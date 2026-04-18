@@ -1,0 +1,117 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap');
+
+:root {
+  /* ── Colors ─────────────────────────────────────────────── */
+  --color-primary: hsl(231 30% 44%);
+  --color-primary-foreground: hsl(0 0% 100%);
+
+  --color-secondary: hsl(231 20% 93%);
+  --color-secondary-foreground: hsl(231 30% 35%);
+
+  --color-muted: hsl(230 15% 93%);
+  --color-muted-foreground: hsl(230 10% 46%);
+
+  --color-accent: hsl(231 25% 92%);
+  --color-accent-foreground: hsl(231 30% 35%);
+
+  --color-destructive: hsl(0 72% 51%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+
+  --color-bg: hsl(240 20% 97%);
+  --color-fg: hsl(233 25% 18%);
+
+  --color-card: hsl(0 0% 100%);
+  --color-card-foreground: hsl(233 25% 18%);
+
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(233 25% 18%);
+
+  --color-border: hsl(230 15% 88%);
+  --color-input: hsl(230 15% 85%);
+  --color-ring: hsl(231 30% 44%);
+
+  /* ── Typography ─────────────────────────────────────────── */
+  --font-sans: 'Cairo', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Cairo', Georgia, serif;
+  --font-mono: Menlo, ui-monospace, monospace;
+
+  /* ── Spacing ────────────────────────────────────────────── */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+
+  /* ── Radius ─────────────────────────────────────────────── */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+
+  /* ── Shadows ────────────────────────────────────────────── */
+  --shadow-2xs: 0 1px 2px 0 rgba(78, 91, 146, 0.03);
+  --shadow-xs: 0 1px 3px 0 rgba(78, 91, 146, 0.06);
+  --shadow-sm: 0 1px 3px 0 rgba(78, 91, 146, 0.08),
+    0 1px 2px -1px rgba(78, 91, 146, 0.06);
+  --shadow: 0 2px 6px 0 rgba(78, 91, 146, 0.08),
+    0 1px 3px -1px rgba(78, 91, 146, 0.06);
+  --shadow-md: 0 4px 8px -1px rgba(78, 91, 146, 0.1),
+    0 2px 4px -2px rgba(78, 91, 146, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(78, 91, 146, 0.1),
+    0 4px 6px -4px rgba(78, 91, 146, 0.06);
+  --shadow-xl: 0 20px 25px -5px rgba(78, 91, 146, 0.1),
+    0 8px 10px -6px rgba(78, 91, 146, 0.06);
+  --shadow-2xl: 0 25px 50px -12px rgba(78, 91, 146, 0.2);
+
+  /* ── Transitions ────────────────────────────────────────── */
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-primary: hsl(231 40% 60%);
+    --color-primary-foreground: hsl(0 0% 100%);
+
+    --color-secondary: hsl(233 20% 18%);
+    --color-secondary-foreground: hsl(231 30% 75%);
+
+    --color-muted: hsl(233 18% 18%);
+    --color-muted-foreground: hsl(230 12% 55%);
+
+    --color-accent: hsl(233 20% 20%);
+    --color-accent-foreground: hsl(231 30% 75%);
+
+    --color-destructive: hsl(0 62% 55%);
+    --color-destructive-foreground: hsl(0 0% 100%);
+
+    --color-bg: hsl(233 25% 10%);
+    --color-fg: hsl(240 15% 92%);
+
+    --color-card: hsl(233 22% 14%);
+    --color-card-foreground: hsl(240 15% 92%);
+
+    --color-popover: hsl(233 22% 14%);
+    --color-popover-foreground: hsl(240 15% 92%);
+
+    --color-border: hsl(233 20% 20%);
+    --color-input: hsl(233 20% 25%);
+    --color-ring: hsl(231 40% 60%);
+
+    --shadow-2xs: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
+    --shadow-xs: 0 1px 3px 0 rgba(0, 0, 0, 0.15);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.2),
+      0 1px 2px -1px rgba(0, 0, 0, 0.15);
+    --shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.2),
+      0 1px 3px -1px rgba(0, 0, 0, 0.15);
+    --shadow-md: 0 4px 8px -1px rgba(0, 0, 0, 0.25),
+      0 2px 4px -2px rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3),
+      0 4px 6px -4px rgba(0, 0, 0, 0.15);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.3),
+      0 8px 10px -6px rgba(0, 0, 0, 0.15);
+    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+}
