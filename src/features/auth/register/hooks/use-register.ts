@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { registerUser } from "../services/register.service";
-import type { RegisterErrors, RegisterFormState } from "../types/register.types";
+import type { RegisterErrors, RegisterFormState, PasswordStrength } from "../types/register.types";
 import { ApiError } from "@/shared/api";
 import * as React from "react";
 
@@ -50,8 +50,25 @@ export function useRegister() {
     }
   };
 
+  const getPasswordStrength = (): PasswordStrength | null => {
+    const p = form.password;
+    if (!p) return null;
+    let score = 0;
+    if (p.length >= 8) score++;
+    if (/[A-Z]/.test(p)) score++;
+    if (/[0-9]/.test(p)) score++;
+    if (/[^A-Za-z0-9]/.test(p)) score++;
+    if (score <= 1) return { label: "ضعيفة", color: "#D4183D", width: "25%" };
+    if (score === 2) return { label: "مقبولة", color: "#F5A623", width: "55%" };
+    if (score === 3) return { label: "جيدة", color: "#4E5B92", width: "75%" };
+    return { label: "قوية", color: "#27AE60", width: "100%" };
+  };
+
+  const strength = getPasswordStrength();
+
   return {
     form,
+    strength,
     agreed,
     setAgreed,
     loading,

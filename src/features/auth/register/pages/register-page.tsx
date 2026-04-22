@@ -7,6 +7,7 @@ export function RegisterPage() {
   const navigate = useNavigate();
   const {
     form,
+    strength,
     agreed,
     setAgreed,
     loading,
@@ -19,6 +20,7 @@ export function RegisterPage() {
     <AuthLayout>
       <RegisterForm
         form={form}
+        strength={strength}
         agreed={agreed}
         loading={loading}
         errors={errors}

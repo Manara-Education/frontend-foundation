@@ -1,11 +1,12 @@
 import { Mail, Lock, User } from "lucide-react";
 import { AuthCard } from "@/features/auth/components/AuthCard";
 import { FormField, PrimaryButton, LinkButton, Divider } from "@/features/auth/components/FormField";
-import type { RegisterErrors, RegisterFormState } from "../types/register.types";
+import type { RegisterErrors, RegisterFormState, PasswordStrength } from "../types/register.types";
 import * as React from "react";
 
 interface RegisterFormProps {
   form: Omit<RegisterFormState, 'agreed'>;
+  strength: PasswordStrength | null;
   agreed: boolean;
   loading: boolean;
   errors: RegisterErrors;
@@ -17,6 +18,7 @@ interface RegisterFormProps {
 
 export function RegisterForm({
   form,
+  strength,
   agreed,
   loading,
   errors,
@@ -25,22 +27,6 @@ export function RegisterForm({
   onSubmit,
   onLoginClick,
 }: RegisterFormProps) {
-  const getPasswordStrength = () => {
-    const p = form.password;
-    if (!p) return null;
-    let score = 0;
-    if (p.length >= 8) score++;
-    if (/[A-Z]/.test(p)) score++;
-    if (/[0-9]/.test(p)) score++;
-    if (/[^A-Za-z0-9]/.test(p)) score++;
-    if (score <= 1) return { label: "ضعيفة", color: "#D4183D", width: "25%" };
-    if (score === 2) return { label: "مقبولة", color: "#F5A623", width: "55%" };
-    if (score === 3) return { label: "جيدة", color: "#4E5B92", width: "75%" };
-    return { label: "قوية", color: "#27AE60", width: "100%" };
-  };
-
-  const strength = getPasswordStrength();
-
   return (
     <AuthCard
       title="ابدأ رحلتك مع منارة"
