@@ -1,7 +1,7 @@
 import { createBrowserRouter, useMatches, Outlet } from "react-router";
 import { useEffect } from "react";
 import { LoginPage } from "../features/auth/login/pages/login-page";
-import { RegisterPage } from "./components/auth/RegisterPage";
+import { RegisterPage } from "../features/auth/register/pages/register-page";
 import { ForgotPasswordPage } from "./components/auth/ForgotPasswordPage";
 import { OTPPage } from "./components/auth/OTPPage";
 import { ResetPasswordPage } from "./components/auth/ResetPasswordPage";
