@@ -12,7 +12,7 @@ interface RegisterFormProps {
   errors: RegisterErrors;
   onChange: (k: keyof Omit<RegisterFormState, 'agreed'>) => (e: React.ChangeEvent<HTMLInputElement>) => void;
   onAgreedToggle: () => void;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onLoginClick: () => void;
 }
 

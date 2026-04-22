@@ -40,6 +40,10 @@ export function useLogin() {
       navigate("/");
     } catch (err) {
       if (err instanceof ApiError) {
+        if (err.errors[0] === "يرجى تأكيد بريدك الإلكتروني قبل تسجيل الدخول") {
+          navigate("/otp", { state: { email, context: "email-verification" } });
+          return;
+        }
         setErrors({ general: err.errors[0] });
       } else {
         setErrors({ general: "حدث خطأ غير متوقع، حاول مرة أخرى" });
