@@ -1,0 +1,26 @@
+export interface AuthResponse {
+  token: string;
+  fullName: string;
+  email: string;
+}
+
+export type OtpContextType = "email-verification" | "password-reset";
+
+export interface OtpFormState {
+  otp: string[];
+}
+
+export interface OtpErrors {
+  general?: string;
+  otp?: string;
+}
+
+export interface OtpVerifyRequest {
+  email: string;
+  code: string;
+}
+
+export interface ResendOtpRequest {
+  email: string;
+  type?: "EMAIL_VERIFICATION" | "PASSWORD_RESET";
+}

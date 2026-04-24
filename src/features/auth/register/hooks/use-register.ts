@@ -28,7 +28,7 @@ export function useRegister() {
     return errs;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
@@ -38,7 +38,7 @@ export function useRegister() {
 
     try {
       await registerUser({ fullName: form.name, email: form.email, password: form.password });
-      navigate("/otp");
+      navigate("/otp", { state: { email: form.email, context: "email-verification" } });
     } catch (err) {
       if (err instanceof ApiError) {
         setErrors({ general: err.errors[0] });

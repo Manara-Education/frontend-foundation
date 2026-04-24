@@ -2,9 +2,9 @@ import { createBrowserRouter, useMatches, Outlet } from "react-router";
 import { useEffect } from "react";
 import { LoginPage } from "../features/auth/login/pages/login-page";
 import { RegisterPage } from "../features/auth/register/pages/register-page";
-import { ForgotPasswordPage } from "./components/auth/ForgotPasswordPage";
-import { OTPPage } from "./components/auth/OTPPage";
-import { ResetPasswordPage } from "./components/auth/ResetPasswordPage";
+import { ForgotPasswordPage } from "../features/auth/forgot-password/pages/forgot-password-page";
+import { OtpPage } from "../features/auth/otp/pages/otp-page";
+import { ResetPasswordPage } from "../features/auth/reset-password/pages/reset-password-page";
 
 function TitleUpdater() {
   const matches = useMatches();
@@ -39,7 +39,7 @@ export const router = createBrowserRouter([
       },
       {
         path: "/otp",
-        Component: OTPPage,
+        Component: OtpPage,
         handle: { title: "التحقق من الرمز" },
       },
       {

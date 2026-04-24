@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { BrandPanel } from "./BrandPanel";
 import { ManaraLogoFull } from "@/shared/components/ManaraLogo";
-import { NavDemo } from "@/app/components/auth/NavDemo";
+
 
 interface AuthLayoutProps {
   children: ReactNode;
