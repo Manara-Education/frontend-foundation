@@ -9,8 +9,8 @@ export function useProfile() {
   const [saved, setSaved] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("");
-  const [createdAt, setCreatedAt] = useState("");
+  const [roleLabel, setRoleLabel] = useState("");
+  const [memberSince, setMemberSince] = useState("");
   const [draftName, setDraftName] = useState("");
 
   useEffect(() => {
@@ -18,8 +18,8 @@ export function useProfile() {
       .then((profile) => {
         setName(profile.fullName);
         setEmail(profile.email);
-        setRole(profile.role);
-        setCreatedAt(profile.createdAt);
+        setRoleLabel(profile.roleLabel);
+        setMemberSince(profile.memberSince);
         setDraftName(profile.fullName);
       })
       .finally(() => setIsLoading(false));
@@ -47,7 +47,7 @@ export function useProfile() {
   }, [name]);
 
   const navigateToResetPassword = useCallback(() => {
-    navigate("/reset-password", { state: { from: "profile" } });
+    navigate("/reset-password", {replace: true,  state: { from: "profile" } });
   }, [navigate]);
 
   return {
@@ -56,8 +56,8 @@ export function useProfile() {
     saved,
     name,
     email,
-    role,
-    createdAt,
+    roleLabel,
+    memberSince,
     draftName,
     setDraftName,
     openEdit,

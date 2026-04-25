@@ -14,15 +14,30 @@ export interface EvaluatedRule {
 export function useResetPassword() {
   const navigate = useNavigate();
   const location = useLocation();
-  const state = location.state as { email?: string; code?: string } | null;
+  const state = location.state as { email?: string; code?: string; from?: string } | null;
   const email = state?.email;
   const code = state?.code;
+  const fromProfile = state?.from === "profile";
 
   useEffect(() => {
-    if (!email || !code) {
+    if (!fromProfile && (!email || !code)) {
       navigate("/");
     }
-  }, [email, code, navigate]);
+  }, [email, code, fromProfile, navigate]);
+
+  // When coming from profile, intercept browser back to go to profile
+  // and replace the entry so reset-password is removed from the stack
+  useEffect(() => {
+    if (!fromProfile) return;
+
+    const handlePopState = () => {
+      window.location.replace("/main?view=profile");
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [fromProfile, navigate]);
+
 
   const [form, setForm] = useState<ResetPasswordFormState>({ password: "", confirm: "" });
   const [errors, setErrors] = useState<ResetPasswordErrors>({});
@@ -81,6 +96,7 @@ export function useResetPassword() {
     errors,
     loading,
     done,
+    fromProfile,
     setField,
     handleSubmit,
     evaluatedRules,

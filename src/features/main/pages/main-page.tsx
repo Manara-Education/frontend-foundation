@@ -1,5 +1,5 @@
 import { useState, type ElementType } from "react";
-import { useNavigate, useLocation } from "react-router";
+import { useNavigate, useLocation, useSearchParams } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { BookOpen, Compass } from "lucide-react";
 import { Sidebar, type ActiveView } from "@/features/main/components/sidebar.tsx";
@@ -51,7 +51,8 @@ const VIEW_META: Record<ActiveView, { title: string; subtitle: string }> = {
 export function MainPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const initialView = (location.state as { view?: ActiveView } | null)?.view ?? "home";
+  const [searchParams] = useSearchParams();
+  const initialView = (searchParams.get("view") as ActiveView) ?? (location.state as { view?: ActiveView } | null)?.view ?? "home";
   const [activeView, setActiveView] = useState<ActiveView>(initialView);
 
   const meta = VIEW_META[activeView];
@@ -149,7 +150,10 @@ export function MainPage() {
       <Sidebar
         activeView={activeView}
         onNavigate={setActiveView}
-        onLogout={() => navigate("/")}
+        onLogout={() => {
+          localStorage.removeItem("auth_token");
+          navigate("/", { replace: true });
+        }}
       />
     </div>
   );

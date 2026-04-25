@@ -13,6 +13,15 @@ export interface UpdateProfileRequest {
   fullName: string;
 }
 
+/* ── Domain/view shape returned by the service ────────────── */
+
+export interface Profile {
+  fullName: string;
+  email: string;
+  roleLabel: string;
+  memberSince: string;
+}
+
 /* ── Component props ──────────────────────────────────────── */
 
 export interface ProfileContentProps {
@@ -21,8 +30,8 @@ export interface ProfileContentProps {
   saved: boolean;
   name: string;
   email: string;
-  role: string;
-  createdAt: string;
+  roleLabel: string;
+  memberSince: string;
   draftName: string;
   setDraftName: (v: string) => void;
   openEdit: () => void;

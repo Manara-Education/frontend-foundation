@@ -22,8 +22,9 @@ function handleResponseError(error: AxiosError<ApiErrorPayload>) {
   if (error.response) {
     const { status, data } = error.response;
 
-    if (status === 401) {
+    if (status === 401 || status === 403) {
       localStorage.removeItem(TOKEN_KEY);
+      window.location.href = "/";
     }
 
     throw new ApiError(status, data?.errors ?? [error.message]);

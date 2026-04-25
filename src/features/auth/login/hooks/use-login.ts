@@ -37,7 +37,7 @@ export function useLogin() {
 
     try {
       await login({ email, password });
-      navigate("/main");
+      navigate("/main", { replace: true });
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.errors[0] === "يرجى تأكيد بريدك الإلكتروني قبل تسجيل الدخول") {

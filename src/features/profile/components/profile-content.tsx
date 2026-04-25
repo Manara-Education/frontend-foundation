@@ -8,25 +8,14 @@ import type { ProfileContentProps } from "@/features/profile/types/profile.types
 
 const PRIMARY = "#4E5B92";
 
-function formatMemberSince(iso: string): string {
-  if (!iso) return "";
-  const date = new Date(iso);
-  return date.toLocaleDateString("ar-EG", { month: "long", year: "numeric" });
-}
-
-function getRoleBadge(role: string): string {
-  const map: Record<string, string> = { STUDENT: "طالب نشط", ADMIN: "مسؤول", TEACHER: "معلم" };
-  return map[role] ?? role;
-}
-
 export function ProfileContent({
   isLoading,
   isEditing,
   saved,
   name,
   email,
-  role,
-  createdAt,
+  roleLabel,
+  memberSince,
   draftName,
   setDraftName,
   openEdit,
@@ -79,7 +68,7 @@ export function ProfileContent({
                       <span style={{ fontSize: 13, color: "#9BA3C4" }}>{email}</span>
                       <div className="flex items-center gap-1.5 rounded-full px-3.5 py-1 mt-1.5" style={{ background: "rgba(78,91,146,0.08)", border: "1px solid rgba(78,91,146,0.12)" }}>
                         <div className="rounded-full" style={{ width: 6, height: 6, background: "#27AE60" }} />
-                        <span style={{ fontWeight: 600, fontSize: 11, color: PRIMARY }}>{getRoleBadge(role)}</span>
+                        <span style={{ fontWeight: 600, fontSize: 11, color: PRIMARY }}>{roleLabel}</span>
                       </div>
                       <button
                         onClick={openEdit}
@@ -139,7 +128,7 @@ export function ProfileContent({
             <div className="rounded-2xl px-5 py-3.5 flex items-center justify-between" style={{ background: "rgba(78,91,146,0.04)", border: "1.5px solid rgba(78,91,146,0.08)" }}>
               <div className="flex flex-col gap-0.5">
                 <span style={{ fontSize: 12, color: "#717182" }}>عضو منذ</span>
-                <span style={{ fontWeight: 700, fontSize: 14, color: "#1E2340" }}>{formatMemberSince(createdAt)}</span>
+                <span style={{ fontWeight: 700, fontSize: 14, color: "#1E2340" }}>{memberSince}</span>
               </div>
               <div className="flex items-center gap-2">
                 <ManaraLogoIcon size={20} color="rgba(78,91,146,0.28)" />
