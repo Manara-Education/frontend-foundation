@@ -5,6 +5,7 @@ import { RegisterPage } from "../features/auth/register/pages/register-page";
 import { ForgotPasswordPage } from "../features/auth/forgot-password/pages/forgot-password-page";
 import { OtpPage } from "../features/auth/otp/pages/otp-page";
 import { ResetPasswordPage } from "../features/auth/reset-password/pages/reset-password-page";
+import { MainPage } from "@/features/main/pages/main-page";
 
 function TitleUpdater() {
   const matches = useMatches();
@@ -46,6 +47,11 @@ export const router = createBrowserRouter([
         path: "/reset-password",
         Component: ResetPasswordPage,
         handle: { title: "إعادة تعيين كلمة المرور" },
+      },
+      {
+        path: "/main",
+        Component: MainPage,
+        handle: { title: "الرئيسية" },
       },
     ],
   },

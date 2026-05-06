@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router";
-import { Lock, Check } from "lucide-react";
+import { Lock, Check, ChevronRight } from "lucide-react";
 import { AuthCard } from "@/features/auth/components/AuthCard";
 import { FormField, PrimaryButton } from "@/features/auth/components/FormField";
 import { ManaraLogoIcon } from "@/shared/components/ManaraLogo";
@@ -14,6 +14,7 @@ interface ResetPasswordFormProps {
   errors: ResetPasswordErrors;
   loading: boolean;
   done: boolean;
+  fromProfile: boolean;
   evaluatedRules: EvaluatedRule[];
   onChange: (k: keyof ResetPasswordFormState) => (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
@@ -24,6 +25,7 @@ export function ResetPasswordForm({
   errors,
   loading,
   done,
+  fromProfile,
   evaluatedRules,
   onChange,
   onSubmit,
@@ -101,8 +103,8 @@ export function ResetPasswordForm({
             <div style={{ flex: 1, height: 1, background: "rgba(78,91,146,0.1)" }} />
           </div>
 
-          <PrimaryButton onClick={() => navigate("/")}>
-            العودة إلى تسجيل الدخول
+          <PrimaryButton onClick={() => fromProfile ? window.location.replace("/main?view=profile") : navigate("/")}>
+            {fromProfile ? "العودة إلى الملف الشخصي" : "العودة إلى تسجيل الدخول"}
           </PrimaryButton>
         </div>
       </div>
@@ -136,6 +138,27 @@ export function ResetPasswordForm({
           </div>
         )}
 
+        {fromProfile && (
+          <button
+            type="button"
+            onClick={() => navigate("/main?view=profile", { replace: true })}
+            className="flex items-center gap-1.5 transition-opacity duration-150 hover:opacity-70"
+            style={{
+              fontFamily: "'Cairo', sans-serif",
+              fontWeight: 600,
+              fontSize: 13,
+              color: PRIMARY,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+            }}
+          >
+            <ChevronRight size={15} color={PRIMARY} />
+            العودة إلى الملف الشخصي
+          </button>
+        )}
+      
         <FormField
           label="كلمة المرور الجديدة"
           isPassword
