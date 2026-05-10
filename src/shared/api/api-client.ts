@@ -1,37 +1,51 @@
 import axios from "axios";
-import type { AxiosError, InternalAxiosRequestConfig } from "axios";
+import type { AxiosError, AxiosRequestConfig } from "axios";
 import { ApiError, type ApiErrorPayload } from "./api.types";
-
-const TOKEN_KEY = "auth_token";
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   headers: { "Content-Type": "application/json", "Accept-Language": "ar" },
   timeout: 15_000,
+  withCredentials: true,
+  xsrfCookieName: "XSRF-TOKEN",
+  xsrfHeaderName: "X-XSRF-TOKEN",
 });
 
-function injectToken(config: InternalAxiosRequestConfig) {
-  const token = localStorage.getItem(TOKEN_KEY);
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+let csrfBootstrap: (() => Promise<void>) | null = null;
+let onUnauthenticated: (() => void) | null = null;
+
+export function registerCsrfBootstrap(fn: () => Promise<void>) {
+  csrfBootstrap = fn;
 }
 
-function handleResponseError(error: AxiosError<ApiErrorPayload>) {
-  if (error.response) {
-    const { status, data } = error.response;
+export function registerUnauthenticatedHandler(fn: () => void) {
+  onUnauthenticated = fn;
+}
 
-    if (status === 401 || status === 403) {
-      localStorage.removeItem(TOKEN_KEY);
-      window.location.href = "/";
+type RetriableConfig = AxiosRequestConfig & { _csrfRetried?: boolean };
+
+async function handleResponseError(error: AxiosError<ApiErrorPayload>) {
+  if (!error.response) {
+    throw new ApiError(0, [error.message || "Network error"]);
+  }
+
+  const { status, data, config } = error.response;
+
+  if (status === 403 && csrfBootstrap && config && !(config as RetriableConfig)._csrfRetried) {
+    (config as RetriableConfig)._csrfRetried = true;
+    try {
+      await csrfBootstrap();
+      return apiClient.request(config);
+    } catch {
+      throw new ApiError(status, data?.errors ?? [error.message]);
     }
-
-    throw new ApiError(status, data?.errors ?? [error.message]);
   }
 
-  throw new ApiError(0, [error.message || "Network error"]);
+  if (status === 401) {
+    onUnauthenticated?.();
+  }
+
+  throw new ApiError(status, data?.errors ?? [error.message]);
 }
 
-apiClient.interceptors.request.use(injectToken);
 apiClient.interceptors.response.use((r) => r, handleResponseError);

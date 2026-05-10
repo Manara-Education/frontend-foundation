@@ -1,7 +1,7 @@
 export interface AuthResponse {
-  token: string;
   fullName: string;
   email: string;
+  role: string;
 }
 
 export type OtpContextType = "email-verification" | "password-reset";

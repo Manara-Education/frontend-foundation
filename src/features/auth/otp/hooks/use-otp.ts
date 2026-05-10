@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router";
 import { verifyOtp, verifyResetOtp, resendOtp } from "../services/otp.service";
 import type { OtpErrors, OtpContextType } from "../types/otp.types";
 import { ApiError } from "@/shared/api";
+import { useAuth } from "@/shared/auth";
 import * as React from "react";
 
 export const OTP_LENGTH = 6;
@@ -10,6 +11,7 @@ export const OTP_LENGTH = 6;
 export function useOtp() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { setUser } = useAuth();
   const state = location.state as { email?: string; context?: OtpContextType } | null;
   const email = state?.email || "";
   const context = state?.context || "email-verification";
@@ -94,11 +96,10 @@ export function useOtp() {
 
     try {
       if (context === "email-verification") {
-        const res = await verifyOtp({ email, code });
-        localStorage.setItem("auth_token", res.token);
+        const user = await verifyOtp({ email, code });
+        setUser(user);
         setSuccess(true);
-        // Assuming user should go to dashboard or home after successful login/registration verification
-        setTimeout(() => navigate("/"), 1200); 
+        setTimeout(() => navigate("/main", { replace: true }), 1200);
       } else if (context === "password-reset") {
         await verifyResetOtp({ email, code });
         setSuccess(true);

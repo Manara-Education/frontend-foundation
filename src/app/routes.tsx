@@ -6,6 +6,8 @@ import { ForgotPasswordPage } from "../features/auth/forgot-password/pages/forgo
 import { OtpPage } from "../features/auth/otp/pages/otp-page";
 import { ResetPasswordPage } from "../features/auth/reset-password/pages/reset-password-page";
 import { MainPage } from "@/features/main/pages/main-page";
+import { AccessDeniedPage } from "@/features/session/access-denied/pages/access-denied-page";
+import { ProtectedRoute, PublicOnlyRoute } from "@/shared/auth";
 
 function TitleUpdater() {
   const matches = useMatches();
@@ -24,19 +26,29 @@ export const router = createBrowserRouter([
     Component: TitleUpdater,
     children: [
       {
-        path: "/",
-        Component: LoginPage,
-        handle: { title: "تسجيل الدخول" },
-      },
-      {
-        path: "/register",
-        Component: RegisterPage,
-        handle: { title: "إنشاء حساب" },
-      },
-      {
-        path: "/forgot-password",
-        Component: ForgotPasswordPage,
-        handle: { title: "نسيت كلمة المرور" },
+        Component: PublicOnlyRoute,
+        children: [
+          {
+            path: "/",
+            Component: LoginPage,
+            handle: { title: "تسجيل الدخول" },
+          },
+          {
+            path: "/register",
+            Component: RegisterPage,
+            handle: { title: "إنشاء حساب" },
+          },
+          {
+            path: "/forgot-password",
+            Component: ForgotPasswordPage,
+            handle: { title: "نسيت كلمة المرور" },
+          },
+          {
+            path: "/reset-password",
+            Component: ResetPasswordPage,
+            handle: { title: "إعادة تعيين كلمة المرور" },
+          },
+        ],
       },
       {
         path: "/otp",
@@ -44,14 +56,19 @@ export const router = createBrowserRouter([
         handle: { title: "التحقق من الرمز" },
       },
       {
-        path: "/reset-password",
-        Component: ResetPasswordPage,
-        handle: { title: "إعادة تعيين كلمة المرور" },
-      },
-      {
-        path: "/main",
-        Component: MainPage,
-        handle: { title: "الرئيسية" },
+        Component: ProtectedRoute,
+        children: [
+          {
+            path: "/main",
+            Component: MainPage,
+            handle: { title: "الرئيسية" },
+          },
+          {
+            path: "/access-denied",
+            Component: AccessDeniedPage,
+            handle: { title: "وصول مرفوض" },
+          },
+        ],
       },
     ],
   },

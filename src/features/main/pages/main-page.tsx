@@ -2,9 +2,14 @@ import { useState, type ElementType } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { BookOpen, Compass } from "lucide-react";
-import { Sidebar, type ActiveView } from "@/features/main/components/sidebar.tsx";
+import { Sidebar, isInstructorRole, type ActiveView } from "@/features/main/components/sidebar.tsx";
 import { HomeView } from "@/features/main/components/home-view.tsx";
+import { InstructorHomeView } from "@/features/main/components/instructor-home-view.tsx";
+import { AllCoursesView } from "@/features/main/components/all-courses-view.tsx";
+import { CreateCourseView } from "@/features/main/components/create-course-view.tsx";
+import { AddLessonsView } from "@/features/main/components/add-lessons-view.tsx";
 import { ProfileView } from "@/features/profile/pages/profile-view.tsx";
+import { useAuth } from "@/shared/auth";
 
 const PRIMARY = "#4E5B92";
 
@@ -40,10 +45,13 @@ function PlaceholderView({ icon: Icon, title, subtitle, color }: { icon: Element
 // ── Section titles ─────────────────────────────────────────────────────────────
 
 const VIEW_META: Record<ActiveView, { title: string; subtitle: string }> = {
-  home:    { title: "الرئيسية",       subtitle: "مرحباً بك في منارة" },
-  courses: { title: "دوراتي",          subtitle: "متابعة مسيرتك التعليمية" },
-  explore: { title: "استكشاف الدورات", subtitle: "اكتشف محتوى جديداً" },
-  profile: { title: "ملفي الشخصي",     subtitle: "إدارة حسابك بسهولة" },
+  home:                 { title: "الرئيسية",          subtitle: "مرحباً بك في منارة" },
+  courses:              { title: "دوراتي",             subtitle: "متابعة مسيرتك التعليمية" },
+  explore:              { title: "استكشاف الدورات",    subtitle: "اكتشف محتوى جديداً" },
+  profile:              { title: "ملفي الشخصي",        subtitle: "إدارة حسابك بسهولة" },
+  "instructor-home":    { title: "لوحة المدرّب",        subtitle: "نظرة عامة على نشاطك التدريسي" },
+  "instructor-courses": { title: "كل دوراتي",           subtitle: "أدر وعدّل جميع دوراتك" },
+  "instructor-create":  { title: "إنشاء دورة جديدة",    subtitle: "ابدأ بإعداد دورتك التالية" },
 };
 
 // ── MainPage ──────────────────────────────────────────────────────────────────
@@ -51,11 +59,23 @@ const VIEW_META: Record<ActiveView, { title: string; subtitle: string }> = {
 export function MainPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, logout } = useAuth();
   const [searchParams] = useSearchParams();
-  const initialView = (searchParams.get("view") as ActiveView) ?? (location.state as { view?: ActiveView } | null)?.view ?? "home";
+  const isInstructor = isInstructorRole(user?.role);
+  const defaultView: ActiveView = isInstructor ? "instructor-home" : "home";
+  const initialView = (searchParams.get("view") as ActiveView) ?? (location.state as { view?: ActiveView } | null)?.view ?? defaultView;
   const [activeView, setActiveView] = useState<ActiveView>(initialView);
+  const [lessonsForCourse, setLessonsForCourse] = useState<string | null>(null);
 
-  const meta = VIEW_META[activeView];
+  const showLessons = lessonsForCourse !== null;
+  const meta = showLessons
+    ? { title: "محتوى الدورة", subtitle: lessonsForCourse ?? "" }
+    : VIEW_META[activeView];
+
+  const goTo = (view: ActiveView) => {
+    setLessonsForCourse(null);
+    setActiveView(view);
+  };
 
   return (
     <div
@@ -113,33 +133,65 @@ export function MainPage() {
           <div style={{ maxWidth: 860, margin: "0 auto", padding: "28px 32px 80px" }}>
             <AnimatePresence mode="wait">
               <motion.div
-                key={activeView}
+                key={showLessons ? `lessons:${lessonsForCourse}` : activeView}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.25, ease: "easeOut" }}
               >
-                {activeView === "home" && <HomeView />}
-
-                {activeView === "courses" && (
-                  <PlaceholderView
-                    icon={BookOpen}
-                    title="دوراتي"
-                    subtitle="ستجد هنا جميع الدورات التي التحقت بها ومتابعة تقدمك فيها"
-                    color={PRIMARY}
+                {showLessons ? (
+                  <AddLessonsView
+                    courseTitle={lessonsForCourse!}
+                    onFinish={() => goTo("instructor-home")}
                   />
-                )}
+                ) : (
+                  <>
+                    {activeView === "home" && <HomeView />}
 
-                {activeView === "explore" && (
-                  <PlaceholderView
-                    icon={Compass}
-                    title="استكشاف الدورات"
-                    subtitle="اكتشف مئات الدورات التعليمية في مجالات اللغة العربية وآدابها"
-                    color="#27AE60"
-                  />
-                )}
+                    {activeView === "courses" && (
+                      <PlaceholderView
+                        icon={BookOpen}
+                        title="دوراتي"
+                        subtitle="ستجد هنا جميع الدورات التي التحقت بها ومتابعة تقدمك فيها"
+                        color={PRIMARY}
+                      />
+                    )}
 
-                {activeView === "profile" && <ProfileView />}
+                    {activeView === "explore" && (
+                      <PlaceholderView
+                        icon={Compass}
+                        title="استكشاف الدورات"
+                        subtitle="اكتشف مئات الدورات التعليمية في مجالات اللغة العربية وآدابها"
+                        color="#27AE60"
+                      />
+                    )}
+
+                    {activeView === "profile" && <ProfileView />}
+
+                    {activeView === "instructor-home" && (
+                      <InstructorHomeView
+                        onCreateCourse={() => goTo("instructor-create")}
+                        onViewAllCourses={() => goTo("instructor-courses")}
+                        onCourseClick={(title) => setLessonsForCourse(title)}
+                      />
+                    )}
+
+                    {activeView === "instructor-courses" && (
+                      <AllCoursesView
+                        onBack={() => goTo("instructor-home")}
+                        onCreateCourse={() => goTo("instructor-create")}
+                        onCourseClick={(title) => setLessonsForCourse(title)}
+                      />
+                    )}
+
+                    {activeView === "instructor-create" && (
+                      <CreateCourseView
+                        onCancel={() => goTo("instructor-home")}
+                        onCourseCreated={(title) => setLessonsForCourse(title)}
+                      />
+                    )}
+                  </>
+                )}
               </motion.div>
             </AnimatePresence>
           </div>
@@ -149,9 +201,10 @@ export function MainPage() {
       {/* ── SIDEBAR (Right) ───────────────────────────────────────────────── */}
       <Sidebar
         activeView={activeView}
-        onNavigate={setActiveView}
-        onLogout={() => {
-          localStorage.removeItem("auth_token");
+        onNavigate={goTo}
+        role={user?.role}
+        onLogout={async () => {
+          await logout();
           navigate("/", { replace: true });
         }}
       />

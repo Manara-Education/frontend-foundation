@@ -1,4 +1,8 @@
-export { apiClient } from "./api-client";
+export {
+  apiClient,
+  registerCsrfBootstrap,
+  registerUnauthenticatedHandler,
+} from "./api-client";
 export { ApiError } from "./api.types";
 export type {
   ApiResponse,

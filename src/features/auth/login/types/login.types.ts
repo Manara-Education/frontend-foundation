@@ -10,9 +10,9 @@ export interface LoginFormState {
 }
 
 export interface LoginResponse {
-  token: string;
   fullName: string;
   email: string;
+  role: string;
 }
 
 export interface LoginErrors {
