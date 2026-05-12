@@ -2,11 +2,13 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { login } from "../services/auth.service";
 import { ApiError } from "@/shared/api";
+import { useAuth } from "@/shared/auth";
 import type { LoginErrors } from "../types/login.types";
 import * as React from "react";
 
 export function useLogin() {
   const navigate = useNavigate();
+  const { setUser } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -36,7 +38,8 @@ export function useLogin() {
     setLoading(true);
 
     try {
-      await login({ email, password });
+      const user = await login({ email, password });
+      setUser(user);
       navigate("/main", { replace: true });
     } catch (err) {
       if (err instanceof ApiError) {

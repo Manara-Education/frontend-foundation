@@ -1,25 +1,57 @@
-import { type ElementType } from "react";
-import { Home, BookOpen, Compass, User, LogOut } from "lucide-react";
+import { Fragment, type ElementType } from "react";
+import { Home, BookOpen, Compass, User, LogOut, PlusSquare } from "lucide-react";
 import { ManaraLogoIcon } from "@/shared/components/ManaraLogo";
 
 const PRIMARY = "#4E5B92";
 
-export type ActiveView = "home" | "courses" | "explore" | "profile";
+export type ActiveView =
+  | "home"
+  | "courses"
+  | "explore"
+  | "profile"
+  | "instructor-home"
+  | "instructor-courses"
+  | "instructor-create";
 
-const navItems: { icon: ElementType; label: string; view: ActiveView }[] = [
-  { icon: Home,    label: "الرئيسية",         view: "home"    },
-  { icon: BookOpen,label: "دوراتي",            view: "courses" },
-  { icon: Compass, label: "استكشاف الدورات",   view: "explore" },
-  { icon: User,    label: "ملفي الشخصي",       view: "profile" },
-];
+interface NavItem { icon: ElementType; label: string; view: ActiveView }
+interface NavSection { label: string; items: NavItem[] }
+
+const studentSection: NavSection = {
+  label: "الطالب",
+  items: [
+    { icon: Home,    label: "الرئيسية",         view: "home"    },
+    { icon: BookOpen,label: "دوراتي",            view: "courses" },
+    { icon: Compass, label: "استكشاف الدورات",   view: "explore" },
+    { icon: User,    label: "ملفي الشخصي",       view: "profile" },
+  ],
+};
+
+const instructorSection: NavSection = {
+  label: "المدرّب",
+  items: [
+    { icon: Home,       label: "الرئيسية",     view: "instructor-home"   },
+    { icon: PlusSquare, label: "إنشاء دورة",   view: "instructor-create" },
+    { icon: User,       label: "ملفي الشخصي",  view: "profile"           },
+  ],
+};
+
+export function isInstructorRole(role: string | undefined): boolean {
+  return role?.toUpperCase() === "INSTRUCTOR";
+}
+
+export function getNavSectionsForRole(role: string | undefined): NavSection[] {
+  return isInstructorRole(role) ? [instructorSection] : [studentSection];
+}
 
 interface SidebarProps {
   activeView: ActiveView;
   onNavigate: (view: ActiveView) => void;
   onLogout: () => void;
+  role?: string;
 }
 
-export function Sidebar({ activeView, onNavigate, onLogout }: SidebarProps) {
+export function Sidebar({ activeView, onNavigate, onLogout, role }: SidebarProps) {
+  const navSections = getNavSectionsForRole(role);
   return (
     <aside
       dir="rtl"
@@ -101,17 +133,17 @@ export function Sidebar({ activeView, onNavigate, onLogout }: SidebarProps) {
         />
       </div>
 
-      {/* ── NAV LABEL ──────────────────────────────────────────────── */}
-      <div
-        className="px-5 pb-1"
-        style={{ fontSize: 10, fontWeight: 600, color: "#B0B7D4", letterSpacing: 1.5, flexShrink: 0 }}
-      >
-        القائمة
-      </div>
-
       {/* ── NAV ITEMS ──────────────────────────────────────────────── */}
       <nav className="flex flex-col gap-0.5 px-3 flex-1">
-        {navItems.map(({ icon: Icon, label, view }) => {
+        {navSections.map((section, sIdx) => (
+          <Fragment key={section.label}>
+            <div
+              className="px-2 pt-3 pb-1"
+              style={{ fontSize: 10, fontWeight: 600, color: "#B0B7D4", letterSpacing: 1.5, flexShrink: 0, marginTop: sIdx === 0 ? 0 : 6 }}
+            >
+              {section.label}
+            </div>
+            {section.items.map(({ icon: Icon, label, view }) => {
           const isActive = activeView === view;
           return (
             <button
@@ -194,6 +226,8 @@ export function Sidebar({ activeView, onNavigate, onLogout }: SidebarProps) {
             </button>
           );
         })}
+          </Fragment>
+        ))}
       </nav>
 
       {/* ── SPACER ─────────────────────────────────────────────────── */}
