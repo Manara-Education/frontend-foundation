@@ -3,11 +3,11 @@ import { useNavigate, useLocation, useSearchParams } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { BookOpen, Compass } from "lucide-react";
 import { Sidebar, isInstructorRole, type ActiveView } from "@/features/main/components/sidebar.tsx";
-import { HomeView } from "@/features/main/components/home-view.tsx";
+import { HomePage } from "@/features/main/student/home/pages/home-page";
 import { InstructorHomeView } from "@/features/main/components/instructor-home-view.tsx";
-import { AllCoursesView } from "@/features/main/components/all-courses-view.tsx";
-import { CreateCourseView } from "@/features/main/components/create-course-view.tsx";
-import { AddLessonsView } from "@/features/main/components/add-lessons-view.tsx";
+import { AllCoursesPage } from "@/features/course/student/all-courses/pages/all-courses-page";
+import { CreateCoursePage } from "@/features/course/Instructor/create-course/pages/create-course-page";
+import { AddLessonsPage } from "@/features/course/Instructor/add-lessons/pages/add-lessons-page";
 import { ProfileView } from "@/features/profile/pages/profile-view.tsx";
 import { useAuth } from "@/shared/auth";
 
@@ -65,15 +65,16 @@ export function MainPage() {
   const defaultView: ActiveView = isInstructor ? "instructor-home" : "home";
   const initialView = (searchParams.get("view") as ActiveView) ?? (location.state as { view?: ActiveView } | null)?.view ?? defaultView;
   const [activeView, setActiveView] = useState<ActiveView>(initialView);
-  const [lessonsForCourse, setLessonsForCourse] = useState<string | null>(null);
+  const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
 
-  const showLessons = lessonsForCourse !== null;
+  const showLessons = activeCourseId !== null;
   const meta = showLessons
-    ? { title: "محتوى الدورة", subtitle: lessonsForCourse ?? "" }
+    ? { title: "محتوى الدورة", subtitle: "إدارة الدروس والمحتوى" }
     : VIEW_META[activeView];
 
   const goTo = (view: ActiveView) => {
-    setLessonsForCourse(null);
+    console.log("goTo called with:", view);
+    setActiveCourseId(null);
     setActiveView(view);
   };
 
@@ -133,20 +134,20 @@ export function MainPage() {
           <div style={{ maxWidth: 860, margin: "0 auto", padding: "28px 32px 80px" }}>
             <AnimatePresence mode="wait">
               <motion.div
-                key={showLessons ? `lessons:${lessonsForCourse}` : activeView}
+                key={showLessons ? `lessons:${activeCourseId}` : activeView}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.25, ease: "easeOut" }}
               >
                 {showLessons ? (
-                  <AddLessonsView
-                    courseTitle={lessonsForCourse!}
+                  <AddLessonsPage
+                    courseId={activeCourseId!}
                     onFinish={() => goTo("instructor-home")}
                   />
                 ) : (
                   <>
-                    {activeView === "home" && <HomeView />}
+                    {activeView === "home" && <HomePage />}
 
                     {activeView === "courses" && (
                       <PlaceholderView
@@ -172,22 +173,22 @@ export function MainPage() {
                       <InstructorHomeView
                         onCreateCourse={() => goTo("instructor-create")}
                         onViewAllCourses={() => goTo("instructor-courses")}
-                        onCourseClick={(title) => setLessonsForCourse(title)}
+                        onCourseClick={(courseId) => setActiveCourseId(courseId)}
                       />
                     )}
 
                     {activeView === "instructor-courses" && (
-                      <AllCoursesView
+                      <AllCoursesPage
                         onBack={() => goTo("instructor-home")}
                         onCreateCourse={() => goTo("instructor-create")}
-                        onCourseClick={(title) => setLessonsForCourse(title)}
+                        onCourseClick={(courseId) => setActiveCourseId(courseId)}
                       />
                     )}
 
                     {activeView === "instructor-create" && (
-                      <CreateCourseView
+                      <CreateCoursePage
                         onCancel={() => goTo("instructor-home")}
-                        onCourseCreated={(title) => setLessonsForCourse(title)}
+                        onCourseCreated={(courseId) => setActiveCourseId(courseId)}
                       />
                     )}
                   </>
@@ -203,6 +204,7 @@ export function MainPage() {
         activeView={activeView}
         onNavigate={goTo}
         role={user?.role}
+        fullName={user?.fullName}
         onLogout={async () => {
           await logout();
           navigate("/", { replace: true });

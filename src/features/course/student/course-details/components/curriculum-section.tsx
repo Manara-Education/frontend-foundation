@@ -1,0 +1,119 @@
+import { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { BookOpen, ChevronDown } from "lucide-react";
+import type { LessonView } from "../types/course-details.types";
+import { LessonItem } from "./lesson-item";
+
+const PRIMARY = "#4E5B92";
+const FONT = "'Cairo', sans-serif";
+const SUCCESS = "#22C55E";
+
+interface CurriculumSectionProps {
+  lessons: LessonView[];
+  onLessonClick?: (id: number) => void;
+}
+
+export function CurriculumSection({ lessons, onLessonClick }: CurriculumSectionProps) {
+  const [showAll, setShowAll] = useState(false);
+  const displayed = showAll ? lessons : lessons.slice(0, 8);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: 0.25 }}
+      style={{ marginBottom: 20 }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 14,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 10,
+              background: "rgba(78,91,146,0.08)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: PRIMARY,
+            }}
+          >
+            <BookOpen size={15} strokeWidth={1.8} />
+          </div>
+          <div>
+            <div style={{ fontFamily: FONT, fontSize: 16, color: "#1F2937" }}>
+              منهج الدورة
+            </div>
+            <div style={{ fontFamily: FONT, fontSize: 11, color: "#9BA3C4" }}>
+              {lessons.length} درس
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 12 }}>
+          {[
+            { v: lessons.filter((l) => l.status === "completed").length, label: "مكتمل", c: SUCCESS },
+            { v: lessons.filter((l) => l.status === "not-started").length, label: "قادم", c: "#9BA3C4" },
+          ].map(({ v, label, c }) => (
+            <div key={label} style={{ textAlign: "center" }}>
+              <div style={{ fontFamily: FONT, fontSize: 15, color: c }}>{v}</div>
+              <div style={{ fontFamily: FONT, fontSize: 10, color: "#B0B7D4" }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <AnimatePresence>
+          {displayed.map((lesson, i) => (
+            <LessonItem key={lesson.id} lesson={lesson} index={i} onLessonClick={onLessonClick} />
+          ))}
+        </AnimatePresence>
+      </div>
+
+      {lessons.length > 8 && (
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={() => setShowAll(!showAll)}
+          style={{
+            width: "100%",
+            marginTop: 10,
+            padding: "12px",
+            borderRadius: 14,
+            background: "transparent",
+            border: "1.5px solid #ECECEC",
+            cursor: "pointer",
+            fontFamily: FONT,
+            fontSize: 13,
+            color: "#9BA3C4",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            transition: "all 0.18s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = "rgba(78,91,146,0.25)";
+            e.currentTarget.style.color = PRIMARY;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = "#ECECEC";
+            e.currentTarget.style.color = "#9BA3C4";
+          }}
+        >
+          <motion.div animate={{ rotate: showAll ? 180 : 0 }} transition={{ duration: 0.2 }}>
+            <ChevronDown size={15} strokeWidth={2} />
+          </motion.div>
+          {showAll ? "عرض أقل" : `عرض ${lessons.length - 8} دروس إضافية`}
+        </motion.button>
+      )}
+    </motion.div>
+  );
+}
