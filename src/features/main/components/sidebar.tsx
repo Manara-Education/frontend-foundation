@@ -19,19 +19,19 @@ interface NavSection { label: string; items: NavItem[] }
 const studentSection: NavSection = {
   label: "الطالب",
   items: [
-    { icon: Home,    label: "الرئيسية",         view: "home"    },
-    { icon: BookOpen,label: "دوراتي",            view: "courses" },
-    { icon: Compass, label: "استكشاف الدورات",   view: "explore" },
-    { icon: User,    label: "ملفي الشخصي",       view: "profile" },
+    { icon: Home, label: "الرئيسية", view: "home" },
+    { icon: BookOpen, label: "دوراتي", view: "courses" },
+    { icon: Compass, label: "استكشاف الدورات", view: "explore" },
+    { icon: User, label: "ملفي الشخصي", view: "profile" },
   ],
 };
 
 const instructorSection: NavSection = {
   label: "المدرّب",
   items: [
-    { icon: Home,       label: "الرئيسية",     view: "instructor-home"   },
-    { icon: PlusSquare, label: "إنشاء دورة",   view: "instructor-create" },
-    { icon: User,       label: "ملفي الشخصي",  view: "profile"           },
+    { icon: Home, label: "الرئيسية", view: "instructor-home" },
+    { icon: PlusSquare, label: "إنشاء دورة", view: "instructor-create" },
+    { icon: User, label: "ملفي الشخصي", view: "profile" },
   ],
 };
 
@@ -48,9 +48,10 @@ interface SidebarProps {
   onNavigate: (view: ActiveView) => void;
   onLogout: () => void;
   role?: string;
+  fullName?: string;
 }
 
-export function Sidebar({ activeView, onNavigate, onLogout, role }: SidebarProps) {
+export function Sidebar({ activeView, onNavigate, onLogout, role, fullName }: SidebarProps) {
   const navSections = getNavSectionsForRole(role);
   return (
     <aside
@@ -120,10 +121,10 @@ export function Sidebar({ activeView, onNavigate, onLogout, role }: SidebarProps
           <div
             style={{ fontWeight: 600, fontSize: 14, color: "#1E2340", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
           >
-            أحمد محمد
+            {fullName || "المستخدم"}
           </div>
           <div style={{ fontWeight: 400, fontSize: 11, color: "#9BA3C4" }}>
-            طالب نشط
+            {isInstructorRole(role) ? "معلّم" : "طالب"}
           </div>
         </div>
         {/* Online dot */}
@@ -144,88 +145,88 @@ export function Sidebar({ activeView, onNavigate, onLogout, role }: SidebarProps
               {section.label}
             </div>
             {section.items.map(({ icon: Icon, label, view }) => {
-          const isActive = activeView === view;
-          return (
-            <button
-              key={view}
-              onClick={() => onNavigate(view)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                width: "100%",
-                height: 52,
-                paddingRight: 12,
-                paddingLeft: 12,
-                borderRadius: 14,
-                background: isActive ? "rgba(78,91,146,0.09)" : "transparent",
-                border: "none",
-                cursor: "pointer",
-                color: isActive ? PRIMARY : "#5A5A7A",
-                fontFamily: "'Cairo', sans-serif",
-                fontWeight: isActive ? 600 : 500,
-                fontSize: 14,
-                textAlign: "right",
-                position: "relative",
-                transition: "background 0.15s, color 0.15s",
-                outline: "none",
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.background = "rgba(78,91,146,0.05)";
-                  e.currentTarget.style.color = PRIMARY;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = "#5A5A7A";
-                }
-              }}
-            >
-              {/* Active indicator — left edge (inner edge facing content) */}
-              {isActive && (
-                <div
+              const isActive = activeView === view;
+              return (
+                <button
+                  key={view}
+                  onClick={() => onNavigate(view)}
                   style={{
-                    position: "absolute",
-                    left: 0,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    width: 3,
-                    height: 28,
-                    borderRadius: "0 3px 3px 0",
-                    background: PRIMARY,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    width: "100%",
+                    height: 52,
+                    paddingRight: 12,
+                    paddingLeft: 12,
+                    borderRadius: 14,
+                    background: isActive ? "rgba(78,91,146,0.09)" : "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    color: isActive ? PRIMARY : "#5A5A7A",
+                    fontFamily: "'Cairo', sans-serif",
+                    fontWeight: isActive ? 600 : 500,
+                    fontSize: 14,
+                    textAlign: "right",
+                    position: "relative",
+                    transition: "background 0.15s, color 0.15s",
+                    outline: "none",
                   }}
-                />
-              )}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.background = "rgba(78,91,146,0.05)";
+                      e.currentTarget.style.color = PRIMARY;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.color = "#5A5A7A";
+                    }
+                  }}
+                >
+                  {/* Active indicator — left edge (inner edge facing content) */}
+                  {isActive && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: 0,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        width: 3,
+                        height: 28,
+                        borderRadius: "0 3px 3px 0",
+                        background: PRIMARY,
+                      }}
+                    />
+                  )}
 
-              {/* Icon pill */}
-              <div
-                className="rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{
-                  width: 36,
-                  height: 36,
-                  background: isActive ? `rgba(78,91,146,0.14)` : "rgba(78,91,146,0.06)",
-                  color: isActive ? PRIMARY : "#9BA3C4",
-                  transition: "background 0.15s, color 0.15s",
-                }}
-              >
-                <Icon size={16} />
-              </div>
+                  {/* Icon pill */}
+                  <div
+                    className="rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{
+                      width: 36,
+                      height: 36,
+                      background: isActive ? `rgba(78,91,146,0.14)` : "rgba(78,91,146,0.06)",
+                      color: isActive ? PRIMARY : "#9BA3C4",
+                      transition: "background 0.15s, color 0.15s",
+                    }}
+                  >
+                    <Icon size={16} />
+                  </div>
 
-              {/* Label */}
-              <span style={{ flex: 1 }}>{label}</span>
+                  {/* Label */}
+                  <span style={{ flex: 1 }}>{label}</span>
 
-              {/* Active dot */}
-              {isActive && (
-                <div
-                  className="rounded-full"
-                  style={{ width: 6, height: 6, background: PRIMARY, flexShrink: 0 }}
-                />
-              )}
-            </button>
-          );
-        })}
+                  {/* Active dot */}
+                  {isActive && (
+                    <div
+                      className="rounded-full"
+                      style={{ width: 6, height: 6, background: PRIMARY, flexShrink: 0 }}
+                    />
+                  )}
+                </button>
+              );
+            })}
           </Fragment>
         ))}
       </nav>
