@@ -24,6 +24,9 @@ export function CoursesSkeleton() {
     <>
       <style>{SHIMMER_CSS}</style>
 
+      {/* Welcome banner */}
+      <Sk h={92} r={22} style={{ marginBottom: 28 }} />
+
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 32 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

@@ -5,6 +5,7 @@ import { CoursesGrid } from "./courses-grid";
 import { CoursesHeader } from "./courses-header";
 import { CoursesSearchFilters } from "./courses-search-filters";
 import { CoursesSkeleton } from "./courses-skeleton";
+import { WelcomeBanner } from "./welcome-banner";
 
 interface CoursesFormProps {
   isLoading: boolean;
@@ -17,6 +18,7 @@ interface CoursesFormProps {
   onQueryChange: (value: string) => void;
   onFilterChange: (key: FilterKey) => void;
   onCourseClick?: (id: number) => void;
+  onBrowse?: () => void;
 }
 
 export function CoursesForm({
@@ -30,6 +32,7 @@ export function CoursesForm({
   onQueryChange,
   onFilterChange,
   onCourseClick,
+  onBrowse,
 }: CoursesFormProps) {
   return (
     <div dir="rtl" style={{ fontFamily: FONT }}>
@@ -45,6 +48,8 @@ export function CoursesForm({
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
           >
+            <WelcomeBanner />
+
             <CoursesHeader total={total} completed={completed} inProgress={inProgress} />
 
             <CoursesSearchFilters
@@ -60,6 +65,7 @@ export function CoursesForm({
               query={query}
               activeFilter={activeFilter}
               onCourseClick={onCourseClick}
+              onBrowse={onBrowse}
             />
 
             <div style={{ height: 24 }} />

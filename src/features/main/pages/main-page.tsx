@@ -1,9 +1,9 @@
 import { useState, type ElementType } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
-import { BookOpen, Compass } from "lucide-react";
+import { Compass } from "lucide-react";
 import { Sidebar, isInstructorRole, type ActiveView } from "@/features/main/components/sidebar.tsx";
-import { HomePage } from "@/features/main/student/home/pages/home-page";
+import { CoursesPage } from "@/features/course/student/courses/pages/courses-page";
 import { InstructorHomeView } from "@/features/main/components/instructor-home-view.tsx";
 import { AllCoursesPage } from "@/features/course/student/all-courses/pages/all-courses-page";
 import { CreateCoursePage } from "@/features/course/Instructor/create-course/pages/create-course-page";
@@ -45,8 +45,7 @@ function PlaceholderView({ icon: Icon, title, subtitle, color }: { icon: Element
 // ── Section titles ─────────────────────────────────────────────────────────────
 
 const VIEW_META: Record<ActiveView, { title: string; subtitle: string }> = {
-  home:                 { title: "الرئيسية",          subtitle: "مرحباً بك في منارة" },
-  courses:              { title: "دوراتي",             subtitle: "متابعة مسيرتك التعليمية" },
+  home:                 { title: "دوراتي",             subtitle: "متابعة مسيرتك التعليمية" },
   explore:              { title: "استكشاف الدورات",    subtitle: "اكتشف محتوى جديداً" },
   profile:              { title: "ملفي الشخصي",        subtitle: "إدارة حسابك بسهولة" },
   "instructor-home":    { title: "لوحة المدرّب",        subtitle: "نظرة عامة على نشاطك التدريسي" },
@@ -147,16 +146,7 @@ export function MainPage() {
                   />
                 ) : (
                   <>
-                    {activeView === "home" && <HomePage />}
-
-                    {activeView === "courses" && (
-                      <PlaceholderView
-                        icon={BookOpen}
-                        title="دوراتي"
-                        subtitle="ستجد هنا جميع الدورات التي التحقت بها ومتابعة تقدمك فيها"
-                        color={PRIMARY}
-                      />
-                    )}
+                    {activeView === "home" && <CoursesPage onBrowse={() => goTo("explore")} />}
 
                     {activeView === "explore" && (
                       <PlaceholderView

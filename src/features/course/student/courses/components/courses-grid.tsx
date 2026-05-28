@@ -8,14 +8,15 @@ interface CoursesGridProps {
   query: string;
   activeFilter: FilterKey;
   onCourseClick?: (id: number) => void;
+  onBrowse?: () => void;
 }
 
-export function CoursesGrid({ filtered, query, activeFilter, onCourseClick }: CoursesGridProps) {
+export function CoursesGrid({ filtered, query, activeFilter, onCourseClick, onBrowse }: CoursesGridProps) {
   return (
     <AnimatePresence mode="wait">
       {filtered.length === 0 ? (
         <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <EmptyState query={query} filter={activeFilter} />
+          <EmptyState query={query} filter={activeFilter} onBrowse={onBrowse} />
         </motion.div>
       ) : (
         <motion.div

@@ -42,3 +42,11 @@ export function formatPercent(progress: number): string {
 export function formatResultsCount(count: number): string {
   return `${count} دورة`;
 }
+
+export function getGreeting(date: Date = new Date()): string {
+  const h = date.getHours();
+  if (h >= 5 && h < 12) return "صباح الخير";
+  if (h >= 12 && h < 17) return "مساء الخير";
+  if (h >= 17 && h < 21) return "مساء النور";
+  return "أهلاً بك";
+}
