@@ -1,35 +1,50 @@
-export interface Course {
-  id: number;
-  title: string;
-  subtitle?: string;
-  image?: string;
-  description?: string;
-  duration?: number;
-  lessonCount?: number;
-  price: number;
-  studentsCount?: number;
-  instructorId?: number;
-  instructorName?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface Lesson {
-  id: number;
-  title: string;
-  summary?: string;
-  description?: string;
-  videoId?: string;
-  duration?: number;
-  orderIndex: number;
-  courseId: number;
-  isCompleted?: boolean;
-  createdAt?: string;
-}
-
 export type LessonStatus = "completed" | "current" | "not-started" | "locked";
 
-export interface LessonView {
+export type CourseDetailsMode = "enrolled" | "browse";
+
+export type CourseViewMode = "ENROLLED" | "DISCOVER";
+
+export interface CourseInfoApi {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  image: string | null;
+  description: string | null;
+  duration: number | null;
+  lessonCount: number | null;
+  price: number | null;
+  studentsCount: number | null;
+  createdAt: string | null;
+}
+
+export interface InstructorInfoApi {
+  id: number;
+  fullName: string;
+  email: string | null;
+  bio: string | null;
+  specialization: string | null;
+}
+
+export interface LessonApi {
+  id: number;
+  title: string;
+  summary: string | null;
+  description: string | null;
+  videoId: string | null;
+  duration: number | null;
+  orderIndex: number;
+  courseId: number;
+  isCompleted: boolean | null;
+  createdAt: string | null;
+}
+
+export interface CourseDetailsApiResponse {
+  course: CourseInfoApi;
+  instructor: InstructorInfoApi;
+  lessons: LessonApi[];
+}
+
+export interface LessonResponse {
   id: number;
   number: number;
   title: string;
@@ -37,7 +52,7 @@ export interface LessonView {
   status: LessonStatus;
 }
 
-export interface CourseDetailData {
+export interface CourseDetailResponse {
   id: number;
   title: string;
   instructor: string;
@@ -57,6 +72,19 @@ export interface CourseDetailData {
   students: number;
   rating: number;
   category: string;
-  currentLesson?: { number: number; title: string; remaining: string };
-  lessons: LessonView[];
+  currentLesson: { number: number; title: string; remaining: string };
+  lessons: LessonResponse[];
+}
+
+export type Lesson = LessonResponse;
+export type CourseDetailData = CourseDetailResponse;
+
+export type CheckoutStep = "form" | "processing" | "success";
+
+export interface CheckoutFormState {
+  cardNumber: string;
+  expiry: string;
+  cvc: string;
+  name: string;
+  email: string;
 }

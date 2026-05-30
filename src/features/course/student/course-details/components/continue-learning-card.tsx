@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { Play, Clock, ArrowRight, Trophy } from "lucide-react";
+import { FONT, PRIMARY, SUCCESS } from "../formatters/course-details.formatter";
 import type { CourseDetailData } from "../types/course-details.types";
 
-const PRIMARY = "#4E5B92";
-const FONT = "'Cairo', sans-serif";
-const SUCCESS = "#22C55E";
+interface ContinueLearningCardProps {
+  course: CourseDetailData;
+  onLessonClick?: (id: number) => void;
+}
 
-export function ContinueLearningCard({ course }: { course: CourseDetailData }) {
+export function ContinueLearningCard({ course, onLessonClick }: ContinueLearningCardProps) {
   const [hovered, setHovered] = useState(false);
   const isCompleted = course.progress === 100;
+  const currentLesson = course.lessons.find((l) => l.status === "current");
 
   return (
     <motion.div
@@ -51,10 +54,11 @@ export function ContinueLearningCard({ course }: { course: CourseDetailData }) {
           boxShadow: isCompleted ? "none" : "0 4px 12px rgba(78,91,146,0.25)",
         }}
       >
-        {isCompleted
-          ? <Trophy size={22} color={SUCCESS} strokeWidth={1.8} />
-          : <Play size={20} fill="#ffffff" color="#ffffff" strokeWidth={0} />
-        }
+        {isCompleted ? (
+          <Trophy size={22} color={SUCCESS} strokeWidth={1.8} />
+        ) : (
+          <Play size={20} fill="#ffffff" color="#ffffff" strokeWidth={0} />
+        )}
       </div>
 
       <div style={{ flex: 1, minWidth: 160 }}>
@@ -64,14 +68,12 @@ export function ContinueLearningCard({ course }: { course: CourseDetailData }) {
         <div style={{ fontFamily: FONT, fontSize: 15, color: "#1F2937", lineHeight: 1.45, marginBottom: 4 }}>
           {isCompleted
             ? "أنجزت جميع الدروس بنجاح!"
-            : `الدرس ${course.currentLesson?.number || 1}: ${course.currentLesson?.title || ""}`}
+            : `الدرس ${course.currentLesson.number}: ${course.currentLesson.title}`}
         </div>
         {!isCompleted && (
           <div style={{ display: "flex", alignItems: "center", gap: 5, color: "#9BA3C4" }}>
             <Clock size={11} strokeWidth={1.5} />
-            <span style={{ fontFamily: FONT, fontSize: 11 }}>
-              {course.currentLesson?.remaining || "٠ دقيقة"} متبقية
-            </span>
+            <span style={{ fontFamily: FONT, fontSize: 11 }}>{course.currentLesson.remaining} متبقية</span>
           </div>
         )}
       </div>
@@ -79,6 +81,10 @@ export function ContinueLearningCard({ course }: { course: CourseDetailData }) {
       <motion.button
         whileHover={{ scale: 1.04 }}
         whileTap={{ scale: 0.96 }}
+        onClick={() => {
+          const target = currentLesson ?? course.lessons[0];
+          if (target) onLessonClick?.(target.id);
+        }}
         style={{
           padding: "9px 20px",
           borderRadius: 12,

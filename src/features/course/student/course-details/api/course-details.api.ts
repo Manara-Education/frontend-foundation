@@ -1,12 +1,34 @@
 import { apiClient, type ApiResponse } from "@/shared/api";
-import type { Course, Lesson } from "../types/course-details.types";
+import type {
+  CourseDetailsApiResponse,
+  CourseDetailsMode,
+  CourseViewMode,
+} from "../types/course-details.types";
 
-const COURSE_BASE_V1 = "v1/courses";
+const STUDENT_COURSE_BASE_V1 = "v1/student/courses";
 
-export function getCourseById(courseId: number) {
-  return apiClient.get<ApiResponse<Course>>(`/${COURSE_BASE_V1}/${courseId}`);
+const VIEW_MODE_MAP: Record<CourseDetailsMode, CourseViewMode> = {
+  enrolled: "ENROLLED",
+  browse: "DISCOVER",
+};
+
+export async function fetchCourseDetail(
+  courseId: number,
+  mode: CourseDetailsMode,
+): Promise<CourseDetailsApiResponse> {
+  const { data } = await apiClient.get<ApiResponse<CourseDetailsApiResponse>>(
+    `/${STUDENT_COURSE_BASE_V1}/${courseId}`,
+    { params: { mode: VIEW_MODE_MAP[mode] } },
+  );
+  return data.data!;
 }
 
-export function getCourseLessons(courseId: number) {
-  return apiClient.get<ApiResponse<Lesson[]>>(`/${COURSE_BASE_V1}/${courseId}/lessons`);
+// TODO: connect to real API — pricing endpoint for browse mode
+export function fetchBrowsePrice(_courseId: number): number | null {
+  return null;
+}
+
+// TODO: connect to real Stripe checkout flow
+export async function processCheckout(_courseId: number, _isFree: boolean): Promise<void> {
+  throw new Error("processCheckout is not implemented");
 }

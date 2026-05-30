@@ -1,18 +1,30 @@
 import { motion, AnimatePresence } from "motion/react";
 import { CourseDetailsForm } from "../components/course-details-form";
 import { DetailSkeleton } from "../components/detail-skeleton";
+import { FONT } from "../formatters/course-details.formatter";
 import { useCourseDetails } from "../hooks/use-course-details";
-
-const FONT = "'Cairo', sans-serif";
+import type { CourseDetailsMode } from "../types/course-details.types";
 
 interface CourseDetailsPageProps {
   courseId: number;
   onBack: () => void;
   onLessonClick?: (lessonId: number) => void;
+  mode?: CourseDetailsMode;
+  onEnrolled?: () => void;
 }
 
-export function CourseDetailsPage({ courseId, onBack, onLessonClick }: CourseDetailsPageProps) {
-  const { isLoading, courseData } = useCourseDetails(courseId);
+export function CourseDetailsPage({
+  courseId,
+  onBack,
+  onLessonClick,
+  mode = "enrolled",
+  onEnrolled,
+}: CourseDetailsPageProps) {
+  const { isLoading, courseData, browsePrice, error, handleEnrolled } = useCourseDetails({
+    courseId,
+    mode,
+    onEnrolled,
+  });
 
   return (
     <div dir="rtl" style={{ fontFamily: FONT }}>
@@ -28,13 +40,18 @@ export function CourseDetailsPage({ courseId, onBack, onLessonClick }: CourseDet
             <DetailSkeleton />
           </motion.div>
         ) : !courseData ? (
-          <div style={{ textAlign: "center", padding: 40, color: "#9BA3C4" }}>حدث خطأ أثناء تحميل الدورة</div>
+          <div style={{ textAlign: "center", padding: 40, color: "#9BA3C4" }}>
+            حدث خطأ أثناء تحميل الدورة
+          </div>
         ) : (
           <CourseDetailsForm
             courseData={courseData}
             courseId={courseId}
+            mode={mode}
+            browsePrice={browsePrice}
             onBack={onBack}
             onLessonClick={onLessonClick}
+            onEnrolled={handleEnrolled}
           />
         )}
       </AnimatePresence>

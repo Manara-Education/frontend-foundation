@@ -1,9 +1,10 @@
-import { useState, type ElementType } from "react";
+import { useEffect, useState, type ElementType } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { Compass } from "lucide-react";
 import { Sidebar, isInstructorRole, type ActiveView } from "@/features/main/components/sidebar.tsx";
 import { CoursesPage } from "@/features/course/student/courses/pages/courses-page";
+import { CourseDetailsPage } from "@/features/course/student/course-details/pages/course-details-page";
 import { InstructorHomeView } from "@/features/main/components/instructor-home-view.tsx";
 import { AllCoursesPage } from "@/features/course/student/all-courses/pages/all-courses-page";
 import { CreateCoursePage } from "@/features/course/Instructor/create-course/pages/create-course-page";
@@ -59,21 +60,45 @@ export function MainPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isInstructor = isInstructorRole(user?.role);
   const defaultView: ActiveView = isInstructor ? "instructor-home" : "home";
   const initialView = (searchParams.get("view") as ActiveView) ?? (location.state as { view?: ActiveView } | null)?.view ?? defaultView;
   const [activeView, setActiveView] = useState<ActiveView>(initialView);
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
 
+  const courseIdParam = searchParams.get("courseId");
+  const studentCourseId = courseIdParam ? Number(courseIdParam) : null;
+
+  function setStudentCourseId(id: number | null) {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (id === null) next.delete("courseId");
+        else next.set("courseId", String(id));
+        return next;
+      },
+      { replace: false },
+    );
+  }
+
+  useEffect(() => {
+    if (studentCourseId !== null && activeCourseId !== null) {
+      setActiveCourseId(null);
+    }
+  }, [studentCourseId, activeCourseId]);
+
   const showLessons = activeCourseId !== null;
+  const showStudentCourseDetails = studentCourseId !== null;
   const meta = showLessons
     ? { title: "محتوى الدورة", subtitle: "إدارة الدروس والمحتوى" }
+    : showStudentCourseDetails
+    ? { title: "تفاصيل الدورة", subtitle: "" }
     : VIEW_META[activeView];
 
   const goTo = (view: ActiveView) => {
-    console.log("goTo called with:", view);
     setActiveCourseId(null);
+    setStudentCourseId(null);
     setActiveView(view);
   };
 
@@ -133,7 +158,7 @@ export function MainPage() {
           <div style={{ maxWidth: 860, margin: "0 auto", padding: "28px 32px 80px" }}>
             <AnimatePresence mode="wait">
               <motion.div
-                key={showLessons ? `lessons:${activeCourseId}` : activeView}
+                key={showLessons ? `lessons:${activeCourseId}` : showStudentCourseDetails ? `course:${studentCourseId}` : activeView}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
@@ -144,9 +169,19 @@ export function MainPage() {
                     courseId={activeCourseId!}
                     onFinish={() => goTo("instructor-home")}
                   />
+                ) : showStudentCourseDetails ? (
+                  <CourseDetailsPage
+                    courseId={studentCourseId!}
+                    onBack={() => setStudentCourseId(null)}
+                  />
                 ) : (
                   <>
-                    {activeView === "home" && <CoursesPage onBrowse={() => goTo("explore")} />}
+                    {activeView === "home" && (
+                      <CoursesPage
+                        onBrowse={() => goTo("explore")}
+                        onCourseClick={(id) => setStudentCourseId(id)}
+                      />
+                    )}
 
                     {activeView === "explore" && (
                       <PlaceholderView
