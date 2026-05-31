@@ -1,6 +1,5 @@
 import { motion } from "motion/react";
 import { GraduationCap } from "lucide-react";
-import { ImageWithFallback } from "@/shared/components/ImageWithFallback";
 import type { CourseDetailData } from "../types/course-details.types";
 
 const PRIMARY = "#4E5B92";
@@ -44,16 +43,20 @@ export function InstructorSection({ course }: { course: CourseDetailData }) {
             width: 64,
             height: 64,
             borderRadius: 18,
-            overflow: "hidden",
             flexShrink: 0,
             border: "2px solid rgba(78,91,146,0.12)",
+            background: "linear-gradient(135deg, #3A4880 0%, #6B7AB8 100%)",
+            color: "#ffffff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontFamily: FONT,
+            fontWeight: 700,
+            fontSize: 24,
           }}
+          aria-label={course.instructor}
         >
-          <ImageWithFallback
-            src={course.instructorImage}
-            alt={course.instructor}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
+          {course.instructor?.trim().charAt(0) ?? ""}
         </div>
 
         <div style={{ flex: 1, minWidth: 180 }}>

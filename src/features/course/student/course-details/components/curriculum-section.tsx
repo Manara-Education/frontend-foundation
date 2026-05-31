@@ -1,15 +1,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { BookOpen, ChevronDown } from "lucide-react";
-import type { LessonView } from "../types/course-details.types";
+import { FONT, PRIMARY, SUCCESS } from "../formatters/course-details.formatter";
+import type { Lesson } from "../types/course-details.types";
 import { LessonItem } from "./lesson-item";
 
-const PRIMARY = "#4E5B92";
-const FONT = "'Cairo', sans-serif";
-const SUCCESS = "#22C55E";
-
 interface CurriculumSectionProps {
-  lessons: LessonView[];
+  lessons: Lesson[];
   onLessonClick?: (id: number) => void;
 }
 

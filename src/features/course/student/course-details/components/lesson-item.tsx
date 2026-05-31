@@ -1,28 +1,18 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Play, CheckCircle2, Lock, Clock, PlayCircle } from "lucide-react";
-import type { LessonStatus, LessonView } from "../types/course-details.types";
-
-const PRIMARY = "#4E5B92";
-const FONT = "'Cairo', sans-serif";
-const SUCCESS = "#22C55E";
-
-const LESSON_CFG: Record<LessonStatus, { icon: React.ElementType; color: string; bg: string; label: string }> = {
-  completed:     { icon: CheckCircle2, color: SUCCESS,   bg: "rgba(34,197,94,0.10)",   label: "مكتمل" },
-  current:       { icon: PlayCircle,   color: PRIMARY,   bg: "rgba(78,91,146,0.10)",   label: "قيد المشاهدة" },
-  "not-started": { icon: Play,         color: "#9BA3C4", bg: "rgba(155,163,196,0.08)", label: "غير مكتمل" },
-  locked:        { icon: Lock,         color: "#C4C9DE", bg: "rgba(196,201,222,0.06)", label: "مقفل" },
-};
+import { Clock } from "lucide-react";
+import { FONT, LESSON_STATUS_CONFIG, PRIMARY } from "../formatters/course-details.formatter";
+import type { Lesson } from "../types/course-details.types";
 
 interface LessonItemProps {
-  lesson: LessonView;
+  lesson: Lesson;
   index: number;
   onLessonClick?: (id: number) => void;
 }
 
 export function LessonItem({ lesson, index, onLessonClick }: LessonItemProps) {
   const [hovered, setHovered] = useState(false);
-  const cfg = LESSON_CFG[lesson.status];
+  const cfg = LESSON_STATUS_CONFIG[lesson.status];
   const Icon = cfg.icon;
   const isLocked = lesson.status === "locked";
   const isCurrent = lesson.status === "current";
@@ -34,7 +24,9 @@ export function LessonItem({ lesson, index, onLessonClick }: LessonItemProps) {
       transition={{ duration: 0.22, delay: index * 0.035 }}
       onMouseEnter={() => !isLocked && setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => { if (!isLocked) onLessonClick?.(lesson.id); }}
+      onClick={() => {
+        if (!isLocked) onLessonClick?.(lesson.id);
+      }}
       style={{
         display: "flex",
         alignItems: "center",
