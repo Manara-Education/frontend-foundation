@@ -3,9 +3,10 @@ import { CoursesForm } from "../components/courses-form";
 
 interface CoursesPageProps {
   onCourseClick?: (id: number) => void;
+  onBrowse?: () => void;
 }
 
-export function CoursesPage({ onCourseClick }: CoursesPageProps) {
+export function CoursesPage({ onCourseClick, onBrowse }: CoursesPageProps) {
   const view = useCoursesView({ onCourseClick });
 
   return (
@@ -20,6 +21,7 @@ export function CoursesPage({ onCourseClick }: CoursesPageProps) {
       onQueryChange={view.onQueryChange}
       onFilterChange={view.onFilterChange}
       onCourseClick={view.onCourseClick}
+      onBrowse={onBrowse}
     />
   );
 }

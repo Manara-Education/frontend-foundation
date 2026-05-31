@@ -1,12 +1,11 @@
 import { Fragment, type ElementType } from "react";
-import { Home, BookOpen, Compass, User, LogOut, PlusSquare } from "lucide-react";
+import { Home, Compass, User, LogOut, PlusSquare } from "lucide-react";
 import { ManaraLogoIcon } from "@/shared/components/ManaraLogo";
 
 const PRIMARY = "#4E5B92";
 
 export type ActiveView =
   | "home"
-  | "courses"
   | "explore"
   | "profile"
   | "instructor-home"
@@ -19,8 +18,7 @@ interface NavSection { label: string; items: NavItem[] }
 const studentSection: NavSection = {
   label: "الطالب",
   items: [
-    { icon: Home, label: "الرئيسية", view: "home" },
-    { icon: BookOpen, label: "دوراتي", view: "courses" },
+    { icon: Home, label: "دوراتي", view: "home" },
     { icon: Compass, label: "استكشاف الدورات", view: "explore" },
     { icon: User, label: "ملفي الشخصي", view: "profile" },
   ],

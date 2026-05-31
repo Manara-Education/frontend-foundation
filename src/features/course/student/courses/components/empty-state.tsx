@@ -6,10 +6,11 @@ import type { FilterKey } from "../types/courses.types";
 interface EmptyStateProps {
   query: string;
   filter: FilterKey;
+  onBrowse?: () => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function EmptyState({ query, filter }: EmptyStateProps) {
+export function EmptyState({ query, filter, onBrowse }: EmptyStateProps) {
   const isSearch = query.trim().length > 0;
   return (
     <motion.div
@@ -74,6 +75,7 @@ export function EmptyState({ query, filter }: EmptyStateProps) {
       </div>
 
       <button
+        onClick={onBrowse}
         style={{
           padding: "11px 24px",
           borderRadius: 14,
