@@ -10,7 +10,8 @@ export interface CourseInfoApi {
   subtitle: string | null;
   image: string | null;
   description: string | null;
-  duration: number | null;
+  duration: string | null;
+  remainingDuration: string | null;
   lessonCount: number | null;
   price: number | null;
   studentsCount: number | null;
@@ -31,7 +32,7 @@ export interface LessonApi {
   summary: string | null;
   description: string | null;
   videoId: string | null;
-  duration: number | null;
+  duration: string | null;
   orderIndex: number;
   courseId: number;
   isCompleted: boolean | null;
@@ -69,6 +70,7 @@ export interface CourseDetailResponse {
   totalLessons: number;
   completedLessons: number;
   totalDuration: string;
+  remainingDuration: string;
   students: number;
   rating: number;
   category: string;

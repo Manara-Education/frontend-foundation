@@ -6,15 +6,6 @@ import type {
   LessonStatus,
 } from "../types/course-details.types";
 
-function formatDurationMinutes(minutes: number | null | undefined): string {
-  if (!minutes || minutes <= 0) return "0 د";
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h && m) return `${h} س ${m} د`;
-  if (h) return `${h} س`;
-  return `${m} د`;
-}
-
 function pickCurrentLessonIndex(lessons: LessonApi[]): number {
   const idx = lessons.findIndex((l) => !l.isCompleted);
   return idx === -1 ? lessons.length - 1 : idx;
@@ -25,7 +16,7 @@ function toLesson(api: LessonApi, status: LessonStatus, number: number): LessonR
     id: api.id,
     number,
     title: api.title,
-    duration: formatDurationMinutes(api.duration),
+    duration: api.duration ?? "",
     status,
   };
 }
@@ -49,7 +40,6 @@ export function toCourseDetail(dto: CourseDetailsApiResponse): CourseDetailData 
   const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
   const currentLessonApi = ordered[currentIdx];
-  const remainingLessons = Math.max(totalLessons - completedLessons, 0);
 
   return {
     id: course.id,
@@ -67,14 +57,15 @@ export function toCourseDetail(dto: CourseDetailsApiResponse): CourseDetailData 
     progress,
     totalLessons,
     completedLessons,
-    totalDuration: formatDurationMinutes(course.duration),
+    totalDuration: course.duration ?? "",
+    remainingDuration: course.remainingDuration ?? "",
     students: course.studentsCount ?? 0,
     rating: 0,
     category: course.subtitle ?? "",
     currentLesson: {
       number: currentLessonApi ? currentIdx + 1 : 0,
       title: currentLessonApi?.title ?? "",
-      remaining: `${remainingLessons} درس متبقي`,
+      remaining: course.remainingDuration ?? "",
     },
     lessons: mappedLessons,
   };

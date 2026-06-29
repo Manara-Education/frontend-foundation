@@ -5,10 +5,11 @@ import { Compass } from "lucide-react";
 import { Sidebar, isInstructorRole, type ActiveView } from "@/features/main/components/sidebar.tsx";
 import { CoursesPage } from "@/features/course/student/courses/pages/courses-page";
 import { CourseDetailsPage } from "@/features/course/student/course-details/pages/course-details-page";
+import { LessonPage } from "@/features/lesson/student/lesson-details/pages/lesson-page";
 import { InstructorHomeView } from "@/features/main/components/instructor-home-view.tsx";
 import { AllCoursesPage } from "@/features/course/student/all-courses/pages/all-courses-page";
 import { CreateCoursePage } from "@/features/course/Instructor/create-course/pages/create-course-page";
-import { AddLessonsPage } from "@/features/course/Instructor/add-lessons/pages/add-lessons-page";
+import { AddLessonsPage } from "@/features/lesson/instructor/add-lessons/pages/add-lessons-page";
 import { ProfileView } from "@/features/profile/pages/profile-view.tsx";
 import { useAuth } from "@/shared/auth";
 
@@ -69,6 +70,8 @@ export function MainPage() {
 
   const courseIdParam = searchParams.get("courseId");
   const studentCourseId = courseIdParam ? Number(courseIdParam) : null;
+  const lessonIdParam = searchParams.get("lessonId");
+  const studentLessonId = lessonIdParam ? Number(lessonIdParam) : null;
 
   function setStudentCourseId(id: number | null) {
     setSearchParams(
@@ -76,6 +79,19 @@ export function MainPage() {
         const next = new URLSearchParams(prev);
         if (id === null) next.delete("courseId");
         else next.set("courseId", String(id));
+        next.delete("lessonId");
+        return next;
+      },
+      { replace: false },
+    );
+  }
+
+  function setStudentLessonId(id: number | null) {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (id === null) next.delete("lessonId");
+        else next.set("lessonId", String(id));
         return next;
       },
       { replace: false },
@@ -89,9 +105,12 @@ export function MainPage() {
   }, [studentCourseId, activeCourseId]);
 
   const showLessons = activeCourseId !== null;
-  const showStudentCourseDetails = studentCourseId !== null;
+  const showStudentLesson = studentCourseId !== null && studentLessonId !== null;
+  const showStudentCourseDetails = studentCourseId !== null && !showStudentLesson;
   const meta = showLessons
     ? { title: "محتوى الدورة", subtitle: "إدارة الدروس والمحتوى" }
+    : showStudentLesson
+    ? { title: "الدرس", subtitle: "" }
     : showStudentCourseDetails
     ? { title: "تفاصيل الدورة", subtitle: "" }
     : VIEW_META[activeView];
@@ -158,7 +177,7 @@ export function MainPage() {
           <div style={{ maxWidth: 860, margin: "0 auto", padding: "28px 32px 80px" }}>
             <AnimatePresence mode="wait">
               <motion.div
-                key={showLessons ? `lessons:${activeCourseId}` : showStudentCourseDetails ? `course:${studentCourseId}` : activeView}
+                key={showLessons ? `lessons:${activeCourseId}` : showStudentLesson ? `lesson:${studentCourseId}:${studentLessonId}` : showStudentCourseDetails ? `course:${studentCourseId}` : activeView}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
@@ -169,10 +188,23 @@ export function MainPage() {
                     courseId={activeCourseId!}
                     onFinish={() => goTo("instructor-home")}
                   />
+                ) : showStudentLesson ? (
+                  <LessonPage
+                    courseId={studentCourseId!}
+                    lessonId={studentLessonId!}
+                    onBackToCourseDetails={() => setStudentLessonId(null)}
+                    onBackToCourses={() => {
+                      setStudentCourseId(null);
+                      goTo("home");
+                    }}
+                    onBackToHome={() => goTo("home")}
+                    onLessonChange={(id) => setStudentLessonId(id)}
+                  />
                 ) : showStudentCourseDetails ? (
                   <CourseDetailsPage
                     courseId={studentCourseId!}
                     onBack={() => setStudentCourseId(null)}
+                    onLessonClick={(lessonId) => setStudentLessonId(lessonId)}
                   />
                 ) : (
                   <>
