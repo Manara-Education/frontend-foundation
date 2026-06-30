@@ -1,11 +1,9 @@
 import * as api from "../api/add-lessons.api";
+import { getMyCourses } from "@/shared/courses";
 import type { CourseRequest, LessonRequest } from "../types/add-lessons.types";
 
 export const addLessonsService = {
-  async getMyCourses() {
-    const { data } = await api.getMyCourses();
-    return data.data!;
-  },
+  getMyCourses,
 
   async updateCourse(courseId: number, payload: CourseRequest) {
     const { data } = await api.updateCourse(courseId, payload);

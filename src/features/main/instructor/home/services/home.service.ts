@@ -1,8 +1,5 @@
-import * as api from "../api/home.api";
+import { getMyCourses } from "@/shared/courses";
 
 export const homeService = {
-  async getMyCourses() {
-    const { data } = await api.getMyCourses();
-    return data.data!;
-  },
+  getMyCourses,
 };

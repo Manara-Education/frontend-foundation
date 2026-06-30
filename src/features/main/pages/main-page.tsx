@@ -6,7 +6,7 @@ import { Sidebar, isInstructorRole, type ActiveView } from "@/features/main/comp
 import { CoursesPage } from "@/features/course/student/courses/pages/courses-page";
 import { CourseDetailsPage } from "@/features/course/student/course-details/pages/course-details-page";
 import { LessonPage } from "@/features/lesson/student/lesson-details/pages/lesson-page";
-import { InstructorHomeView } from "@/features/main/components/instructor-home-view.tsx";
+import { InstructorHomePage } from "@/features/main/instructor/home/pages/home-page.tsx";
 import { AllCoursesPage } from "@/features/course/student/all-courses/pages/all-courses-page";
 import { CreateCoursePage } from "@/features/course/Instructor/create-course/pages/create-course-page";
 import { AddLessonsPage } from "@/features/lesson/instructor/add-lessons/pages/add-lessons-page";
@@ -227,7 +227,7 @@ export function MainPage() {
                     {activeView === "profile" && <ProfileView />}
 
                     {activeView === "instructor-home" && (
-                      <InstructorHomeView
+                      <InstructorHomePage
                         onCreateCourse={() => goTo("instructor-create")}
                         onViewAllCourses={() => goTo("instructor-courses")}
                         onCourseClick={(courseId) => setActiveCourseId(courseId)}

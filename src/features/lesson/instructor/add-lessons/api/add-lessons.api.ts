@@ -3,10 +3,6 @@ import type { Course, CourseRequest, Lesson, LessonRequest } from "../types/add-
 
 const COURSE_BASE_V1 = "v1/instructor/courses";
 
-export function getMyCourses() {
-  return apiClient.get<ApiResponse<Course[]>>(`/v1/courses/my-courses`);
-}
-
 export function updateCourse(courseId: number, data: CourseRequest) {
   return apiClient.put<ApiResponse<Course>>(`/${COURSE_BASE_V1}/${courseId}`, data);
 }
