@@ -12,6 +12,9 @@ import { CreateCoursePage } from "@/features/course/Instructor/create-course/pag
 import { AddLessonsPage } from "@/features/lesson/instructor/add-lessons/pages/add-lessons-page";
 import { ProfileView } from "@/features/profile/pages/profile-view.tsx";
 import { useAuth } from "@/shared/auth";
+import { ExplorePage } from "@/features/course/student/explore/pages/explore-page";
+import { coursesService } from "@/features/course/student/courses/services/courses.service";
+import type { CourseDetailsMode } from "@/features/course/student/course-details/types/course-details.types";
 
 const PRIMARY = "#4E5B92";
 
@@ -73,18 +76,38 @@ export function MainPage() {
   const lessonIdParam = searchParams.get("lessonId");
   const studentLessonId = lessonIdParam ? Number(lessonIdParam) : null;
 
-  function setStudentCourseId(id: number | null) {
+  const modeParam = searchParams.get("mode") as CourseDetailsMode | null;
+  const detailsMode = modeParam ?? "enrolled";
+
+  function setStudentCourseId(id: number | null, mode: CourseDetailsMode = "enrolled") {
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
-        if (id === null) next.delete("courseId");
-        else next.set("courseId", String(id));
+        if (id === null) {
+          next.delete("courseId");
+          next.delete("mode");
+        } else {
+          next.set("courseId", String(id));
+          next.set("mode", mode);
+        }
         next.delete("lessonId");
         return next;
       },
       { replace: false },
     );
   }
+
+  const [enrolledIds, setEnrolledIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    if (user?.role === "student") {
+      coursesService.loadCourses()
+        .then((courses) => {
+          setEnrolledIds(new Set(courses.map((c) => c.id)));
+        })
+        .catch((err) => console.error("Failed to load enrolled courses cache", err));
+    }
+  }, [user]);
 
   function setStudentLessonId(id: number | null) {
     setSearchParams(
@@ -203,24 +226,35 @@ export function MainPage() {
                 ) : showStudentCourseDetails ? (
                   <CourseDetailsPage
                     courseId={studentCourseId!}
+                    mode={detailsMode}
                     onBack={() => setStudentCourseId(null)}
                     onLessonClick={(lessonId) => setStudentLessonId(lessonId)}
+                    onEnrolled={() => {
+                      setEnrolledIds((prev) => {
+                        const next = new Set(prev);
+                        next.add(studentCourseId!);
+                        return next;
+                      });
+                      setActiveView("home");
+                      setStudentCourseId(studentCourseId!, "enrolled");
+                    }}
                   />
                 ) : (
                   <>
                     {activeView === "home" && (
                       <CoursesPage
                         onBrowse={() => goTo("explore")}
-                        onCourseClick={(id) => setStudentCourseId(id)}
+                        onCourseClick={(id) => setStudentCourseId(id, "enrolled")}
                       />
                     )}
 
                     {activeView === "explore" && (
-                      <PlaceholderView
-                        icon={Compass}
-                        title="استكشاف الدورات"
-                        subtitle="اكتشف مئات الدورات التعليمية في مجالات اللغة العربية وآدابها"
-                        color="#27AE60"
+                      <ExplorePage
+                        enrolledCourseIds={enrolledIds}
+                        onCourseClick={(id) => {
+                          const isEnrolled = enrolledIds.has(id);
+                          setStudentCourseId(id, isEnrolled ? "enrolled" : "browse");
+                        }}
                       />
                     )}
 

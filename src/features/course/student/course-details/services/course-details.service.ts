@@ -14,6 +14,10 @@ export function getBrowsePrice(courseId: number): number | null {
   return api.fetchBrowsePrice(courseId);
 }
 
-export async function processCheckout(courseId: number, isFree: boolean): Promise<void> {
-  await api.processCheckout(courseId, isFree);
+export async function processCheckout(
+  courseId: number,
+  isFree: boolean,
+  paymentDetails?: any
+): Promise<void> {
+  await api.processCheckout(courseId, isFree, paymentDetails);
 }

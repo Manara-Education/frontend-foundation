@@ -4,6 +4,7 @@ import { Sparkles, ShieldCheck, X } from "lucide-react";
 import { FONT, PRIMARY } from "../formatters/course-details.formatter";
 import type { CourseDetailData } from "../types/course-details.types";
 import { StripeCheckoutModal } from "./stripe-checkout-modal";
+import { processCheckout } from "../services/course-details.service";
 
 interface PaymentCTASectionProps {
   course: CourseDetailData;
@@ -12,9 +13,10 @@ interface PaymentCTASectionProps {
 }
 
 export function PaymentCTASection({ course, price, onPay }: PaymentCTASectionProps) {
-  const isFree = price === null;
+  const isFree = price === null || price === 0;
   const [showCheckout, setShowCheckout] = useState(false);
   const [paymentFailed, setPaymentFailed] = useState(false);
+  const [isEnrollingFree, setIsEnrollingFree] = useState(false);
 
   function handleCancelPayment() {
     setShowCheckout(false);
@@ -24,6 +26,24 @@ export function PaymentCTASection({ course, price, onPay }: PaymentCTASectionPro
   function handleSuccessPayment() {
     setShowCheckout(false);
     onPay();
+  }
+
+  async function handleButtonClick() {
+    setPaymentFailed(false);
+    if (isFree) {
+      setIsEnrollingFree(true);
+      try {
+        await processCheckout(course.id, true);
+        onPay();
+      } catch (err) {
+        console.error("Free enrollment failed", err);
+        setPaymentFailed(true);
+      } finally {
+        setIsEnrollingFree(false);
+      }
+    } else {
+      setShowCheckout(true);
+    }
   }
 
   return (
@@ -89,10 +109,28 @@ export function PaymentCTASection({ course, price, onPay }: PaymentCTASectionPro
                 </div>
               </div>
               <button
-                onClick={() => setPaymentFailed(false)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#C4C9DE", padding: 0, flexShrink: 0 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPaymentFailed(false);
+                }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#C4C9DE",
+                  padding: "6px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  borderRadius: "50%",
+                  transition: "background 0.2s",
+                  outline: "none",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
               >
-                <X size={13} strokeWidth={2} />
+                <X size={14} strokeWidth={2.2} />
               </button>
             </motion.div>
           )}
@@ -114,7 +152,6 @@ export function PaymentCTASection({ course, price, onPay }: PaymentCTASectionPro
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
             {[
-              `${course.totalLessons} درس مُحكم`,
               `${course.totalDuration} من المحتوى`,
               "وصول دائم بلا انتهاء",
             ].map((feat) => (
@@ -127,12 +164,9 @@ export function PaymentCTASection({ course, price, onPay }: PaymentCTASectionPro
         </div>
 
         <motion.button
-          whileHover={{ scale: 1.015 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => {
-            setPaymentFailed(false);
-            setShowCheckout(true);
-          }}
+          whileHover={!isEnrollingFree ? { scale: 1.015 } : {}}
+          whileTap={!isEnrollingFree ? { scale: 0.98 } : {}}
+          onClick={!isEnrollingFree ? handleButtonClick : undefined}
           style={{
             width: "100%",
             padding: "16px 24px",
@@ -142,7 +176,7 @@ export function PaymentCTASection({ course, price, onPay }: PaymentCTASectionPro
               : `linear-gradient(135deg, ${PRIMARY} 0%, #6B7AB8 100%)`,
             color: "#ffffff",
             border: "none",
-            cursor: "pointer",
+            cursor: isEnrollingFree ? "not-allowed" : "pointer",
             fontFamily: FONT,
             fontSize: 17,
             display: "flex",
@@ -153,17 +187,18 @@ export function PaymentCTASection({ course, price, onPay }: PaymentCTASectionPro
               ? "0 6px 24px rgba(34,197,94,0.32)"
               : "0 6px 24px rgba(78,91,146,0.32)",
             transition: "transform 0.18s, box-shadow 0.18s",
+            opacity: isEnrollingFree ? 0.8 : 1,
           }}
         >
           <Sparkles size={18} strokeWidth={2} />
-          {isFree ? "ابدأ التعلم مجاناً" : "اشترك الآن وابدأ التعلم"}
+          {isEnrollingFree ? "جاري الاشتراك..." : isFree ? "ابدأ التعلم مجاناً" : "اشترك الآن وابدأ التعلم"}
         </motion.button>
 
-        <p style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4", textAlign: "center", margin: "12px 0 0" }}>
-          {isFree
-            ? "وصول فوري — لا تحتاج إلى بطاقة ائتمانية"
-            : "ضمان استرداد المبلغ خلال ٧ أيام · دفع آمن عبر Stripe"}
-        </p>
+        {isFree && (
+          <p style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4", textAlign: "center", margin: "12px 0 0" }}>
+            وصول فوري — لا تحتاج إلى بطاقة ائتمانية
+          </p>
+        )}
       </motion.div>
     </>
   );

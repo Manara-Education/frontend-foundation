@@ -62,6 +62,7 @@ export function toCourseDetail(dto: CourseDetailsApiResponse): CourseDetailData 
     students: course.studentsCount ?? 0,
     rating: 0,
     category: course.subtitle ?? "",
+    price: course.price,
     currentLesson: {
       number: currentLessonApi ? currentIdx + 1 : 0,
       title: currentLessonApi?.title ?? "",

@@ -39,7 +39,7 @@ export function useCourseDetails({ courseId, mode, onEnrolled }: UseCourseDetail
     };
   }, [courseId, mode]);
 
-  const browsePrice = mode === "browse" ? getBrowsePrice(courseId) : null;
+  const browsePrice = mode === "browse" && courseData ? courseData.price : null;
 
   function handleEnrolled() {
     onEnrolled?.();
