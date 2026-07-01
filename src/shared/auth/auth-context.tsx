@@ -96,6 +96,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         setUserState(null);
         setStatus("anonymous");
+        // Logout invalidates the server session and regenerates its CSRF token.
+        // The XSRF-TOKEN cookie the browser still holds is now tied to the
+        // destroyed session, so re-seed a fresh token bound to the new anonymous
+        // session. Without this, the next login POST carries a stale X-XSRF-TOKEN
+        // and is rejected by CSRF middleware before it reaches the login handler.
+        // Awaited so callers navigate to the login screen only after re-seeding
+        // completes, avoiding a cleanup/navigation race.
+        try {
+          await bootstrapCsrf();
+        } catch {
+          // Non-fatal: a failed POST still retries once on 403 via the interceptor.
+        }
       },
     }),
     [user, status],
