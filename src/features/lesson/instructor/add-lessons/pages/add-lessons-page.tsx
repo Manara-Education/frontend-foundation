@@ -1,5 +1,6 @@
+import { AnimatePresence } from "motion/react";
 import { AddLessonsForm } from "../components/add-lessons-form";
-import { ErrorDialog } from "../components/error-dialog";
+import { ErrorOverlay } from "@/shared/components/ErrorOverlay/ErrorOverlay";
 import { PageSkeleton } from "../components/page-skeleton";
 import { useAddLessons } from "../hooks/use-add-lessons";
 
@@ -24,6 +25,7 @@ export function AddLessonsPage({ courseId, onFinish }: AddLessonsPageProps) {
     displayPrice,
     errorMessage,
     dismissError,
+    retryError,
     setShowForm,
     setShowCourseEdit,
     handleSave,
@@ -65,11 +67,15 @@ export function AddLessonsPage({ courseId, onFinish }: AddLessonsPageProps) {
         onReorder={reorderLessons}
         onFinish={onFinish}
       />
-      <ErrorDialog
-        open={errorMessage !== null}
-        message={errorMessage ?? undefined}
-        onClose={dismissError}
-      />
+      <AnimatePresence>
+        {errorMessage !== null && (
+          <ErrorOverlay
+            message={errorMessage}
+            onRetry={retryError}
+            onClose={dismissError}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

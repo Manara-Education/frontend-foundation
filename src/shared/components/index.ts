@@ -11,3 +11,4 @@ export { Separator } from './Separator/Separator.tsx';
 export { Skeleton } from './Skeleton/Skeleton.tsx';
 export { Spinner } from './Spinner/Spinner.tsx';
 export { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from './Empty/Empty.tsx';
+export { ErrorOverlay } from './ErrorOverlay/ErrorOverlay.tsx';

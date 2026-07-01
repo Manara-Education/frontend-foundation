@@ -4,6 +4,7 @@ import type { CreateCourseErrors } from "../types/create-course.types";
 import { Field } from "./field";
 import { ImageUpload } from "./image-upload";
 import { SuccessOverlay } from "./success-overlay";
+import { ErrorOverlay } from "@/shared/components/ErrorOverlay/ErrorOverlay";
 
 const PRIMARY = "#4E5B92";
 const FONT = "'Cairo', sans-serif";
@@ -26,6 +27,7 @@ interface CreateCourseFormProps {
   onCancel?: () => void;
   onSuccessClose: () => void;
   onAddLessons: () => void;
+  onErrorClose: () => void;
 }
 
 export function CreateCourseForm({
@@ -46,6 +48,7 @@ export function CreateCourseForm({
   onCancel,
   onSuccessClose,
   onAddLessons,
+  onErrorClose,
 }: CreateCourseFormProps) {
   return (
     <div dir="rtl" style={{ fontFamily: FONT }}>
@@ -300,23 +303,6 @@ export function CreateCourseForm({
 
         <div style={{ height: 1, background: "rgba(78,91,146,0.07)", margin: "28px 0 24px" }} />
 
-        <AnimatePresence>
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -4, height: 0 }}
-              animate={{ opacity: 1, y: 0, height: "auto" }}
-              exit={{ opacity: 0, y: -4, height: 0 }}
-              className="mb-4 p-3 rounded-xl flex items-start gap-2"
-              style={{ background: "rgba(212,24,61,0.05)", border: "1px solid rgba(212,24,61,0.15)", color: "#D4183D" }}
-            >
-              <Info size={16} className="mt-0.5 flex-shrink-0" />
-              <p style={{ fontFamily: FONT, fontSize: 13, lineHeight: 1.5, margin: 0 }}>
-                {error}
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         <div className="flex items-center gap-3 justify-start">
           <motion.button
             onClick={onSubmit}
@@ -437,6 +423,16 @@ export function CreateCourseForm({
             title={title}
             onClose={onSuccessClose}
             onAddLessons={onAddLessons}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {error && (
+          <ErrorOverlay
+            message={error}
+            onRetry={onSubmit}
+            onClose={onErrorClose}
           />
         )}
       </AnimatePresence>

@@ -7,6 +7,14 @@ export function updateCourse(courseId: number, data: CourseRequest) {
   return apiClient.put<ApiResponse<Course>>(`/${COURSE_BASE_V1}/${courseId}`, data);
 }
 
+export function uploadFile(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiClient.post<ApiResponse<{ url: string }>>(`/v1/uploads`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+}
+
 export function getCourseLessons(courseId: number) {
   return apiClient.get<ApiResponse<Lesson[]>>(`/${COURSE_BASE_V1}/${courseId}/lessons`);
 }
