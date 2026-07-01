@@ -100,7 +100,7 @@ export function MainPage() {
   const [enrolledIds, setEnrolledIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    if (user?.role === "student") {
+    if (user?.role?.toLowerCase() === "student") {
       coursesService.loadCourses()
         .then((courses) => {
           setEnrolledIds(new Set(courses.map((c) => c.id)));
