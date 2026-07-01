@@ -20,7 +20,7 @@ interface EditCourseModalProps {
   description: string;
   imageUrl: string;
   price: number;
-  onSave: (data: EditCourseFormData) => void;
+  onSave: (data: EditCourseFormData) => Promise<boolean>;
   onClose: () => void;
 }
 
@@ -28,36 +28,54 @@ export function EditCourseModal({ title, description, imageUrl, price, onSave, o
   const [editTitle, setEditTitle] = useState(title);
   const [editDesc, setEditDesc] = useState(description);
   const [editImage, setEditImage] = useState(imageUrl);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [editPrice, setEditPrice] = useState(price > 0 ? String(price) : price === 0 ? "0" : "");
   const [priceError, setPriceError] = useState("");
   const [imgPreview, setImgPreview] = useState(imageUrl);
   const [titleError, setTitleError] = useState("");
   const [dragging, setDragging] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const previewBlobRef = useRef<string | null>(null);
 
   useEffect(() => { titleInputRef.current?.focus(); }, []);
 
-  useEffect(() => {
-    const t = setTimeout(() => setImgPreview(editImage), 500);
-    return () => clearTimeout(t);
-  }, [editImage]);
+  useEffect(() => () => {
+    if (previewBlobRef.current) URL.revokeObjectURL(previewBlobRef.current);
+  }, []);
 
   const handleImageFile = (file: File | null) => {
-    if (!file) { setEditImage(""); setImgPreview(""); return; }
+    if (previewBlobRef.current) {
+      URL.revokeObjectURL(previewBlobRef.current);
+      previewBlobRef.current = null;
+    }
+    if (!file) { setImageFile(null); setEditImage(""); setImgPreview(""); return; }
     const url = URL.createObjectURL(file);
-    setEditImage(url);
+    previewBlobRef.current = url;
+    setImageFile(file);
     setImgPreview(url);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (isSaving) return;
     if (!editTitle.trim()) { setTitleError("يرجى إدخال عنوان الدورة"); return; }
     const parsedPrice = editPrice === "" ? 0 : parseFloat(editPrice);
     if (editPrice !== "" && (isNaN(parsedPrice) || parsedPrice < 0)) {
       setPriceError("لا يمكن أن يكون السعر قيمة سالبة");
       return;
     }
-    onSave({ title: editTitle.trim(), description: editDesc.trim(), imageUrl: editImage.trim(), price: isNaN(parsedPrice) ? 0 : parsedPrice });
+    setIsSaving(true);
+    const success = await onSave({ title: editTitle.trim(), description: editDesc.trim(), imageUrl: editImage.trim(), imageFile, price: isNaN(parsedPrice) ? 0 : parsedPrice });
+    if (success) {
+      onClose();
+    } else {
+      setIsSaving(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (isSaving) return;
     onClose();
   };
 
@@ -77,7 +95,7 @@ export function EditCourseModal({ title, description, imageUrl, price, onSave, o
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
-        onClick={onClose}
+        onClick={handleClose}
         style={{
           position: "fixed", inset: 0,
           background: "rgba(14,18,42,0.45)",
@@ -117,10 +135,11 @@ export function EditCourseModal({ title, description, imageUrl, price, onSave, o
               </div>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleClose}
+              disabled={isSaving}
               className="rounded-xl flex items-center justify-center"
-              style={{ width: 36, height: 36, background: "rgba(78,91,146,0.06)", border: "none", cursor: "pointer", color: "#9BA3C4", transition: "all 0.15s" }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(212,24,61,0.08)"; e.currentTarget.style.color = "#D4183D"; }}
+              style={{ width: 36, height: 36, background: "rgba(78,91,146,0.06)", border: "none", cursor: isSaving ? "not-allowed" : "pointer", color: "#9BA3C4", transition: "all 0.15s" }}
+              onMouseEnter={(e) => { if (isSaving) return; e.currentTarget.style.background = "rgba(212,24,61,0.08)"; e.currentTarget.style.color = "#D4183D"; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(78,91,146,0.06)"; e.currentTarget.style.color = "#9BA3C4"; }}
             >
               <X size={15} />
@@ -375,29 +394,47 @@ export function EditCourseModal({ title, description, imageUrl, price, onSave, o
             style={{ borderTop: "1px solid rgba(78,91,146,0.08)" }}>
             <motion.button
               onClick={handleSave}
-              whileHover={{ y: -2, boxShadow: "0 10px 26px rgba(78,91,146,0.30)" }}
-              whileTap={{ scale: 0.97 }}
+              disabled={isSaving}
+              whileHover={isSaving ? {} : { y: -2, boxShadow: "0 10px 26px rgba(78,91,146,0.30)" }}
+              whileTap={isSaving ? {} : { scale: 0.97 }}
               transition={{ duration: 0.14 }}
               className="flex items-center gap-2 rounded-2xl px-6 py-3"
               style={{
-                background: `linear-gradient(135deg, ${PRIMARY} 0%, #6172AC 100%)`,
-                color: "#fff", border: "none", cursor: "pointer",
+                background: isSaving
+                  ? "rgba(78,91,146,0.5)"
+                  : `linear-gradient(135deg, ${PRIMARY} 0%, #6172AC 100%)`,
+                color: "#fff", border: "none", cursor: isSaving ? "not-allowed" : "pointer",
                 fontFamily: FONT, fontWeight: 700, fontSize: 14,
-                boxShadow: "0 4px 16px rgba(78,91,146,0.26)",
+                boxShadow: isSaving ? "none" : "0 4px 16px rgba(78,91,146,0.26)",
+                transition: "background 0.2s, box-shadow 0.2s",
               }}
             >
-              <Save size={15} strokeWidth={2} />
-              حفظ التعديلات
+              {isSaving ? (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ animation: "spin 0.8s linear infinite" }}>
+                    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                    <circle cx="8" cy="8" r="6" stroke="rgba(255,255,255,0.3)" strokeWidth="2" />
+                    <path d="M8 2a6 6 0 0 1 6 6" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  جارٍ الحفظ...
+                </>
+              ) : (
+                <>
+                  <Save size={15} strokeWidth={2} />
+                  حفظ التعديلات
+                </>
+              )}
             </motion.button>
             <button
-              onClick={onClose}
+              onClick={handleClose}
+              disabled={isSaving}
               style={{
                 height: 46, paddingLeft: 20, paddingRight: 20, borderRadius: 13,
                 background: "transparent", color: "#717182",
                 border: "1.5px solid rgba(78,91,146,0.16)",
-                cursor: "pointer", fontFamily: FONT, fontWeight: 600, fontSize: 14, transition: "all 0.15s",
+                cursor: isSaving ? "not-allowed" : "pointer", fontFamily: FONT, fontWeight: 600, fontSize: 14, transition: "all 0.15s",
               }}
-              onMouseEnter={(e) => { const b = e.currentTarget; b.style.color = PRIMARY; b.style.borderColor = "rgba(78,91,146,0.3)"; b.style.background = "rgba(78,91,146,0.04)"; }}
+              onMouseEnter={(e) => { if (isSaving) return; const b = e.currentTarget; b.style.color = PRIMARY; b.style.borderColor = "rgba(78,91,146,0.3)"; b.style.background = "rgba(78,91,146,0.04)"; }}
               onMouseLeave={(e) => { const b = e.currentTarget; b.style.color = "#717182"; b.style.borderColor = "rgba(78,91,146,0.16)"; b.style.background = "transparent"; }}
             >
               إلغاء

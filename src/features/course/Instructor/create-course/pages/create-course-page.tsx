@@ -24,6 +24,7 @@ export function CreateCoursePage({ onCancel, onCourseCreated }: CreateCoursePage
     handleImageChange,
     handleSubmit,
     handleSuccessClose,
+    dismissError,
     setShowSuccess,
   } = useCreateCourse({ onCancel });
 
@@ -45,6 +46,7 @@ export function CreateCoursePage({ onCancel, onCourseCreated }: CreateCoursePage
       onSubmit={handleSubmit}
       onCancel={onCancel}
       onSuccessClose={handleSuccessClose}
+      onErrorClose={dismissError}
       onAddLessons={() => {
         const savedId = createdCourseId;
         setShowSuccess(false);

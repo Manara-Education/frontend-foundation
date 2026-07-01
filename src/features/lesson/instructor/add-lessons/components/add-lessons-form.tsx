@@ -34,7 +34,7 @@ interface AddLessonsFormProps {
   onDelete: (id: number) => void;
   onEdit: (id: number) => void;
   onCancelForm: () => void;
-  onSaveCourseEdit: (data: EditCourseFormData) => void;
+  onSaveCourseEdit: (data: EditCourseFormData) => Promise<boolean>;
   onReorder: (lessons: Lesson[]) => void;
   onFinish: () => void;
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ApiError } from "@/shared/api";
 import { addLessonsService } from "../services/add-lessons.service";
 import type {
@@ -31,26 +31,39 @@ export function useAddLessons({ courseId }: UseAddLessonsArgs) {
   const [isLoading, setIsLoading] = useState(true);
   const [showCourseEdit, setShowCourseEdit] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const lastFailedActionRef = useRef<(() => void) | null>(null);
 
   const [displayTitle, setDisplayTitle] = useState("");
   const [displayDesc, setDisplayDesc] = useState("");
   const [displayImage, setDisplayImage] = useState("");
   const [displayPrice, setDisplayPrice] = useState(0);
 
-  const reportError = useCallback((err: unknown) => {
+  const reportError = useCallback((err: unknown, retry?: () => void) => {
     console.error(err);
+    lastFailedActionRef.current = retry ?? null;
     setErrorMessage(extractErrorMessage(err));
   }, []);
 
-  const dismissError = useCallback(() => setErrorMessage(null), []);
+  const dismissError = useCallback(() => {
+    lastFailedActionRef.current = null;
+    setErrorMessage(null);
+  }, []);
+
+  const retryError = useCallback(() => {
+    const action = lastFailedActionRef.current;
+    lastFailedActionRef.current = null;
+    setErrorMessage(null);
+    action?.();
+  }, []);
 
   const fetchMyCourses = useCallback(async () => {
     try {
       const data = await addLessonsService.getMyCourses();
       setCourses(data);
     } catch (err) {
-      reportError(err);
+      reportError(err, () => void fetchMyCourses());
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportError]);
 
   const fetchLessons = useCallback(async () => {
@@ -59,8 +72,9 @@ export function useAddLessons({ courseId }: UseAddLessonsArgs) {
       const data = await addLessonsService.getCourseLessons(numCourseId);
       setLessons(data.sort((a, b) => a.orderIndex - b.orderIndex));
     } catch (err) {
-      reportError(err);
+      reportError(err, () => void fetchLessons());
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [numCourseId, reportError]);
 
   useEffect(() => {
@@ -105,8 +119,9 @@ export function useAddLessons({ courseId }: UseAddLessonsArgs) {
         setShowForm(false);
       }
     } catch (err) {
-      reportError(err);
+      reportError(err, () => void handleSave(data));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingId, numCourseId, lessons.length, reportError]);
 
   const handleDelete = useCallback(async (id: number) => {
@@ -115,8 +130,9 @@ export function useAddLessons({ courseId }: UseAddLessonsArgs) {
       setLessons((prev) => prev.filter((l) => l.id !== id));
       if (editingId === id) setEditingId(null);
     } catch (err) {
-      reportError(err);
+      reportError(err, () => void handleDelete(id));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingId, numCourseId, reportError]);
 
   const handleEdit = useCallback((id: number) => {
@@ -129,21 +145,28 @@ export function useAddLessons({ courseId }: UseAddLessonsArgs) {
     setEditingId(null);
   }, []);
 
-  const handleSaveCourseEdit = useCallback(async ({ title, description, imageUrl, price }: EditCourseFormData) => {
+  const handleSaveCourseEdit = useCallback(async (data: EditCourseFormData): Promise<boolean> => {
+    const { title, description, imageUrl, imageFile, price } = data;
     try {
+      const image = imageFile
+        ? await addLessonsService.uploadFile(imageFile)
+        : imageUrl;
       await addLessonsService.updateCourse(numCourseId, {
         title,
         description,
-        image: imageUrl,
+        image,
         price,
       });
       setDisplayTitle(title);
       setDisplayDesc(description);
-      setDisplayImage(imageUrl);
+      setDisplayImage(image);
       setDisplayPrice(price);
+      return true;
     } catch (err) {
-      reportError(err);
+      reportError(err, () => void handleSaveCourseEdit(data));
+      return false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [numCourseId, reportError]);
 
   const reorderLessons = useCallback(async (reordered: Lesson[]) => {
@@ -160,9 +183,10 @@ export function useAddLessons({ courseId }: UseAddLessonsArgs) {
         }),
       ));
     } catch (err) {
-      reportError(err);
+      reportError(err, () => void reorderLessons(reordered));
       await fetchLessons();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [numCourseId, fetchLessons, reportError]);
 
   const editingLesson: Lesson | null = editingId ? lessons.find((l) => l.id === editingId) ?? null : null;
@@ -180,6 +204,7 @@ export function useAddLessons({ courseId }: UseAddLessonsArgs) {
     displayPrice,
     errorMessage,
     dismissError,
+    retryError,
     setShowForm,
     setShowCourseEdit,
     handleSave,

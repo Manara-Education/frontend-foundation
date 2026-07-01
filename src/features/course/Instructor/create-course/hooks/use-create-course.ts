@@ -80,6 +80,8 @@ export function useCreateCourse({ onCancel }: UseCreateCourseArgs) {
     setImagePreview(p);
   };
 
+  const dismissError = () => setError(null);
+
   const handleSuccessClose = () => {
     setShowSuccess(false);
     setTitle("");
@@ -107,6 +109,7 @@ export function useCreateCourse({ onCancel }: UseCreateCourseArgs) {
     handleImageChange,
     handleSubmit,
     handleSuccessClose,
+    dismissError,
     setShowSuccess,
   };
 }

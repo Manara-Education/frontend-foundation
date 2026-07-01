@@ -46,7 +46,10 @@ export interface LessonSavePayload {
 export interface EditCourseFormData {
   title: string;
   description: string;
+  /** Existing/kept cover image URL. Ignored when `imageFile` is set. */
   imageUrl: string;
+  /** Newly selected cover image to upload, or null when unchanged/removed. */
+  imageFile?: File | null;
   price: number;
 }
 

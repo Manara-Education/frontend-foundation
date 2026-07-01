@@ -10,6 +10,11 @@ export const addLessonsService = {
     return data.data!;
   },
 
+  async uploadFile(file: File) {
+    const { data } = await api.uploadFile(file);
+    return data.data!.url;
+  },
+
   async getCourseLessons(courseId: number) {
     const { data } = await api.getCourseLessons(courseId);
     return data.data!;
