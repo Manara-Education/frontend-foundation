@@ -74,6 +74,7 @@ export interface CourseDetailResponse {
   students: number;
   rating: number;
   category: string;
+  price: number | null;
   currentLesson: { number: number; title: string; remaining: string };
   lessons: LessonResponse[];
 }

@@ -7,6 +7,7 @@ import { DescriptionSection } from "./description-section";
 import { HeroSection } from "./hero-section";
 import { InstructorSection } from "./instructor-section";
 import { PaymentCTASection } from "./payment-cta-section";
+import { BrowseCurriculumSection } from "./browse-curriculum-section";
 
 interface CourseDetailsFormProps {
   courseData: CourseDetailData;
@@ -39,7 +40,10 @@ export function CourseDetailsForm({
       <HeroSection course={courseData} />
 
       {mode === "browse" ? (
-        <PaymentCTASection course={courseData} price={browsePrice} onPay={onEnrolled} />
+        <>
+          <PaymentCTASection course={courseData} price={browsePrice} onPay={onEnrolled} />
+          <BrowseCurriculumSection lessons={courseData.lessons} enrolled={false} />
+        </>
       ) : (
         <>
           <ContinueLearningCard course={courseData} onLessonClick={onLessonClick} />

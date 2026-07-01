@@ -28,7 +28,14 @@ export function fetchBrowsePrice(_courseId: number): number | null {
   return null;
 }
 
-// TODO: connect to real Stripe checkout flow
-export async function processCheckout(_courseId: number, _isFree: boolean): Promise<void> {
-  throw new Error("processCheckout is not implemented");
+export async function processCheckout(
+  courseId: number,
+  isFree: boolean,
+  paymentDetails?: { cardNumber: string; expiry: string; cvc: string; name: string }
+): Promise<void> {
+  const payload = paymentDetails ? {
+    ...paymentDetails,
+    email: "student@manara.com",
+  } : {};
+  await apiClient.post(`/v1/student/courses/${courseId}/checkout`, payload);
 }

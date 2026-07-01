@@ -106,7 +106,6 @@ export function StripeCheckoutModal({ course, price, onSuccess, onCancel }: Stri
                   </div>
                 ) : (
                   <>
-                    <StripeField label="البريد الإلكتروني" placeholder="you@example.com" value={form.email} onChange={setEmail} type="email" />
                     <StripeField label="رقم البطاقة" placeholder="1234 5678 9012 3456" value={form.cardNumber} onChange={setCardNumber} showCardIcon />
                     <div style={{ display: "flex", gap: 12 }}>
                       <div style={{ flex: 1 }}>

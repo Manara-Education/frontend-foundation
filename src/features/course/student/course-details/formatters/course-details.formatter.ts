@@ -53,12 +53,11 @@ export function sanitizeCvc(v: string): string {
 }
 
 export function isCheckoutValid(state: {
-  cardNumber: string; expiry: string; cvc: string; name: string; email: string;
+  cardNumber: string; expiry: string; cvc: string; name: string;
 }, isFree: boolean): boolean {
   if (isFree) return true;
   return (
     state.name.trim().length > 0 &&
-    state.email.includes("@") &&
     state.cardNumber.replace(/\s/g, "").length === 16 &&
     state.expiry.length >= 4 &&
     state.cvc.length >= 3

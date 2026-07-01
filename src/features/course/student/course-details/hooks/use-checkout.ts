@@ -35,9 +35,14 @@ export function useCheckout({ courseId, isFree, onSuccess }: UseCheckoutArgs) {
   async function handlePay() {
     if (!canPay) return;
     setStep("processing");
-    await processCheckout(courseId, isFree);
-    setStep("success");
-    setTimeout(onSuccess, 1300);
+    try {
+      await processCheckout(courseId, isFree, isFree ? undefined : form);
+      setStep("success");
+      setTimeout(onSuccess, 1300);
+    } catch (err) {
+      console.error("Checkout failed", err);
+      setStep("form");
+    }
   }
 
   return {
