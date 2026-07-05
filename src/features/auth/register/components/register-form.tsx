@@ -5,13 +5,11 @@ import type { RegisterErrors, RegisterFormState, PasswordStrength } from "../typ
 import * as React from "react";
 
 interface RegisterFormProps {
-  form: Omit<RegisterFormState, 'agreed'>;
+  form: RegisterFormState;
   strength: PasswordStrength | null;
-  agreed: boolean;
   loading: boolean;
   errors: RegisterErrors;
-  onChange: (k: keyof Omit<RegisterFormState, 'agreed'>) => (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onAgreedToggle: () => void;
+  onChange: (k: keyof RegisterFormState) => (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onLoginClick: () => void;
 }
@@ -19,11 +17,9 @@ interface RegisterFormProps {
 export function RegisterForm({
   form,
   strength,
-  agreed,
   loading,
   errors,
   onChange,
-  onAgreedToggle,
   onSubmit,
   onLoginClick,
 }: RegisterFormProps) {
@@ -112,43 +108,6 @@ export function RegisterForm({
           icon={<Lock size={17} />}
         />
 
-        {/* Terms */}
-        <div className="flex flex-col gap-1">
-          <label
-            className="flex items-start gap-3 cursor-pointer select-none"
-            style={{ fontFamily: "'Cairo', sans-serif", fontSize: 14, color: "#2C3156", lineHeight: 1.7 }}
-          >
-            <div
-              onClick={onAgreedToggle}
-              className="flex-shrink-0 w-5 h-5 rounded-md mt-0.5 transition-all duration-150 flex items-center justify-center cursor-pointer"
-              style={{
-                background: agreed ? "#4E5B92" : "transparent",
-                border: `2px solid ${agreed ? "#4E5B92" : errors.agreed ? "#D4183D" : "rgba(78,91,146,0.3)"}`,
-              }}
-            >
-              {agreed && (
-                <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
-                  <path d="M1 4L4 7.5L10 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              )}
-            </div>
-            <span>
-              أوافق على{" "}
-              <span style={{ color: "#4E5B92", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}>
-                الشروط والأحكام
-              </span>{" "}
-              و
-              {" "}<span style={{ color: "#4E5B92", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}>
-                سياسة الخصوصية
-              </span>
-            </span>
-          </label>
-          {errors.agreed && (
-            <p style={{ fontFamily: "'Cairo', sans-serif", fontSize: 13, color: "#D4183D", marginRight: 28 }}>
-              {errors.agreed}
-            </p>
-          )}
-        </div>
 
         <div className="mt-1">
           <PrimaryButton type="submit" loading={loading}>

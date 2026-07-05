@@ -8,8 +8,6 @@ export function RegisterPage() {
   const {
     form,
     strength,
-    agreed,
-    setAgreed,
     loading,
     errors,
     setField,
@@ -21,11 +19,9 @@ export function RegisterPage() {
       <RegisterForm
         form={form}
         strength={strength}
-        agreed={agreed}
         loading={loading}
         errors={errors}
         onChange={setField}
-        onAgreedToggle={() => setAgreed(!agreed)}
         onSubmit={handleSubmit}
         onLoginClick={() => navigate("/")}
       />

@@ -3,7 +3,6 @@ export interface RegisterFormState {
   email: string;
   password: string;
   confirm: string;
-  agreed: boolean;
 }
 
 export interface RegisterErrors {
@@ -11,7 +10,6 @@ export interface RegisterErrors {
   email?: string;
   password?: string;
   confirm?: string;
-  agreed?: string;
   general?: string;
 }
 
