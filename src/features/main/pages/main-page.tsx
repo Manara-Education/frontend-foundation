@@ -67,9 +67,8 @@ export function MainPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const isInstructor = isInstructorRole(user?.role);
   const defaultView: ActiveView = isInstructor ? "instructor-home" : "home";
-  const initialView = (searchParams.get("view") as ActiveView) ?? (location.state as { view?: ActiveView } | null)?.view ?? defaultView;
-  const [activeView, setActiveView] = useState<ActiveView>(initialView);
-  const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
+  const activeView = (searchParams.get("view") as ActiveView) ?? (location.state as { view?: ActiveView } | null)?.view ?? defaultView;
+  const activeCourseId = searchParams.get("instructorCourseId");
 
   const courseIdParam = searchParams.get("courseId");
   const studentCourseId = courseIdParam ? Number(courseIdParam) : null;
@@ -91,6 +90,22 @@ export function MainPage() {
           next.set("mode", mode);
         }
         next.delete("lessonId");
+        next.delete("instructorCourseId");
+        return next;
+      },
+      { replace: false },
+    );
+  }
+
+  function setInstructorCourseId(id: string | null) {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (id === null) {
+          next.delete("instructorCourseId");
+        } else {
+          next.set("instructorCourseId", id);
+        }
         return next;
       },
       { replace: false },
@@ -121,12 +136,6 @@ export function MainPage() {
     );
   }
 
-  useEffect(() => {
-    if (studentCourseId !== null && activeCourseId !== null) {
-      setActiveCourseId(null);
-    }
-  }, [studentCourseId, activeCourseId]);
-
   const showLessons = activeCourseId !== null;
   const showStudentLesson = studentCourseId !== null && studentLessonId !== null;
   const showStudentCourseDetails = studentCourseId !== null && !showStudentLesson;
@@ -139,9 +148,18 @@ export function MainPage() {
     : VIEW_META[activeView];
 
   const goTo = (view: ActiveView) => {
-    setActiveCourseId(null);
-    setStudentCourseId(null);
-    setActiveView(view);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("view", view);
+        next.delete("courseId");
+        next.delete("mode");
+        next.delete("lessonId");
+        next.delete("instructorCourseId");
+        return next;
+      },
+      { replace: false },
+    );
   };
 
   return (
@@ -235,8 +253,18 @@ export function MainPage() {
                         next.add(studentCourseId!);
                         return next;
                       });
-                      setActiveView("home");
-                      setStudentCourseId(studentCourseId!, "enrolled");
+                      setSearchParams(
+                        (prev) => {
+                          const next = new URLSearchParams(prev);
+                          next.set("view", "home");
+                          next.set("courseId", String(studentCourseId));
+                          next.set("mode", "enrolled");
+                          next.delete("lessonId");
+                          next.delete("instructorCourseId");
+                          return next;
+                        },
+                        { replace: false },
+                      );
                     }}
                   />
                 ) : (
@@ -264,7 +292,7 @@ export function MainPage() {
                       <InstructorHomePage
                         onCreateCourse={() => goTo("instructor-create")}
                         onViewAllCourses={() => goTo("instructor-courses")}
-                        onCourseClick={(courseId) => setActiveCourseId(courseId)}
+                        onCourseClick={(courseId) => setInstructorCourseId(courseId)}
                       />
                     )}
 
@@ -272,14 +300,14 @@ export function MainPage() {
                       <AllCoursesPage
                         onBack={() => goTo("instructor-home")}
                         onCreateCourse={() => goTo("instructor-create")}
-                        onCourseClick={(courseId) => setActiveCourseId(courseId)}
+                        onCourseClick={(courseId) => setInstructorCourseId(courseId)}
                       />
                     )}
 
                     {activeView === "instructor-create" && (
                       <CreateCoursePage
                         onCancel={() => goTo("instructor-home")}
-                        onCourseCreated={(courseId) => setActiveCourseId(courseId)}
+                        onCourseCreated={(courseId) => setInstructorCourseId(courseId)}
                       />
                     )}
                   </>

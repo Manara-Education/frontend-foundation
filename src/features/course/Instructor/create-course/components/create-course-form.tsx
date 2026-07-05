@@ -391,31 +391,6 @@ export function CreateCourseForm({
         </div>
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.18 }}
-        className="flex items-start gap-3 p-4 rounded-2xl"
-        style={{
-          background: "rgba(78,91,146,0.05)",
-          border: "1px solid rgba(78,91,146,0.1)",
-        }}
-      >
-        <div
-          className="rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
-          style={{ width: 34, height: 34, background: "rgba(78,91,146,0.1)", color: PRIMARY }}
-        >
-          <Info size={15} />
-        </div>
-        <div>
-          <p style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: "#1E2340", lineHeight: 1.5 }}>
-            يمكنك إضافة الدروس والاختبارات بعد إنشاء الدورة
-          </p>
-          <p style={{ fontFamily: FONT, fontWeight: 400, fontSize: 12, color: "#9BA3C4", marginTop: 3, lineHeight: 1.6 }}>
-            بعد الإنشاء ستظهر الدورة في لوحتك حيث يمكنك إضافة المحتوى والدروس وإدارة الطلاب بسهولة.
-          </p>
-        </div>
-      </motion.div>
 
       <AnimatePresence>
         {showSuccess && (

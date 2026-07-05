@@ -7,12 +7,11 @@ import * as React from "react";
 
 export function useRegister() {
   const navigate = useNavigate();
-  const [form, setForm] = useState<Omit<RegisterFormState, 'agreed'>>({ name: "", email: "", password: "", confirm: "" });
-  const [agreed, setAgreed] = useState(false);
+  const [form, setForm] = useState<RegisterFormState>({ name: "", email: "", password: "", confirm: "" });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<RegisterErrors>({});
 
-  const setField = (k: keyof Omit<RegisterFormState, 'agreed'>) => (e: React.ChangeEvent<HTMLInputElement>) =>
+  const setField = (k: keyof RegisterFormState) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const validate = (): RegisterErrors => {
@@ -24,7 +23,6 @@ export function useRegister() {
     else if (form.password.length < 8) errs.password = "يجب أن تكون كلمة المرور 8 أحرف على الأقل";
     if (!form.confirm) errs.confirm = "تأكيد كلمة المرور مطلوب";
     else if (form.password !== form.confirm) errs.confirm = "كلمتا المرور غير متطابقتين";
-    if (!agreed) errs.agreed = "يجب الموافقة على الشروط والأحكام";
     return errs;
   };
 
@@ -69,8 +67,6 @@ export function useRegister() {
   return {
     form,
     strength,
-    agreed,
-    setAgreed,
     loading,
     errors,
     setField,
