@@ -2,6 +2,7 @@ import {
   CheckCircle2, ClipboardList, Play, PlayCircle, Lock,
 } from "lucide-react";
 import type { QuizView } from "@/features/quiz/student/quiz-player";
+import type { SubscriptionUnit } from "@/shared/courses";
 import type { LessonApi, LessonStatus } from "../types/course-details.types";
 
 export const PRIMARY = "#4E5B92";
@@ -71,6 +72,38 @@ export function formatQuestionCount(count: number): string {
 
 export function formatStudentsCount(n: number): string {
   return n.toLocaleString("ar-EG");
+}
+
+// ── Pricing and access ────────────────────────────────────────────────────────
+
+/** Every amount on this screen — course price, plan price, pay button — reads the same. */
+export function formatPrice(amount: number): string {
+  return `${amount.toLocaleString("ar-EG")} ج.م`;
+}
+
+const SUBSCRIPTION_UNIT_LABELS: Record<SubscriptionUnit, string> = {
+  DAY: "يوم",
+  WEEK: "أسبوع",
+  MONTH: "شهر",
+};
+
+/**
+ * A plan's length, in the unit it is actually sold in.
+ *
+ * Deliberately not converted to days: a month is a calendar month to the backend, which
+ * computes the expiry, and printing "٣٠ يوم" for it would be this screen inventing a figure
+ * the server never agreed to.
+ */
+export function formatPlanDuration(duration: number, unit: SubscriptionUnit): string {
+  return `${duration.toLocaleString("ar-EG")} ${SUBSCRIPTION_UNIT_LABELS[unit] ?? ""}`.trim();
+}
+
+/** The date a subscription ends, as the card prints it: `"٧ سبتمبر ٢٠٢٦"`. */
+export function formatAccessEndDate(iso: string | null): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("ar-EG", { day: "numeric", month: "long", year: "numeric" });
 }
 
 export function formatCardNumber(v: string): string {

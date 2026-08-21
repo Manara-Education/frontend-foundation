@@ -4,21 +4,32 @@ import { Sparkles, ShieldCheck, X } from "lucide-react";
 import { FONT, PRIMARY } from "../formatters/course-details.formatter";
 import type { CourseDetailData } from "../types/course-details.types";
 import { StripeCheckoutModal } from "./stripe-checkout-modal";
-import { processCheckout } from "../services/course-details.service";
+import { enrollFree } from "../services/course-details.service";
 
 interface PaymentCTASectionProps {
   course: CourseDetailData;
-  price: number | null;
   onPay: () => void;
 }
 
-export function PaymentCTASection({ course, price, onPay }: PaymentCTASectionProps) {
-  const isFree = price === null || price === 0;
+/**
+ * The enrol / buy card a learner sees while browsing a `FREE` or `PURCHASE` course.
+ *
+ * Which of the two it is comes from `accessType`, not from the price: a subscription course
+ * also has no purchase price, and reading "free" off a null would have offered it away. A
+ * `SUBSCRIPTION` course never reaches this card — it has its own, with a plan selector.
+ */
+export function PaymentCTASection({ course, onPay }: PaymentCTASectionProps) {
+  const isFree = course.accessType === "FREE";
   const [showCheckout, setShowCheckout] = useState(false);
   const [paymentFailed, setPaymentFailed] = useState(false);
   const [isEnrollingFree, setIsEnrollingFree] = useState(false);
 
   function handleCancelPayment() {
+    setShowCheckout(false);
+    setPaymentFailed(true);
+  }
+
+  function handleFailedPayment() {
     setShowCheckout(false);
     setPaymentFailed(true);
   }
@@ -31,9 +42,12 @@ export function PaymentCTASection({ course, price, onPay }: PaymentCTASectionPro
   async function handleButtonClick() {
     setPaymentFailed(false);
     if (isFree) {
+      // Nothing to collect and nothing to charge, so there is no checkout to open. The button
+      // is the whole flow, exactly as the reference's free card reads.
+      if (isEnrollingFree) return;
       setIsEnrollingFree(true);
       try {
-        await processCheckout(course.id);
+        await enrollFree(course.id);
         onPay();
       } catch (err) {
         console.error("Free enrollment failed", err);
@@ -52,8 +66,11 @@ export function PaymentCTASection({ course, price, onPay }: PaymentCTASectionPro
         {showCheckout && (
           <StripeCheckoutModal
             course={course}
-            price={price}
+            kind="purchase"
+            amountLabel={course.purchasePriceLabel ?? ""}
+            termsLabel="شراء مرة واحدة"
             onSuccess={handleSuccessPayment}
+            onFailure={handleFailedPayment}
             onCancel={handleCancelPayment}
           />
         )}
@@ -144,14 +161,15 @@ export function PaymentCTASection({ course, price, onPay }: PaymentCTASectionPro
                 <span style={{ fontFamily: FONT, fontSize: 32, color: "#15803D" }}>مجانية</span>
               ) : (
                 <>
-                  <span style={{ fontFamily: FONT, fontSize: 32, color: PRIMARY }}>${price}</span>
-                  <span style={{ fontFamily: FONT, fontSize: 14, color: "#9BA3C4" }}>دفعة واحدة</span>
+                  <span style={{ fontFamily: FONT, fontSize: 32, color: PRIMARY }}>{course.purchasePriceLabel}</span>
+                  <span style={{ fontFamily: FONT, fontSize: 14, color: "#9BA3C4" }}>شراء مرة واحدة</span>
                 </>
               )}
             </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
             {[
+              `${course.totalLessons} درس مُحكم`,
               `${course.totalDuration} من المحتوى`,
               "وصول دائم بلا انتهاء",
             ].map((feat) => (
@@ -166,7 +184,7 @@ export function PaymentCTASection({ course, price, onPay }: PaymentCTASectionPro
         <motion.button
           whileHover={!isEnrollingFree ? { scale: 1.015 } : {}}
           whileTap={!isEnrollingFree ? { scale: 0.98 } : {}}
-          onClick={!isEnrollingFree ? handleButtonClick : undefined}
+          onClick={handleButtonClick}
           style={{
             width: "100%",
             padding: "16px 24px",
@@ -194,11 +212,11 @@ export function PaymentCTASection({ course, price, onPay }: PaymentCTASectionPro
           {isEnrollingFree ? "جاري الاشتراك..." : isFree ? "ابدأ التعلم مجاناً" : "اشترك الآن وابدأ التعلم"}
         </motion.button>
 
-        {isFree && (
-          <p style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4", textAlign: "center", margin: "12px 0 0" }}>
-            وصول فوري — لا تحتاج إلى بطاقة ائتمانية
-          </p>
-        )}
+        <p style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4", textAlign: "center", margin: "12px 0 0" }}>
+          {isFree
+            ? "وصول فوري — لا تحتاج إلى بطاقة ائتمانية"
+            : "ضمان استرداد المبلغ خلال ٧ أيام · دفع آمن عبر Stripe"}
+        </p>
       </motion.div>
     </>
   );

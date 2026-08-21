@@ -1,5 +1,5 @@
 import { apiClient, unwrap, type ApiResponse } from "@/shared/api";
-import type { CheckoutRequest, EnrollmentResponse } from "@/shared/courses";
+import type { CheckoutRequest, CheckoutResponse } from "@/shared/courses";
 import type {
   CourseDetailsApiResponse,
   CourseDetailsMode,
@@ -24,12 +24,19 @@ export async function fetchCourseDetail(
   return unwrap(response);
 }
 
+/**
+ * The one call that grants access, whichever of the three ways the course is sold.
+ *
+ * The body carries an identifier and an instrument and nothing else the server acts on: no
+ * price, no expiry, no access type. Which parts it reads is decided by the course.
+ */
 export async function processCheckout(
   courseId: number,
-  paymentDetails?: CheckoutRequest,
-): Promise<void> {
-  await apiClient.post<ApiResponse<EnrollmentResponse>>(
+  request: CheckoutRequest,
+): Promise<CheckoutResponse> {
+  const response = await apiClient.post<ApiResponse<CheckoutResponse>>(
     `/${STUDENT_COURSE_BASE_V1}/${courseId}/checkout`,
-    paymentDetails ?? {},
+    request,
   );
+  return unwrap(response);
 }

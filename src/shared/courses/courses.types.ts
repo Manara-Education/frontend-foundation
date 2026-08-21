@@ -7,9 +7,11 @@
  * can send null here"; `?` means "the field may be absent from the payload".
  */
 import type {
+  AccessStatus,
   CourseAccessType,
   CourseStatus,
   CourseStructure,
+  EntitlementSource,
   SubscriptionUnit,
 } from "./courses.enums";
 import type {
@@ -303,9 +305,36 @@ export interface CourseDetailsInfo {
  * decided rather than from rules of its own. They are absent for a viewer the course
  * tracks no progress for — course discovery, typically.
  */
+/**
+ * The viewing learner's standing on one course: whether they joined it, whether they may
+ * open it right now, and — for a subscription — until when.
+ *
+ * Every field is the server's own answer. "Every lesson is locked" describes a visitor who
+ * has not bought the course and a subscriber whose window closed equally well; only this
+ * block separates them, which is what decides between a buy CTA and a renew CTA.
+ */
+export interface CourseAccessResponse {
+  /** They joined the course. Stays true after a subscription lapses. */
+  enrolled: boolean | null;
+  /** They may be served protected content right now. */
+  entitled: boolean | null;
+  /** What their access rests on, or `null` when nothing was ever granted. */
+  source: EntitlementSource | null;
+  status: AccessStatus | null;
+  startsAt: string | null;
+  /** `null` for a grant that never ends — free courses and outright purchases. */
+  expiresAt: string | null;
+  /** Whole days left before `expiresAt`, or `null` when nothing expires. */
+  daysRemaining: number | null;
+  /** The plan the current or most recent window was bought under, when there is one. */
+  planId: number | null;
+}
+
 export interface CourseDetailsResponse {
   course: CourseDetailsInfo;
   instructor: CourseDetailsInstructorInfo;
+  /** The viewing learner's own standing. Absent for a response that predates the field. */
+  access: CourseAccessResponse | null;
   structure: CourseStructure | null;
   lessons: LessonResponse[] | null;
   modules: LearnerCourseModuleResponse[] | null;
@@ -340,21 +369,54 @@ export interface LessonCompletionResponse {
 
 // ── Enrollment / checkout ─────────────────────────────────────────────────────
 
-export interface CheckoutRequest {
+/**
+ * The payment instrument, as the checkout form produces it.
+ *
+ * Card-shaped and nothing more, because there is no payment provider behind the backend.
+ * When a real one arrives this becomes an opaque token.
+ */
+export interface PaymentMethodRequest {
   cardNumber: string;
   expiry: string;
   cvc: string;
   name: string;
-  email: string;
+  email?: string;
 }
 
-export interface EnrollmentResponse {
-  id: number;
-  course: CourseResponse;
-  /** 0–100. */
-  progress: number | null;
-  enrolled: boolean | null;
-  enrolledAt: string | null;
+/**
+ * What a learner submits to gain access to a course. The backend decides which parts it
+ * reads from the course's own access type — leaving fields out cannot buy a cheaper path.
+ *
+ * - `FREE` — `{}`
+ * - `PURCHASE` — `{ paymentMethod }`; the amount is the course's stored price
+ * - `SUBSCRIPTION` — `{ planId, paymentMethod }`; only the identifier is trusted, and the
+ *   plan's price, duration and expiry are read from the plan row server-side
+ *
+ * There is deliberately no field for a price or an expiry. Both are computed by the server.
+ */
+export interface CheckoutRequest {
+  /** Required for a `SUBSCRIPTION` course, ignored for the other two. */
+  planId?: number;
+  paymentMethod?: PaymentMethodRequest;
+}
+
+/**
+ * What a checkout produced.
+ *
+ * Returned identically whether the call did the work or found it already done, so a retried
+ * or double-clicked checkout is indistinguishable from the one that succeeded — except that
+ * `paymentReference` is `null`, because nothing was charged the second time.
+ */
+export interface CheckoutResponse {
+  enrollmentId: number | null;
+  courseId: number;
+  accessType: CourseAccessType | null;
+  access: CourseAccessResponse | null;
+  /**
+   * The gateway's reference for the charge this call made, or `null` when nothing was
+   * charged. Payments are simulated by the backend; its references are prefixed `sim_`.
+   */
+  paymentReference: string | null;
 }
 
 /** Query parameter of the student course details endpoint. */

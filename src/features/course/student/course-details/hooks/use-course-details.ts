@@ -47,8 +47,6 @@ export function useCourseDetails({ courseId, mode, onEnrolled }: UseCourseDetail
     setReloadToken(0);
   }, [courseId, mode]);
 
-  const browsePrice = mode === "browse" && courseData ? courseData.price : null;
-
   /**
    * Re-reads the course after an exam moved the learner along. What unlocked, what the
    * progress now is and which lesson comes next are all the server's answers — this
@@ -65,7 +63,6 @@ export function useCourseDetails({ courseId, mode, onEnrolled }: UseCourseDetail
   return {
     isLoading,
     courseData,
-    browsePrice,
     mode,
     error,
     handleEnrolled,

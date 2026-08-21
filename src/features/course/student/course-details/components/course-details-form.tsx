@@ -7,13 +7,14 @@ import { DescriptionSection } from "./description-section";
 import { HeroSection } from "./hero-section";
 import { InstructorSection } from "./instructor-section";
 import { PaymentCTASection } from "./payment-cta-section";
+import { SubscriptionCTASection } from "./subscription-cta-section";
+import { SubscriptionStatusCard } from "./subscription-status-card";
 import { BrowseCurriculumSection } from "./browse-curriculum-section";
 
 interface CourseDetailsFormProps {
   courseData: CourseDetailData;
   courseId: number;
   mode: CourseDetailsMode;
-  browsePrice: number | null;
   onBack: () => void;
   onLessonClick?: (lessonId: number) => void;
   onEnrolled: () => void;
@@ -24,12 +25,23 @@ export function CourseDetailsForm({
   courseData,
   courseId,
   mode,
-  browsePrice,
   onBack,
   onLessonClick,
   onEnrolled,
   onProgressionChanged,
 }: CourseDetailsFormProps) {
+  const { access, accessType, subscriptionPlans } = courseData;
+
+  // A subscription's standing has its own card — active, ending soon, or expired with the
+  // renewal offer. It is shown whenever the learner has ever held one, including after it
+  // lapsed, which is the state the renewal card exists for.
+  const showSubscriptionStatus =
+    accessType === "SUBSCRIPTION" && access.source === "SUBSCRIPTION" && access.status !== "NONE";
+
+  // The reference hides "continue learning" behind an expired subscription, because there is
+  // nothing left to continue into until it is renewed. The progress it describes is untouched.
+  const canContinue = access.entitled;
+
   return (
     <motion.div
       key={`details-${courseId}`}
@@ -43,17 +55,42 @@ export function CourseDetailsForm({
 
       {mode === "browse" ? (
         <>
-          <PaymentCTASection course={courseData} price={browsePrice} onPay={onEnrolled} />
+          {/* Someone who already holds the course is not offered it again — reaching it from
+              the catalogue rather than from their own list does not un-buy it. */}
+          {access.entitled ? (
+            <ContinueLearningCard course={courseData} onLessonClick={onLessonClick} />
+          ) : accessType === "SUBSCRIPTION" ? (
+            <SubscriptionCTASection
+              course={courseData}
+              plans={subscriptionPlans}
+              onPay={onEnrolled}
+            />
+          ) : (
+            <PaymentCTASection course={courseData} onPay={onEnrolled} />
+          )}
+
           <BrowseCurriculumSection
             lessons={courseData.lessons}
             modules={courseData.modules}
             structure={courseData.structure}
-            enrolled={false}
+            enrolled={access.entitled}
           />
         </>
       ) : (
         <>
-          <ContinueLearningCard course={courseData} onLessonClick={onLessonClick} />
+          {showSubscriptionStatus && (
+            <SubscriptionStatusCard
+              course={courseData}
+              access={access}
+              plans={subscriptionPlans}
+              onRenewed={onProgressionChanged}
+            />
+          )}
+
+          {canContinue && (
+            <ContinueLearningCard course={courseData} onLessonClick={onLessonClick} />
+          )}
+
           <CurriculumSection
             courseId={courseId}
             lessons={courseData.lessons}

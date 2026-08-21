@@ -2,23 +2,30 @@ export { getMyCoursesRequest } from "./courses.api";
 export { getMyCourses } from "./courses.service";
 
 export {
+  ACCESS_STATUSES,
   COURSE_ACCESS_TYPES,
   COURSE_STATUSES,
   COURSE_STRUCTURES,
+  ENTITLEMENT_SOURCES,
   SUBSCRIPTION_UNITS,
+  normalizeAccessStatus,
   normalizeCourseAccessType,
   normalizeCourseStatus,
   normalizeCourseStructure,
 } from "./courses.enums";
 export type {
+  AccessStatus,
   CourseAccessType,
   CourseStatus,
   CourseStructure,
+  EntitlementSource,
   SubscriptionUnit,
 } from "./courses.enums";
 
 export type {
   CheckoutRequest,
+  CheckoutResponse,
+  CourseAccessResponse,
   CourseDetailsInfo,
   CourseDetailsInstructorInfo,
   CourseDetailsResponse,
@@ -26,7 +33,6 @@ export type {
   CourseRequest,
   CourseResponse,
   CourseViewMode,
-  EnrollmentResponse,
   InstructorCourseModuleResponse,
   InstructorCourseResponse,
   InstructorLessonResponse,
@@ -36,6 +42,7 @@ export type {
   LessonRef,
   LessonRequest,
   LessonResponse,
+  PaymentMethodRequest,
   SubscriptionPlanRequest,
   SubscriptionPlanResponse,
 } from "./courses.types";

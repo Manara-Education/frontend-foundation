@@ -15,9 +15,10 @@ export type {
 } from "@/shared/courses";
 
 import type {
+  AccessStatus,
   CourseAccessType,
   CourseStructure,
-  SubscriptionPlanResponse,
+  EntitlementSource,
 } from "@/shared/courses";
 import type { QuizView } from "@/features/quiz/student/quiz-player";
 
@@ -32,6 +33,45 @@ import type { QuizView } from "@/features/quiz/student/quiz-player";
 export type LessonStatus = "completed" | "current" | "not-started" | "locked";
 
 export type CourseDetailsMode = "enrolled" | "browse";
+
+/**
+ * One purchasable subscription plan, ready to render.
+ *
+ * The figures are the backend's: `priceLabel` comes from the stored plan price and
+ * `durationLabel` from its `duration` + `unit`. Nothing here is a local constant, and only
+ * `id` is ever sent back — the price a learner is charged is decided server-side from this
+ * same row.
+ */
+export interface SubscriptionPlanOption {
+  id: number;
+  name: string;
+  /** e.g. `"٣٠ يوم"`, `"٣ شهر"` — the plan's real duration, in the unit it is sold in. */
+  durationLabel: string;
+  /** e.g. `"٦٠٠ ج.م"`. */
+  priceLabel: string;
+}
+
+/**
+ * The viewing learner's standing on this course.
+ *
+ * This is what picks the call to action. "Every lesson is locked" is true both for someone
+ * who never bought the course and for a subscriber whose window closed, and only `status`
+ * and `entitled` tell those two apart.
+ */
+export interface CourseAccess {
+  /** They joined the course. Stays true after a subscription lapses. */
+  enrolled: boolean;
+  /** They may open the content right now. */
+  entitled: boolean;
+  source: EntitlementSource | null;
+  status: AccessStatus;
+  /** e.g. `"٧ سبتمبر ٢٠٢٦"`. Empty when the access never ends. */
+  endDateLabel: string;
+  /** Whole days left, or `null` when nothing expires. Straight from the server. */
+  daysRemaining: number | null;
+  /** The plan the current or most recent window was bought under. */
+  planId: number | null;
+}
 
 export interface Lesson {
   id: number;
@@ -95,8 +135,13 @@ export interface StudentCourseModel {
    */
   price: number | null;
   purchasePrice: number | null;
+  /** e.g. `"٤٩٠ ج.م"`. Null when the course is not sold outright. */
+  purchasePriceLabel: string | null;
   accessType: CourseAccessType;
-  subscriptionPlans: SubscriptionPlanResponse[];
+  /** Ordered as the instructor arranged them. Empty unless `accessType` is `SUBSCRIPTION`. */
+  subscriptionPlans: SubscriptionPlanOption[];
+  /** The viewing learner's own standing — what the CTA is decided from. */
+  access: CourseAccess;
   structure: CourseStructure;
   currentLesson: { number: number; title: string; remaining: string };
   /**
@@ -121,6 +166,9 @@ export type CourseDetailData = StudentCourseModel;
 // ── Checkout ──────────────────────────────────────────────────────────────────
 
 export type CheckoutStep = "form" | "processing" | "success";
+
+/** Which of the three checkout paths the modal is running. */
+export type CheckoutKind = "free" | "purchase" | "subscription";
 
 export interface CheckoutFormState {
   cardNumber: string;
