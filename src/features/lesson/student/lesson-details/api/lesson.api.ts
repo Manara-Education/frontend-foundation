@@ -1,5 +1,9 @@
 import { apiClient, unwrap, type ApiResponse } from "@/shared/api";
-import type { LessonCompletionResponse, LessonDetailsResponse } from "@/shared/courses";
+import type {
+  CourseDetailsResponse,
+  LessonCompletionResponse,
+  LessonDetailsResponse,
+} from "@/shared/courses";
 
 const COURSE_BASE_V1 = "v1/student/courses";
 
@@ -9,6 +13,21 @@ export async function fetchLessonById(
 ): Promise<LessonDetailsResponse> {
   const response = await apiClient.get<ApiResponse<LessonDetailsResponse>>(
     `/${COURSE_BASE_V1}/${courseId}/lessons/${lessonId}`,
+  );
+  return unwrap(response);
+}
+
+/**
+ * The course behind the lesson, read for the header: its title and the learner's standing
+ * in it, neither of which the lesson response carries.
+ *
+ * `ENROLLED` is the only view that answers with progress — the player is reached from a
+ * course the learner has already joined.
+ */
+export async function fetchCourseSummary(courseId: number): Promise<CourseDetailsResponse> {
+  const response = await apiClient.get<ApiResponse<CourseDetailsResponse>>(
+    `/${COURSE_BASE_V1}/${courseId}`,
+    { params: { mode: "ENROLLED" } },
   );
   return unwrap(response);
 }

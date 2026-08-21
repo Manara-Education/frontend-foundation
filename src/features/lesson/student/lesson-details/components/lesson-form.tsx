@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { QuizPlayer } from "@/features/quiz/student/quiz-player";
-import type { LessonRef, LessonView } from "../types/lesson.types";
+import type { LessonCourseSummary, LessonRef, LessonView } from "../types/lesson.types";
 import { CompletionErrorNotice } from "./completion-error-notice";
 import { LessonContentSection } from "./lesson-content-section";
 import { LessonHeaderCard } from "./lesson-header-card";
@@ -13,6 +13,7 @@ import { YouTubePlayer } from "./youtube-player";
 interface LessonFormProps {
   courseId: number;
   currentLesson: LessonView;
+  course: LessonCourseSummary | null;
   prevLesson: LessonRef | null;
   nextLesson: LessonRef | null;
   isMarkedComplete: boolean;
@@ -32,6 +33,7 @@ interface LessonFormProps {
 export function LessonForm({
   courseId,
   currentLesson,
+  course,
   prevLesson,
   nextLesson,
   isMarkedComplete,
@@ -62,7 +64,11 @@ export function LessonForm({
         lessonTitle={currentLesson.title}
       />
 
-      <LessonHeaderCard lesson={currentLesson} isMarkedComplete={isMarkedComplete} />
+      <LessonHeaderCard
+        lesson={currentLesson}
+        course={course}
+        isMarkedComplete={isMarkedComplete}
+      />
 
       {/*
         A locked lesson still answers with its title and position, so the header stays
@@ -83,30 +89,47 @@ export function LessonForm({
           {isQuizRequired && <QuizRequiredNotice />}
           {completionError && <CompletionErrorNotice message={completionError} />}
 
-          <LessonContentSection description={description} />
+          {/*
+            Below the player the lesson reads in two columns: its content and quiz in the
+            wide one, the lesson rail beside it. `.lp-two-col` folds them back into one
+            column at the narrow breakpoint.
+          */}
+          <div className="lp-two-col">
+            <div className="lp-main-col">
+              <LessonContentSection description={description} />
 
-          {currentLesson.quiz && (
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-              style={{ marginBottom: 16 }}
-            >
-              <QuizPlayer
-                courseId={courseId}
-                quiz={currentLesson.quiz}
-                kind="LESSON"
-                onPassAction={onQuizPassed}
-                isPassActionPending={false}
-              />
-            </motion.div>
-          )}
+              {currentLesson.quiz && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.2 }}
+                  style={{ marginBottom: 16 }}
+                >
+                  <QuizPlayer
+                    courseId={courseId}
+                    quiz={currentLesson.quiz}
+                    kind="LESSON"
+                    onPassAction={onQuizPassed}
+                    isPassActionPending={false}
+                  />
+                </motion.div>
+              )}
+            </div>
 
-          <LessonNavigation
-            prevLesson={prevLesson}
-            nextLesson={nextLesson}
-            onNavigate={onNavigateToLesson}
-          />
+            {/*
+              The first and last lesson of a course have nowhere to go, and the rail is
+              left out entirely for them rather than reserving its width for nothing.
+            */}
+            {(prevLesson || nextLesson) && (
+              <div className="lp-curriculum-col">
+                <LessonNavigation
+                  prevLesson={prevLesson}
+                  nextLesson={nextLesson}
+                  onNavigate={onNavigateToLesson}
+                />
+              </div>
+            )}
+          </div>
         </>
       )}
     </motion.div>

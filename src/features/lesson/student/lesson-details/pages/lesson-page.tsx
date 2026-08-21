@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { LessonForm } from "../components/lesson-form";
 import { LessonSkeleton } from "../components/lesson-skeleton";
-import { FONT } from "../components/lesson.constants";
+import { FONT, LP_SHIMMER } from "../components/lesson.constants";
 import { useLesson } from "../hooks/use-lesson";
 
 export interface LessonPageProps {
@@ -24,6 +24,7 @@ export function LessonPage({
   const {
     isLoading,
     currentLesson,
+    course,
     prevLesson,
     nextLesson,
     isMarkedComplete,
@@ -38,6 +39,9 @@ export function LessonPage({
 
   return (
     <div dir="rtl" style={{ fontFamily: FONT }}>
+      {/* The skeleton's shimmer and the two-column layout both live in this sheet. */}
+      <style>{LP_SHIMMER}</style>
+
       <AnimatePresence mode="wait">
         {isLoading ? (
           <motion.div
@@ -57,6 +61,7 @@ export function LessonPage({
           <LessonForm
             courseId={courseId}
             currentLesson={currentLesson}
+            course={course}
             prevLesson={prevLesson}
             nextLesson={nextLesson}
             isMarkedComplete={isMarkedComplete}

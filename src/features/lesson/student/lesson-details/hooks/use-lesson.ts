@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/shared/api";
-import { loadLesson, markLessonCompleted } from "../services/lesson.service";
-import type { LessonCompletion, LessonRef, LessonView } from "../types/lesson.types";
+import { loadCourseSummary, loadLesson, markLessonCompleted } from "../services/lesson.service";
+import type {
+  LessonCompletion,
+  LessonCourseSummary,
+  LessonRef,
+  LessonView,
+} from "../types/lesson.types";
 
 export interface UseLessonArgs {
   courseId: number;
@@ -13,6 +18,8 @@ export interface UseLessonResult {
   isLoading: boolean;
   error: string | null;
   currentLesson: LessonView | null;
+  /** The course this lesson sits in, or `null` when its summary could not be read. */
+  course: LessonCourseSummary | null;
   prevLesson: LessonRef | null;
   nextLesson: LessonRef | null;
   isMarkedComplete: boolean;
@@ -36,6 +43,7 @@ export function useLesson({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentLesson, setCurrentLesson] = useState<LessonView | null>(null);
+  const [course, setCourse] = useState<LessonCourseSummary | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
   const [completionError, setCompletionError] = useState<string | null>(null);
   const [completion, setCompletion] = useState<LessonCompletion | null>(null);
@@ -46,7 +54,7 @@ export function useLesson({
     const isFirstLoad = reloadToken === 0;
     if (isFirstLoad) setIsLoading(true);
     setError(null);
-    loadLesson(courseId, lessonId)
+    const lessonLoad = loadLesson(courseId, lessonId)
       .then((lesson) => {
         if (!cancelled) setCurrentLesson(lesson);
       })
@@ -58,10 +66,25 @@ export function useLesson({
         } else {
           setError(err?.message ?? "Unknown error");
         }
-      })
-      .finally(() => {
-        if (!cancelled && isFirstLoad) setIsLoading(false);
       });
+
+    // Only the header's course chip and progress bar ride on this, so a course summary
+    // that will not load leaves the lesson playable instead of failing the screen. It is
+    // re-read alongside the lesson so the bar answers for the lesson just completed.
+    const courseLoad = loadCourseSummary(courseId)
+      .then((summary) => {
+        if (!cancelled) setCourse(summary);
+      })
+      .catch((err) => {
+        console.error("Failed to load course summary", err);
+      });
+
+    // The skeleton stays until both have answered: the header is then drawn once, with
+    // its progress block already filled, rather than growing a row after it appears.
+    Promise.all([lessonLoad, courseLoad]).finally(() => {
+      if (!cancelled && isFirstLoad) setIsLoading(false);
+    });
+
     return () => {
       cancelled = true;
     };
@@ -116,6 +139,7 @@ export function useLesson({
     isLoading,
     error,
     currentLesson,
+    course,
     prevLesson: currentLesson?.previousLesson ?? null,
     nextLesson: currentLesson?.nextLesson ?? null,
     isMarkedComplete,

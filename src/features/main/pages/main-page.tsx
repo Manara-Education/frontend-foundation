@@ -141,6 +141,18 @@ export function MainPage() {
   const showLessons = activeCourseId !== null;
   const showStudentLesson = studentCourseId !== null && studentLessonId !== null;
   const showStudentCourseDetails = studentCourseId !== null && !showStudentLesson;
+
+  /**
+   * The reading column every screen is centred in. The lesson player is the exception:
+   * it lays its own content out in two columns beside the video, so it takes the full
+   * width of the shell instead of being capped to the generic column.
+   */
+  const contentMaxWidth: number | string = showStudentLesson
+    ? "none"
+    : activeView === "instructor-banners"
+    ? 960
+    : 860;
+
   const meta = showLessons
     ? { title: "محتوى الدورة", subtitle: "إدارة الدروس والمحتوى" }
     : showStudentLesson
@@ -219,7 +231,7 @@ export function MainPage() {
           {/* Constrained content width — centred in the available space */}
           <div
             style={{
-              maxWidth: activeView === "instructor-banners" ? 960 : 860,
+              maxWidth: contentMaxWidth,
               margin: "0 auto",
               padding: "28px 32px 80px",
             }}
