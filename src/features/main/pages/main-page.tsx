@@ -305,10 +305,7 @@ export function MainPage() {
                     )}
 
                     {activeView === "instructor-create" && (
-                      <CreateCoursePage
-                        onCancel={() => goTo("instructor-home")}
-                        onCourseCreated={(courseId) => setInstructorCourseId(courseId)}
-                      />
+                      <CreateCoursePage onCancel={() => goTo("instructor-home")} />
                     )}
                   </>
                 )}

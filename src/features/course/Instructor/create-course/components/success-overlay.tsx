@@ -1,16 +1,17 @@
 import { motion } from "motion/react";
 import { CheckCircle } from "lucide-react";
-
-const PRIMARY = "#4E5B92";
-const FONT = "'Cairo', sans-serif";
+import { FONT, PRIMARY } from "@/features/course/Instructor/course-editor/components/editor-theme";
 
 interface SuccessOverlayProps {
   title: string;
   onClose: () => void;
-  onAddLessons: () => void;
 }
 
-export function SuccessOverlay({ title, onClose, onAddLessons }: SuccessOverlayProps) {
+/**
+ * Shown once the wizard's aggregate save lands. The course already carries its
+ * lessons, exams and pricing at this point, so the only action left is to leave.
+ */
+export function SuccessOverlay({ title, onClose }: SuccessOverlayProps) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
@@ -44,12 +45,12 @@ export function SuccessOverlay({ title, onClose, onAddLessons }: SuccessOverlayP
         <div className="text-center flex flex-col gap-1.5">
           <h2 style={{ fontWeight: 700, fontSize: 20, color: "#1E2340" }}>تم إنشاء الدورة بنجاح!</h2>
           <p style={{ fontSize: 14, color: "#717182", lineHeight: 1.7 }}>
-            تم إنشاء دورة «{title}» بنجاح. يمكنك الآن البدء في إضافة الدروس والمحتوى.
+            تم إنشاء دورة «{title}» — يمكنك الآن نشر الدورة أو مراجعة المحتوى.
           </p>
         </div>
         <button
-          onClick={onAddLessons}
-          className="w-full rounded-2xl py-3 transition-all duration-150"
+          onClick={onClose}
+          className="w-full rounded-2xl py-3"
           style={{
             background: PRIMARY,
             color: "#fff",
@@ -69,23 +70,7 @@ export function SuccessOverlay({ title, onClose, onAddLessons }: SuccessOverlayP
             e.currentTarget.style.boxShadow = "0 4px 16px rgba(78,91,146,0.3)";
           }}
         >
-          رائع، لنضف الدروس!
-        </button>
-        <button
-          onClick={onClose}
-          style={{
-            marginTop: 8,
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            fontFamily: FONT,
-            fontWeight: 500,
-            fontSize: 13,
-            color: "#9BA3C4",
-            textDecoration: "underline",
-          }}
-        >
-          لاحقاً
+          العودة إلى الرئيسية
         </button>
       </div>
     </motion.div>

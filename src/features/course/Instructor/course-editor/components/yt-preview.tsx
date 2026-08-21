@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { PlayCircle, Video } from "lucide-react";
-import { getYouTubeThumbnail } from "../formatters/add-lessons.formatter";
+import { getYouTubeThumbnail } from "../formatters/course-editor.formatter";
 
 const FONT = "'Cairo', sans-serif";
 

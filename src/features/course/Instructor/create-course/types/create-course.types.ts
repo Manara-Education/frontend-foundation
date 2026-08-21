@@ -1,16 +1,9 @@
 /**
- * This screen still submits the metadata-only slice of the course aggregate. The
- * request type is the canonical `CourseRequest`, so the fields it does not send yet
- * (`structure`, `lessons`, `modules`, `finalQuiz`, `accessType`, `subscriptionPlans`,
- * `status`) are visible here rather than missing from the contract.
+ * The create screen no longer carries a contract of its own.
  *
- * Migration point: the multi-step editor sends the full aggregate and maps its state
- * through `mapCourseEditorStateToCourseRequest`.
+ * It drives the shared course editor (`@/features/course/Instructor/course-editor`),
+ * which holds the state model, the aggregate endpoints and the DTO mapping. What is
+ * re-exported here is only what a caller of this feature needs to name.
  */
+export type { CourseEditorErrors as CreateCourseErrors } from "@/features/course/Instructor/course-editor/types/course-editor.types";
 export type { CourseRequest, InstructorCourseResponse } from "@/shared/courses";
-
-export interface CreateCourseErrors {
-  title?: string;
-  description?: string;
-  price?: string;
-}
