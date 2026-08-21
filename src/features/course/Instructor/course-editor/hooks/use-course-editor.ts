@@ -65,16 +65,31 @@ function emptyModule(draft: ModuleDraft): CourseModuleEditorState {
 }
 
 /**
+ * Detaches content from the rows the backend no longer has.
+ *
+ * Saving a course whose `structure` is `MODULES` deletes its flat lessons, and the
+ * other way round. The editor keeps that branch so switching back does not lose what
+ * was typed — but its `id`s now point at deleted rows, and sending one back is a
+ * "lesson does not belong to this course" error. Clearing them turns the branch into
+ * new content, which is what it has become.
+ */
+function detachPersistedIds<T extends { id: number | null; quiz: QuizEditorState | null }>(
+  item: T,
+): T {
+  return {
+    ...item,
+    id: null,
+    quiz: item.quiz ? { ...item.quiz, id: null } : null,
+  };
+}
+
+/**
  * Re-labels a saved course with the keys the editor was already using.
  *
  * The aggregate response is authoritative for values and ids, but its keys are derived
  * from those ids — adopting them wholesale would remount every list row and collapse
  * the module the instructor is working in. Positions match because the request was
  * built from this exact state.
- *
- * The branch that does not match `structure` comes back empty by contract, so the
- * local one is kept: switching structure must not throw away what the other branch
- * holds, saving included.
  */
 function withEditorKeys(local: CourseEditorState, saved: CourseEditorState): CourseEditorState {
   const lessons = saved.lessons.map((lesson, index) => ({
@@ -93,8 +108,14 @@ function withEditorKeys(local: CourseEditorState, saved: CourseEditorState): Cou
 
   return {
     ...saved,
-    lessons: saved.structure === "FLAT" ? lessons : local.lessons,
-    modules: saved.structure === "MODULES" ? modules : local.modules,
+    lessons: saved.structure === "FLAT" ? lessons : local.lessons.map(detachPersistedIds),
+    modules:
+      saved.structure === "MODULES"
+        ? modules
+        : local.modules.map((module) => ({
+            ...detachPersistedIds(module),
+            lessons: module.lessons.map(detachPersistedIds),
+          })),
     subscriptionPlans: saved.subscriptionPlans.map((plan, index) => ({
       ...plan,
       key: local.subscriptionPlans[index]?.key ?? plan.key,
