@@ -124,7 +124,7 @@ export function ExploreCourseCard({ course, delay = 0, onNavigate, isEnrolled }:
                   مشترك
                 </span>
               </div>
-            ) : course.price === 0 ? (
+            ) : course.accessType === "FREE" ? (
               <div
                 className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 w-fit"
                 style={{
@@ -134,6 +134,18 @@ export function ExploreCourseCard({ course, delay = 0, onNavigate, isEnrolled }:
               >
                 <span style={{ fontFamily: FONT, fontSize: 11, fontWeight: 600, color: "#15803D" }}>
                   مجانية
+                </span>
+              </div>
+            ) : course.accessType === "SUBSCRIPTION" ? (
+              <div
+                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 w-fit"
+                style={{
+                  background: "rgba(78,91,146,0.08)",
+                  border: "1px solid rgba(78,91,146,0.14)",
+                }}
+              >
+                <span style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: PRIMARY }}>
+                  اشتراك
                 </span>
               </div>
             ) : (
@@ -154,7 +166,7 @@ export function ExploreCourseCard({ course, delay = 0, onNavigate, isEnrolled }:
                     direction: "ltr",
                   }}
                 >
-                  {course.price}
+                  {course.purchasePrice ?? 0}
                 </span>
               </div>
             )}

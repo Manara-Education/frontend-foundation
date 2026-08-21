@@ -8,6 +8,8 @@ interface YouTubePlayerProps {
   lessonTitle: string;
   onMarkComplete: () => void;
   isMarked: boolean;
+  /** True while the lesson's quiz still stands between the learner and completion. */
+  quizRequired?: boolean;
 }
 
 const YT_ID_PATTERNS = [
@@ -30,12 +32,13 @@ export function YouTubePlayer({
   lessonTitle,
   onMarkComplete,
   isMarked,
+  quizRequired = false,
 }: YouTubePlayerProps) {
   const videoId = extractYouTubeId(videoUrl);
   const [showCompletionFlash, setShowCompletionFlash] = useState(false);
 
   function handleMarkComplete() {
-    if (isMarked) return;
+    if (isMarked || quizRequired) return;
     setShowCompletionFlash(true);
     setTimeout(() => setShowCompletionFlash(false), 2000);
     onMarkComplete();
@@ -144,8 +147,8 @@ export function YouTubePlayer({
             ) : (
               <motion.button
                 key="btn"
-                whileHover={{ scale: isMarked ? 1 : 1.03 }}
-                whileTap={{ scale: isMarked ? 1 : 0.97 }}
+                whileHover={{ scale: isMarked || quizRequired ? 1 : 1.03 }}
+                whileTap={{ scale: isMarked || quizRequired ? 1 : 0.97 }}
                 onClick={handleMarkComplete}
                 style={{
                   display: "flex",
@@ -155,18 +158,22 @@ export function YouTubePlayer({
                   borderRadius: 12,
                   background: isMarked
                     ? "rgba(34,197,94,0.12)"
+                    : quizRequired
+                    ? "rgba(234,179,8,0.12)"
                     : "rgba(78,91,146,0.18)",
-                  border: `1px solid ${isMarked ? "rgba(34,197,94,0.25)" : "rgba(78,91,146,0.3)"}`,
-                  cursor: isMarked ? "default" : "pointer",
+                  border: `1px solid ${isMarked ? "rgba(34,197,94,0.25)" : quizRequired ? "rgba(234,179,8,0.28)" : "rgba(78,91,146,0.3)"}`,
+                  cursor: isMarked || quizRequired ? "default" : "pointer",
                   fontFamily: FONT,
                   fontSize: 12,
-                  color: isMarked ? "#4ADE80" : "rgba(255,255,255,0.75)",
+                  color: isMarked ? "#4ADE80" : quizRequired ? "#FCD34D" : "rgba(255,255,255,0.75)",
                   transition: "all 0.2s",
                   flexShrink: 0,
+                  maxWidth: 220,
+                  textAlign: "center",
                 }}
               >
                 <CheckCircle2 size={13} strokeWidth={2} />
-                {isMarked ? "مكتمل" : "وضع علامة اكتمال"}
+                {isMarked ? "مكتمل" : quizRequired ? "اجتز الاختبار لإكمال الدرس" : "وضع علامة اكتمال"}
               </motion.button>
             )}
           </AnimatePresence>

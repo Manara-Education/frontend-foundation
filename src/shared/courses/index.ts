@@ -31,6 +31,7 @@ export type {
   InstructorCourseResponse,
   InstructorLessonResponse,
   LearnerCourseModuleResponse,
+  LessonCompletionResponse,
   LessonDetailsResponse,
   LessonRef,
   LessonRequest,
@@ -44,10 +45,15 @@ export type {
   InstructorQuizResponse,
   LearnerQuizQuestionResponse,
   LearnerQuizResponse,
+  LearnerQuizStateResponse,
+  QuizAnswerRequest,
+  QuizAttemptAnswerResponse,
+  QuizAttemptResponse,
   QuizOptionRequest,
   QuizOptionResponse,
   QuizQuestionRequest,
   QuizRequest,
+  QuizSubmissionRequest,
 } from "./quiz.types";
 
 export type {

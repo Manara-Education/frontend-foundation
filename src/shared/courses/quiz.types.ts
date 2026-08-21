@@ -82,8 +82,8 @@ export interface InstructorQuizResponse {
 /**
  * A question as presented to a learner before submission.
  *
- * Neither `correctOptionId` nor `explanation` exists here — both belong to the result
- * of an attempt, which the backend does not model yet.
+ * Neither `correctOptionId` nor `explanation` exists here — both belong to the result of
+ * an attempt, which is {@link QuizAttemptAnswerResponse}.
  */
 export interface LearnerQuizQuestionResponse {
   id: string;
@@ -100,4 +100,93 @@ export interface LearnerQuizResponse {
   instructions: string | null;
   passingScore: number | null;
   questions: LearnerQuizQuestionResponse[];
+  /**
+   * Where this learner stands on the quiz — whether the curriculum has opened it, and
+   * how earlier attempts went. `null` when the viewer is not a learner of the course.
+   */
+  state: LearnerQuizStateResponse | null;
+}
+
+// ── Learner progression state ─────────────────────────────────────────────────
+
+/**
+ * Where one learner stands on one quiz: whether they may take it yet, and how their
+ * past attempts went.
+ *
+ * This is what lets the quiz screen open in the right state without the client deriving
+ * progression rules of its own — `available` answers "is this exam still locked", and
+ * `passed` plus `bestScore` answer "have I already cleared this".
+ *
+ * Carries no answer key: it summarises results, it does not review them. The review
+ * belongs to {@link QuizAttemptResponse}, which only a submission produces.
+ */
+export interface LearnerQuizStateResponse {
+  /** `false` while the progression rules still gate this quiz. */
+  available: boolean | null;
+  attemptCount: number | null;
+  passed: boolean | null;
+  /** Highest score reached so far, or `null` when the learner has not attempted it. */
+  bestScore: number | null;
+  lastAttemptId: number | null;
+  lastSubmittedAt: string | null;
+}
+
+// ── Attempts (taking a quiz) ──────────────────────────────────────────────────
+
+/**
+ * One answer of a submission: the question, and the option chosen for it.
+ *
+ * Nothing else is accepted — no score, no correctness flag — because the server reads
+ * the answer key from its own rows.
+ */
+export interface QuizAnswerRequest {
+  questionId: string;
+  optionId: string;
+}
+
+/**
+ * A learner's completed quiz. The payload carries answers and nothing else: a score, a
+ * pass flag or an answer key sent by a client would be ignored, and there is
+ * deliberately no field able to receive one.
+ */
+export interface QuizSubmissionRequest {
+  answers: QuizAnswerRequest[];
+}
+
+/**
+ * One question of a graded attempt, as returned *after* submission.
+ *
+ * This is the only learner-facing type that carries a correct answer, and it exists only
+ * inside {@link QuizAttemptResponse} — a value produced by grading a submission and by
+ * nothing else.
+ */
+export interface QuizAttemptAnswerResponse {
+  questionId: string;
+  selectedOptionId: string | null;
+  correctOptionId: string | null;
+  correct: boolean | null;
+  /** The instructor's explanation, when they wrote one. */
+  explanation: string | null;
+}
+
+/**
+ * The graded result of one submission.
+ *
+ * Everything the result screen needs is server-computed and present here — the score,
+ * the pass mark it was measured against, the verdict, and the per-question review — so
+ * the client never holds an answer key or reproduces a scoring rule to render it.
+ */
+export interface QuizAttemptResponse {
+  quizId: string;
+  attemptId: number;
+  /** `1` for the learner's first submission of this quiz. */
+  attemptNumber: number | null;
+  correctCount: number | null;
+  totalQuestions: number | null;
+  /** Percentage answered correctly, 0–100. */
+  score: number | null;
+  passingScore: number | null;
+  passed: boolean | null;
+  submittedAt: string | null;
+  answers: QuizAttemptAnswerResponse[] | null;
 }

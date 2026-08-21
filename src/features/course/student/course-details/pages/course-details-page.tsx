@@ -20,11 +20,8 @@ export function CourseDetailsPage({
   mode = "enrolled",
   onEnrolled,
 }: CourseDetailsPageProps) {
-  const { isLoading, courseData, browsePrice, error, handleEnrolled } = useCourseDetails({
-    courseId,
-    mode,
-    onEnrolled,
-  });
+  const { isLoading, courseData, browsePrice, error, handleEnrolled, refreshProgression } =
+    useCourseDetails({ courseId, mode, onEnrolled });
 
   return (
     <div dir="rtl" style={{ fontFamily: FONT }}>
@@ -52,6 +49,7 @@ export function CourseDetailsPage({
             onBack={onBack}
             onLessonClick={onLessonClick}
             onEnrolled={handleEnrolled}
+            onProgressionChanged={refreshProgression}
           />
         )}
       </AnimatePresence>
