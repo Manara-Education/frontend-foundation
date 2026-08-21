@@ -11,6 +11,7 @@ import { AllCoursesPage } from "@/features/course/student/all-courses/pages/all-
 import { CreateCoursePage } from "@/features/course/Instructor/create-course/pages/create-course-page";
 import { AddLessonsPage } from "@/features/lesson/instructor/add-lessons/pages/add-lessons-page";
 import { ProfileView } from "@/features/profile/pages/profile-view.tsx";
+import { BannersPage } from "@/features/banner/instructor/banners/pages/banners-page";
 import { useAuth } from "@/shared/auth";
 import { ExplorePage } from "@/features/course/student/explore/pages/explore-page";
 import { coursesService } from "@/features/course/student/courses/services/courses.service";
@@ -56,6 +57,7 @@ const VIEW_META: Record<ActiveView, { title: string; subtitle: string }> = {
   "instructor-home":    { title: "لوحة المدرّب",        subtitle: "نظرة عامة على نشاطك التدريسي" },
   "instructor-courses": { title: "كل دوراتي",           subtitle: "أدر وعدّل جميع دوراتك" },
   "instructor-create":  { title: "إنشاء دورة جديدة",    subtitle: "ابدأ بإعداد دورتك التالية" },
+  "instructor-banners": { title: "الإعلانات",            subtitle: "إدارة الإعلانات الترويجية" },
 };
 
 // ── MainPage ──────────────────────────────────────────────────────────────────
@@ -215,7 +217,13 @@ export function MainPage() {
           }}
         >
           {/* Constrained content width — centred in the available space */}
-          <div style={{ maxWidth: 860, margin: "0 auto", padding: "28px 32px 80px" }}>
+          <div
+            style={{
+              maxWidth: activeView === "instructor-banners" ? 960 : 860,
+              margin: "0 auto",
+              padding: "28px 32px 80px",
+            }}
+          >
             <AnimatePresence mode="wait">
               <motion.div
                 key={showLessons ? `lessons:${activeCourseId}` : showStudentLesson ? `lesson:${studentCourseId}:${studentLessonId}` : showStudentCourseDetails ? `course:${studentCourseId}` : activeView}
@@ -307,6 +315,8 @@ export function MainPage() {
                     {activeView === "instructor-create" && (
                       <CreateCoursePage onCancel={() => goTo("instructor-home")} />
                     )}
+
+                    {activeView === "instructor-banners" && isInstructor && <BannersPage />}
                   </>
                 )}
               </motion.div>
