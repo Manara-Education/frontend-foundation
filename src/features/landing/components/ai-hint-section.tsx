@@ -1,0 +1,46 @@
+import { Sparkles } from "lucide-react";
+import { FadeIn, SectionHeading } from "./landing-primitives";
+import { PRIMARY, FONT, BG_SOFT, TEXT, TEXT_MUTED, TEXT_LIGHT, BORDER } from "./theme";
+
+/** Section 8 — AI hints. */
+export function AiHintSection() {
+  return (
+    <section dir="rtl" style={{ padding: "100px 28px", background: BG_SOFT }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 60, alignItems: "center" }}>
+          <FadeIn delay={0.1}>
+            <div>
+              <SectionHeading tag="مساعدة ذكية" title="تلميح عندما تحتاجه" subtitle="بدلًا من الكشف الفوري عن الإجابة، تُقدّم منارة تلميحات سياقية تُساعدك على التفكير في المشكلة بنفسك." />
+              <div style={{ marginTop: 28, padding: "20px 22px", borderRadius: 16, background: "#fff", border: `1px solid ${BORDER}`, display: "flex", gap: 6 }}>
+                <div style={{ width: 3, borderRadius: 99, background: PRIMARY, flexShrink: 0 }} />
+                <p style={{ fontFamily: FONT, fontSize: 13.5, color: TEXT_MUTED, lineHeight: 1.8, margin: "0 12px" }}>
+                  الذكاء الاصطناعي في منارة مساعد تعليمي — لا يحلّ محل المدرّس ولا يُقدّم الإجابات جاهزة، بل يُنبّهك إلى الاتجاه الصحيح.
+                </p>
+              </div>
+            </div>
+          </FadeIn>
+          <FadeIn delay={0.2}>
+            <div style={{ padding: "32px", borderRadius: 24, background: "#fff", border: `1px solid ${BORDER}`, boxShadow: "0 8px 40px rgba(78,91,146,0.1)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: `${PRIMARY}12`, color: PRIMARY, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Sparkles size={18} strokeWidth={1.8} />
+                </div>
+                <div>
+                  <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 14, color: TEXT }}>تلميح بواسطة الذكاء الاصطناعي</div>
+                  <div style={{ fontFamily: FONT, fontSize: 11, color: TEXT_LIGHT }}>مخصّص لهذا السؤال</div>
+                </div>
+              </div>
+              <p style={{ fontFamily: FONT, fontSize: 14.5, color: TEXT_MUTED, lineHeight: 1.85, margin: 0, borderRight: `2px solid ${PRIMARY}30`, paddingRight: 16 }}>
+                فكّر في كيفية تأثير تغيير الحالة على دورة حياة المكوّن. حاول استبعاد الإجابات التي تتعارض مع آلية إعادة الرسم في React.
+              </p>
+              <div style={{ marginTop: 20, padding: "10px 14px", borderRadius: 10, background: BG_SOFT, display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 6, height: 6, borderRadius: 99, background: "#22C55E", flexShrink: 0 }} />
+                <span style={{ fontFamily: FONT, fontSize: 12, color: TEXT_MUTED }}>تلميح واحد لكل سؤال — لا يكشف الإجابة الكاملة</span>
+              </div>
+            </div>
+          </FadeIn>
+        </div>
+      </div>
+    </section>
+  );
+}

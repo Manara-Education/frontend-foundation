@@ -7,7 +7,7 @@ export function useAccessDenied() {
 
   const handleLogout = async () => {
     await logout();
-    navigate("/", { replace: true });
+    navigate("/login", { replace: true });
   };
 
   return { handleLogout };

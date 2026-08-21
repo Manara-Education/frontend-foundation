@@ -92,7 +92,7 @@ export function ForgotPasswordForm({
         <div className="flex justify-center">
           <button
             type="button"
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/login")}
             className="flex items-center gap-2 transition-colors duration-150"
             style={{
               fontFamily: "'Cairo', sans-serif",

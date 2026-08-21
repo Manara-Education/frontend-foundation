@@ -21,7 +21,7 @@ export function useResetPassword() {
 
   useEffect(() => {
     if (!fromProfile && (!email || !code)) {
-      navigate("/");
+      navigate("/login");
     }
   }, [email, code, fromProfile, navigate]);
 
