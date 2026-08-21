@@ -18,7 +18,7 @@ export function useOtp() {
 
   useEffect(() => {
     if (!email) {
-      navigate("/");
+      navigate("/login");
     }
   }, [email, navigate]);
 

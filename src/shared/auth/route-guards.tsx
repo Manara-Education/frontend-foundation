@@ -10,14 +10,14 @@ export function ProtectedRoute({ allowedRoles }: { allowedRoles?: string[] } = {
 
   if (status === "loading") return <SessionLoadingScreen />;
   if (status === "anonymous")
-    return <Navigate to="/" replace state={{ from: location.pathname }} />;
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
     return (
       <AccessDeniedCard
         handleLogout={async () => {
           await logout();
-          navigate("/", { replace: true });
+          navigate("/login", { replace: true });
         }}
       />
     );

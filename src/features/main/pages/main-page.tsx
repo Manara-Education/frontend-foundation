@@ -333,7 +333,7 @@ export function MainPage() {
         fullName={user?.fullName}
         onLogout={async () => {
           await logout();
-          navigate("/", { replace: true });
+          navigate("/login", { replace: true });
         }}
       />
     </div>

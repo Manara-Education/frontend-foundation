@@ -23,7 +23,7 @@ export function RegisterPage() {
         errors={errors}
         onChange={setField}
         onSubmit={handleSubmit}
-        onLoginClick={() => navigate("/")}
+        onLoginClick={() => navigate("/login")}
       />
     </AuthLayout>
   );

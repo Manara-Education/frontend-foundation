@@ -103,7 +103,7 @@ export function ResetPasswordForm({
             <div style={{ flex: 1, height: 1, background: "rgba(78,91,146,0.1)" }} />
           </div>
 
-          <PrimaryButton onClick={() => fromProfile ? window.location.replace("/main?view=profile") : navigate("/")}>
+          <PrimaryButton onClick={() => fromProfile ? window.location.replace("/main?view=profile") : navigate("/login")}>
             {fromProfile ? "العودة إلى الملف الشخصي" : "العودة إلى تسجيل الدخول"}
           </PrimaryButton>
         </div>
