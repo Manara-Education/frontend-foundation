@@ -178,7 +178,6 @@ export function useAddLessons({ courseId }: UseAddLessonsArgs) {
           summary: lesson.summary,
           description: lesson.description,
           videoUrl: lesson.videoUrl ?? "",
-          duration: lesson.duration,
           orderIndex: index,
         }),
       ));

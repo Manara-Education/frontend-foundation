@@ -1,34 +1,23 @@
-export type { Course } from "@/shared/courses";
+/**
+ * This screen still uses the legacy scoped lesson endpoints and a metadata-only course
+ * update. Both are canonical contracts now — the types below are the shared ones, not
+ * local copies.
+ *
+ * Migration point: the course editor aggregate (`CourseRequest` with `structure`,
+ * `modules`, `finalQuiz`, `accessType`) replaces the scoped calls in a later phase.
+ */
+export type { CourseCardModel as Course } from "@/shared/courses";
+export type { CourseRequest, LessonRequest } from "@/shared/courses";
 
-export interface CourseRequest {
-  title: string;
-  subtitle?: string;
-  description?: string;
-  image?: string;
-  price?: number;
-}
+/**
+ * The instructor lesson list endpoint currently answers with the learner-shaped
+ * `LessonResponse`, so its quiz — when the backend starts sending one — carries no
+ * answer key. The authoring shape (`InstructorLessonResponse`) is only reachable
+ * through the aggregate course editor endpoint.
+ */
+export type { LessonResponse as Lesson } from "@/shared/courses";
 
-export interface Lesson {
-  id: number;
-  title: string;
-  summary?: string;
-  description?: string;
-  videoUrl?: string;
-  duration?: string;
-  orderIndex: number;
-  courseId: number;
-  isCompleted?: boolean;
-  createdAt?: string;
-}
-
-export interface LessonRequest {
-  title: string;
-  summary?: string;
-  description?: string;
-  videoUrl: string;
-  duration?: string;
-  orderIndex: number;
-}
+import type { LessonResponse } from "@/shared/courses";
 
 export interface LessonFormErrors {
   title?: string;
@@ -53,4 +42,4 @@ export interface EditCourseFormData {
   price: number;
 }
 
-export type LessonInitial = Partial<Lesson>;
+export type LessonInitial = Partial<LessonResponse>;

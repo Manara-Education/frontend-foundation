@@ -33,7 +33,7 @@ export function PaymentCTASection({ course, price, onPay }: PaymentCTASectionPro
     if (isFree) {
       setIsEnrollingFree(true);
       try {
-        await processCheckout(course.id, true);
+        await processCheckout(course.id);
         onPay();
       } catch (err) {
         console.error("Free enrollment failed", err);
