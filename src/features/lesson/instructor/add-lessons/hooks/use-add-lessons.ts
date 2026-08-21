@@ -1,216 +1,156 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { ApiError } from "@/shared/api";
-import { addLessonsService } from "../services/add-lessons.service";
-import type {
-  Course,
-  EditCourseFormData,
-  Lesson,
-  LessonSavePayload,
-} from "../types/add-lessons.types";
+import { useCallback, useState } from "react";
+import { useCourseEditor } from "@/features/course/Instructor/course-editor/hooks/use-course-editor";
+import type { LessonDraft } from "@/features/course/Instructor/course-editor/types/course-editor.types";
+
+export type CourseTab = "overview" | "content" | "quizzes" | "pricing";
 
 interface UseAddLessonsArgs {
   courseId: string;
 }
 
-function extractErrorMessage(err: unknown): string {
-  if (err instanceof ApiError) {
-    return err.errors.join(", ") || err.message;
-  }
-  if (err instanceof Error && err.message) return err.message;
-  return "تعذّر إكمال العملية. يرجى المحاولة مرة أخرى.";
-}
-
+/**
+ * The course editor screen's view state on top of the shared editor.
+ *
+ * The course itself lives in `useCourseEditor`, which loads the aggregate once and
+ * saves it back whole. What this hook adds is which tab is open, which inline lesson
+ * form is showing, and the two inline messages the reference puts next to the publish
+ * and pricing actions.
+ */
 export function useAddLessons({ courseId }: UseAddLessonsArgs) {
-  const numCourseId = Number(courseId);
+  const editor = useCourseEditor({ type: "EDIT", courseId });
 
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [activeTab, setActiveTab] = useState<CourseTab>("content");
+  const [lessonFormOpen, setLessonFormOpen] = useState(false);
+  const [lessonEditKey, setLessonEditKey] = useState<string | null>(null);
+  const [publishError, setPublishError] = useState("");
+  const [pricingError, setPricingError] = useState("");
+  const [infoSaved, setInfoSaved] = useState(false);
 
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showCourseEdit, setShowCourseEdit] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const lastFailedActionRef = useRef<(() => void) | null>(null);
-
-  const [displayTitle, setDisplayTitle] = useState("");
-  const [displayDesc, setDisplayDesc] = useState("");
-  const [displayImage, setDisplayImage] = useState("");
-  const [displayPrice, setDisplayPrice] = useState(0);
-
-  const reportError = useCallback((err: unknown, retry?: () => void) => {
-    console.error(err);
-    lastFailedActionRef.current = retry ?? null;
-    setErrorMessage(extractErrorMessage(err));
+  const openAddLesson = useCallback(() => {
+    setLessonEditKey(null);
+    setLessonFormOpen(true);
   }, []);
 
-  const dismissError = useCallback(() => {
-    lastFailedActionRef.current = null;
-    setErrorMessage(null);
+  const openEditLesson = useCallback((key: string) => {
+    setLessonFormOpen(false);
+    setLessonEditKey(key);
   }, []);
 
-  const retryError = useCallback(() => {
-    const action = lastFailedActionRef.current;
-    lastFailedActionRef.current = null;
-    setErrorMessage(null);
-    action?.();
+  const closeLessonForm = useCallback(() => {
+    setLessonFormOpen(false);
+    setLessonEditKey(null);
   }, []);
 
-  const fetchMyCourses = useCallback(async () => {
-    try {
-      const data = await addLessonsService.getMyCourses();
-      setCourses(data);
-    } catch (err) {
-      reportError(err, () => void fetchMyCourses());
+  const { addLesson, updateLesson } = editor;
+
+  const saveLesson = useCallback(
+    (draft: LessonDraft) => {
+      if (lessonEditKey) updateLesson(lessonEditKey, draft);
+      else addLesson(draft);
+      closeLessonForm();
+    },
+    [addLesson, closeLessonForm, lessonEditKey, updateLesson],
+  );
+
+  const saveModuleLesson = useCallback(
+    (moduleKey: string, lessonKey: string | null, draft: LessonDraft) => {
+      if (lessonKey) editor.updateModuleLesson(moduleKey, lessonKey, draft);
+      else editor.addModuleLesson(moduleKey, draft);
+    },
+    [editor],
+  );
+
+  const deleteLesson = useCallback(
+    (key: string) => {
+      editor.deleteLesson(key);
+      if (lessonEditKey === key) setLessonEditKey(null);
+    },
+    [editor, lessonEditKey],
+  );
+
+  /** Overview's "حفظ التعديلات": one aggregate `PUT`, then the inline confirmation. */
+  const saveOverview = useCallback(async () => {
+    if (await editor.saveAggregate()) setInfoSaved(true);
+  }, [editor]);
+
+  /** Pricing's "حفظ التعديلات": validates the access mode before the same `PUT`. */
+  const savePricing = useCallback(async () => {
+    const message = editor.validatePricing();
+    if (message) {
+      setPricingError(message);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reportError]);
+    setPricingError("");
+    await editor.saveAggregate();
+  }, [editor]);
 
-  const fetchLessons = useCallback(async () => {
-    if (!numCourseId) return;
-    try {
-      const data = await addLessonsService.getCourseLessons(numCourseId);
-      setLessons(data.sort((a, b) => a.orderIndex - b.orderIndex));
-    } catch (err) {
-      reportError(err, () => void fetchLessons());
+  const setAccessType = useCallback(
+    (accessType: Parameters<typeof editor.setAccessType>[0]) => {
+      editor.setAccessType(accessType);
+      setPricingError("");
+    },
+    [editor],
+  );
+
+  const setPurchasePrice = useCallback(
+    (value: string) => {
+      editor.setPurchasePrice(value);
+      setPricingError("");
+    },
+    [editor],
+  );
+
+  /**
+   * Publishing checks the same things the reference does, and sends the instructor to
+   * the tab that needs attention when one fails.
+   */
+  const publish = useCallback(async () => {
+    if (!editor.state.title.trim()) {
+      setPublishError("أدخل عنوان الدورة أولاً");
+      setActiveTab("overview");
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [numCourseId, reportError]);
-
-  useEffect(() => {
-    fetchMyCourses();
-    fetchLessons();
-  }, [fetchMyCourses, fetchLessons]);
-
-  useEffect(() => {
-    if (courses.length > 0) {
-      const activeCourse = courses.find((c) => c.id === numCourseId);
-      if (activeCourse) {
-        setDisplayTitle(activeCourse.title);
-        setDisplayDesc(activeCourse.description || "");
-        setDisplayImage(activeCourse.image || "");
-        setDisplayPrice(activeCourse.price || 0);
-      }
-      setIsLoading(false);
+    if (editor.totalLessons === 0) {
+      setPublishError("أضف درسًا واحدًا على الأقل قبل النشر");
+      setActiveTab("content");
+      return;
     }
-  }, [courses, numCourseId]);
-
-  const handleSave = useCallback(async (data: LessonSavePayload) => {
-    try {
-      if (editingId) {
-        const updated = await addLessonsService.updateLesson(numCourseId, editingId, {
-          title: data.title,
-          description: data.description,
-          videoUrl: data.videoUrl,
-          orderIndex: data.orderIndex,
-        });
-        setLessons((prev) =>
-          prev.map((l) => (l.id === editingId ? updated : l)).sort((a, b) => a.orderIndex - b.orderIndex),
-        );
-        setEditingId(null);
-      } else {
-        const created = await addLessonsService.addLesson(numCourseId, {
-          title: data.title,
-          description: data.description,
-          videoUrl: data.videoUrl,
-          orderIndex: lessons.length,
-        });
-        setLessons((prev) => [...prev, created].sort((a, b) => a.orderIndex - b.orderIndex));
-        setShowForm(false);
-      }
-    } catch (err) {
-      reportError(err, () => void handleSave(data));
+    const pricingMessage = editor.validatePricing();
+    if (pricingMessage) {
+      setPublishError(pricingMessage);
+      setActiveTab("pricing");
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingId, numCourseId, lessons.length, reportError]);
+    setPublishError("");
+    await editor.setStatus("PUBLISHED");
+  }, [editor]);
 
-  const handleDelete = useCallback(async (id: number) => {
-    try {
-      await addLessonsService.deleteLesson(numCourseId, id);
-      setLessons((prev) => prev.filter((l) => l.id !== id));
-      if (editingId === id) setEditingId(null);
-    } catch (err) {
-      reportError(err, () => void handleDelete(id));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingId, numCourseId, reportError]);
-
-  const handleEdit = useCallback((id: number) => {
-    setShowForm(false);
-    setEditingId(id);
-  }, []);
-
-  const handleCancelForm = useCallback(() => {
-    setShowForm(false);
-    setEditingId(null);
-  }, []);
-
-  const handleSaveCourseEdit = useCallback(async (data: EditCourseFormData): Promise<boolean> => {
-    const { title, description, imageUrl, imageFile, price } = data;
-    try {
-      const image = imageFile
-        ? await addLessonsService.uploadFile(imageFile)
-        : imageUrl;
-      await addLessonsService.updateCourse(numCourseId, {
-        title,
-        description,
-        image,
-        price,
-      });
-      setDisplayTitle(title);
-      setDisplayDesc(description);
-      setDisplayImage(image);
-      setDisplayPrice(price);
-      return true;
-    } catch (err) {
-      reportError(err, () => void handleSaveCourseEdit(data));
-      return false;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [numCourseId, reportError]);
-
-  const reorderLessons = useCallback(async (reordered: Lesson[]) => {
-    setLessons(reordered);
-    try {
-      await Promise.all(reordered.map((lesson, index) =>
-        addLessonsService.updateLesson(numCourseId, lesson.id, {
-          title: lesson.title,
-          summary: lesson.summary,
-          description: lesson.description,
-          videoUrl: lesson.videoUrl ?? "",
-          orderIndex: index,
-        }),
-      ));
-    } catch (err) {
-      reportError(err, () => void reorderLessons(reordered));
-      await fetchLessons();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [numCourseId, fetchLessons, reportError]);
-
-  const editingLesson: Lesson | null = editingId ? lessons.find((l) => l.id === editingId) ?? null : null;
+  const unpublish = useCallback(async () => {
+    setPublishError("");
+    await editor.setStatus("DRAFT");
+  }, [editor]);
 
   return {
-    lessons,
-    isLoading,
-    showForm,
-    editingId,
-    editingLesson,
-    showCourseEdit,
-    displayTitle,
-    displayDesc,
-    displayImage,
-    displayPrice,
-    errorMessage,
-    dismissError,
-    retryError,
-    setShowForm,
-    setShowCourseEdit,
-    handleSave,
-    handleDelete,
-    handleEdit,
-    handleCancelForm,
-    handleSaveCourseEdit,
-    reorderLessons,
+    editor,
+    activeTab,
+    setActiveTab,
+    lessonFormOpen,
+    lessonEditKey,
+    publishError,
+    pricingError,
+    infoSaved,
+    setInfoSaved,
+    openAddLesson,
+    openEditLesson,
+    closeLessonForm,
+    saveLesson,
+    saveModuleLesson,
+    deleteLesson,
+    saveOverview,
+    savePricing,
+    setAccessType,
+    setPurchasePrice,
+    publish,
+    unpublish,
   };
 }

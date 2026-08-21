@@ -1,116 +1,113 @@
-import { useState } from "react";
-import { createCourseService } from "../services/create-course.service";
-import type { CreateCourseErrors } from "../types/create-course.types";
+import { useCallback, useState } from "react";
+import { useCourseEditor } from "@/features/course/Instructor/course-editor/hooks/use-course-editor";
+import type { LessonDraft } from "@/features/course/Instructor/course-editor/types/course-editor.types";
+import type { StepId } from "../components/step-indicator";
 
 interface UseCreateCourseArgs {
   onCancel?: () => void;
 }
 
+/**
+ * The create wizard's own view state on top of the shared course editor.
+ *
+ * Everything about the course itself — metadata, structure, lessons, exams, pricing —
+ * lives in `useCourseEditor`; what belongs here is which step is showing and which
+ * inline lesson form is open.
+ */
 export function useCreateCourse({ onCancel }: UseCreateCourseArgs) {
-  const [createdCourseId, setCreatedCourseId] = useState<string>("");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [errors, setErrors] = useState<CreateCourseErrors>({});
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const editor = useCourseEditor({ type: "CREATE" });
 
-  const validate = (): CreateCourseErrors => {
-    const e: CreateCourseErrors = {};
-    if (!title.trim()) e.title = "يرجى إدخال اسم الدورة";
-    else if (title.trim().length < 5) e.title = "اسم الدورة يجب أن يكون 5 أحرف على الأقل";
-    if (!description.trim()) e.description = "يرجى إدخال وصف مختصر للدورة";
-    else if (description.trim().length < 20) e.description = "الوصف يجب أن يكون 20 حرفاً على الأقل";
-    if (price !== "" && (isNaN(parseFloat(price)) || parseFloat(price) < 0)) {
-      e.price = "لا يمكن أن يكون السعر قيمة سالبة";
+  const [step, setStep] = useState<StepId>(1);
+  const [lessonFormOpen, setLessonFormOpen] = useState(false);
+  const [lessonEditKey, setLessonEditKey] = useState<string | null>(null);
+
+  const { setErrors, validateWizardStep } = editor;
+
+  const goNext = useCallback(() => {
+    const message = validateWizardStep(step);
+    if (message) {
+      setErrors({ step: message });
+      return;
     }
-    return e;
-  };
-
-  const handleSubmit = async () => {
-    const e = validate();
-    if (Object.keys(e).length > 0) { setErrors(e); return; }
     setErrors({});
-    setError(null);
-    setIsSubmitting(true);
+    setStep((s) => Math.min(6, s + 1) as StepId);
+  }, [setErrors, step, validateWizardStep]);
 
-    try {
-      let imageUrl: string | undefined = undefined;
-      if (imageFile) {
-        imageUrl = await createCourseService.uploadFile(imageFile);
-      }
+  const goPrev = useCallback(() => {
+    setErrors({});
+    setStep((s) => Math.max(1, s - 1) as StepId);
+  }, [setErrors]);
 
-      const parsedPrice = price === "" ? 0 : parseFloat(price);
-      const newCourse = await createCourseService.createCourse({
-        title: title.trim(),
-        description: description.trim(),
-        price: isNaN(parsedPrice) ? 0 : parsedPrice,
-        image: imageUrl,
-      });
-      setCreatedCourseId(newCourse.id.toString());
-      setShowSuccess(true);
-    } catch (err) {
-      console.error(err);
-      // ApiError sets `message` from the first backend error, so both branches read the same.
-      setError(err instanceof Error ? err.message : "Failed to create course");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  /** The rail and the review shortcuts only ever move backwards. */
+  const goToStep = useCallback(
+    (target: StepId) => {
+      if (target > step) return;
+      setErrors({});
+      setStep(target);
+    },
+    [setErrors, step],
+  );
 
-  const handleTitleChange = (value: string) => {
-    setTitle(value);
-    if (errors.title) setErrors((prev) => ({ ...prev, title: undefined }));
-  };
+  const openAddLesson = useCallback(() => {
+    setLessonEditKey(null);
+    setLessonFormOpen(true);
+  }, []);
 
-  const handleDescriptionChange = (value: string) => {
-    setDescription(value);
-    if (errors.description) setErrors((prev) => ({ ...prev, description: undefined }));
-  };
+  const openEditLesson = useCallback((key: string) => {
+    setLessonEditKey(key);
+    setLessonFormOpen(true);
+  }, []);
 
-  const handlePriceChange = (value: string) => {
-    setPrice(value);
-    if (errors.price) setErrors((prev) => ({ ...prev, price: undefined }));
-  };
+  const closeLessonForm = useCallback(() => {
+    setLessonFormOpen(false);
+    setLessonEditKey(null);
+  }, []);
 
-  const handleImageChange = (f: File | null, p: string | null) => {
-    setImageFile(f);
-    setImagePreview(p);
-  };
+  const { addLesson, updateLesson } = editor;
 
-  const dismissError = () => setError(null);
+  const saveLesson = useCallback(
+    (draft: LessonDraft) => {
+      if (lessonEditKey) updateLesson(lessonEditKey, draft);
+      else addLesson(draft);
+      closeLessonForm();
+    },
+    [addLesson, closeLessonForm, lessonEditKey, updateLesson],
+  );
 
-  const handleSuccessClose = () => {
-    setShowSuccess(false);
-    setTitle("");
-    setDescription("");
-    setPrice("");
-    setImageFile(null);
-    setImagePreview(null);
+  const saveModuleLesson = useCallback(
+    (moduleKey: string, lessonKey: string | null, draft: LessonDraft) => {
+      if (lessonKey) editor.updateModuleLesson(moduleKey, lessonKey, draft);
+      else editor.addModuleLesson(moduleKey, draft);
+    },
+    [editor],
+  );
+
+  const handleCancel = useCallback(() => {
+    if (editor.isDirty && !window.confirm("لديك تغييرات غير محفوظة. هل تريد المغادرة بدون حفظ؟")) return;
     onCancel?.();
-  };
+  }, [editor.isDirty, onCancel]);
+
+  const handleSuccessClose = useCallback(() => {
+    editor.setShowSuccess(false);
+    onCancel?.();
+  }, [editor, onCancel]);
 
   return {
-    title,
-    description,
-    price,
-    imageFile,
-    imagePreview,
-    errors,
-    error,
-    isSubmitting,
-    showSuccess,
-    createdCourseId,
-    handleTitleChange,
-    handleDescriptionChange,
-    handlePriceChange,
-    handleImageChange,
-    handleSubmit,
+    editor,
+    step,
+    lessonFormOpen,
+    lessonEditKey,
+    goNext,
+    goPrev,
+    goToStep,
+    openAddLesson,
+    openEditLesson,
+    closeLessonForm,
+    saveLesson,
+    saveModuleLesson,
+    handleCancel,
     handleSuccessClose,
-    dismissError,
-    setShowSuccess,
+    publish: () => editor.submitCourse("PUBLISHED"),
+    saveDraft: () => editor.submitCourse("DRAFT"),
   };
 }

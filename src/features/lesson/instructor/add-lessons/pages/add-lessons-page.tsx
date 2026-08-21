@@ -1,6 +1,4 @@
-import { AnimatePresence } from "motion/react";
-import { AddLessonsForm } from "../components/add-lessons-form";
-import { ErrorOverlay } from "@/shared/components/ErrorOverlay/ErrorOverlay";
+import { CourseEditorTabs } from "../components/course-editor-tabs";
 import { PageSkeleton } from "../components/page-skeleton";
 import { useAddLessons } from "../hooks/use-add-lessons";
 
@@ -12,31 +10,9 @@ interface AddLessonsPageProps {
 }
 
 export function AddLessonsPage({ courseId, onFinish }: AddLessonsPageProps) {
-  const {
-    lessons,
-    isLoading,
-    showForm,
-    editingId,
-    editingLesson,
-    showCourseEdit,
-    displayTitle,
-    displayDesc,
-    displayImage,
-    displayPrice,
-    errorMessage,
-    dismissError,
-    retryError,
-    setShowForm,
-    setShowCourseEdit,
-    handleSave,
-    handleDelete,
-    handleEdit,
-    handleCancelForm,
-    handleSaveCourseEdit,
-    reorderLessons,
-  } = useAddLessons({ courseId });
+  const controller = useAddLessons({ courseId });
 
-  if (isLoading) {
+  if (controller.editor.isLoading) {
     return (
       <div dir="rtl" style={{ fontFamily: FONT }}>
         <PageSkeleton />
@@ -44,38 +20,5 @@ export function AddLessonsPage({ courseId, onFinish }: AddLessonsPageProps) {
     );
   }
 
-  return (
-    <>
-      <AddLessonsForm
-        lessons={lessons}
-        showForm={showForm}
-        editingId={editingId}
-        editingLesson={editingLesson}
-        showCourseEdit={showCourseEdit}
-        displayTitle={displayTitle}
-        displayDesc={displayDesc}
-        displayImage={displayImage}
-        displayPrice={displayPrice}
-        onShowForm={() => setShowForm(true)}
-        onShowCourseEdit={() => setShowCourseEdit(true)}
-        onCloseCourseEdit={() => setShowCourseEdit(false)}
-        onSave={handleSave}
-        onDelete={handleDelete}
-        onEdit={handleEdit}
-        onCancelForm={handleCancelForm}
-        onSaveCourseEdit={handleSaveCourseEdit}
-        onReorder={reorderLessons}
-        onFinish={onFinish}
-      />
-      <AnimatePresence>
-        {errorMessage !== null && (
-          <ErrorOverlay
-            message={errorMessage}
-            onRetry={retryError}
-            onClose={dismissError}
-          />
-        )}
-      </AnimatePresence>
-    </>
-  );
+  return <CourseEditorTabs {...controller} onFinish={onFinish} />;
 }
