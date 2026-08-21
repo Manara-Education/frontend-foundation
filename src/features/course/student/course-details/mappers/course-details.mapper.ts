@@ -1,13 +1,26 @@
-import { normalizeCourseAccessType, normalizeCourseStructure } from "@/shared/courses";
+import {
+  normalizeAccessStatus,
+  normalizeCourseAccessType,
+  normalizeCourseStructure,
+  type CourseAccessResponse,
+  type SubscriptionPlanResponse,
+} from "@/shared/courses";
 import { toQuizView } from "@/features/quiz/student/quiz-player";
-import { toLessonStatus } from "../formatters/course-details.formatter";
+import {
+  formatAccessEndDate,
+  formatPlanDuration,
+  formatPrice,
+  toLessonStatus,
+} from "../formatters/course-details.formatter";
 import type {
+  CourseAccess,
   CourseDetailsApiResponse,
   CourseModuleApi,
   CurriculumModule,
   Lesson,
   LessonApi,
   StudentCourseModel,
+  SubscriptionPlanOption,
 } from "../types/course-details.types";
 
 function byOrderIndex<T extends { orderIndex: number }>(items: readonly T[]): T[] {
@@ -67,6 +80,31 @@ function toModules(
   });
 }
 
+function toPlanOption(dto: SubscriptionPlanResponse): SubscriptionPlanOption {
+  return {
+    id: dto.id,
+    name: dto.name,
+    durationLabel: formatPlanDuration(dto.duration, dto.unit),
+    priceLabel: formatPrice(dto.price),
+  };
+}
+
+/**
+ * A response that predates the access block, or a viewer the course tracks nothing for,
+ * both map to "no standing" — which is the same thing the backend sends for them.
+ */
+function toCourseAccess(dto: CourseAccessResponse | null | undefined): CourseAccess {
+  return {
+    enrolled: dto?.enrolled ?? false,
+    entitled: dto?.entitled ?? false,
+    source: dto?.source ?? null,
+    status: normalizeAccessStatus(dto?.status),
+    endDateLabel: formatAccessEndDate(dto?.expiresAt ?? null),
+    daysRemaining: dto?.daysRemaining ?? null,
+    planId: dto?.planId ?? null,
+  };
+}
+
 export function mapCourseDetailsResponseToStudentCourseModel(
   dto: CourseDetailsApiResponse,
 ): StudentCourseModel {
@@ -109,8 +147,10 @@ export function mapCourseDetailsResponseToStudentCourseModel(
     category: course.subtitle ?? "",
     price: purchasePrice,
     purchasePrice,
+    purchasePriceLabel: purchasePrice === null ? null : formatPrice(purchasePrice),
     accessType: normalizeCourseAccessType(course.accessType),
-    subscriptionPlans: course.subscriptionPlans ?? [],
+    subscriptionPlans: byOrderIndex(course.subscriptionPlans ?? []).map(toPlanOption),
+    access: toCourseAccess(dto.access),
     structure: normalizeCourseStructure(dto.structure),
     currentLesson: {
       number: currentLesson?.number ?? 0,

@@ -20,7 +20,7 @@ export function CourseDetailsPage({
   mode = "enrolled",
   onEnrolled,
 }: CourseDetailsPageProps) {
-  const { isLoading, courseData, browsePrice, error, handleEnrolled, refreshProgression } =
+  const { isLoading, courseData, error, handleEnrolled, refreshProgression } =
     useCourseDetails({ courseId, mode, onEnrolled });
 
   return (
@@ -45,7 +45,6 @@ export function CourseDetailsPage({
             courseData={courseData}
             courseId={courseId}
             mode={mode}
-            browsePrice={browsePrice}
             onBack={onBack}
             onLessonClick={onLessonClick}
             onEnrolled={handleEnrolled}

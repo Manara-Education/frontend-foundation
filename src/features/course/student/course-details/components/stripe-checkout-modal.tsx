@@ -2,22 +2,41 @@ import { motion, AnimatePresence } from "motion/react";
 import { Lock, X, CheckCircle2, ShieldCheck } from "lucide-react";
 import { FONT, PRIMARY } from "../formatters/course-details.formatter";
 import { useCheckout } from "../hooks/use-checkout";
-import type { CourseDetailData } from "../types/course-details.types";
+import type { CheckoutKind, CourseDetailData } from "../types/course-details.types";
 import { StripeField } from "./stripe-field";
 
 interface StripeCheckoutModalProps {
   course: CourseDetailData;
-  price: number | null;
+  kind: CheckoutKind;
+  /**
+   * The amount, already formatted — shown for confirmation only. What is actually charged is
+   * the backend's decision, taken from the course's or the plan's own stored price.
+   */
+  amountLabel: string;
+  /** What the amount buys: `"شراء مرة واحدة"`, or the chosen plan's name. */
+  termsLabel: string;
+  /** Present for a subscription: the plan the learner picked. The only value submitted. */
+  planId?: number | null;
   onSuccess: () => void;
+  onFailure: () => void;
   onCancel: () => void;
 }
 
-export function StripeCheckoutModal({ course, price, onSuccess, onCancel }: StripeCheckoutModalProps) {
-  const isFree = price === null;
+export function StripeCheckoutModal({
+  course,
+  kind,
+  amountLabel,
+  termsLabel,
+  planId,
+  onSuccess,
+  onFailure,
+  onCancel,
+}: StripeCheckoutModalProps) {
+  const isFree = kind === "free";
   const {
     step, form, canPay,
     setCardNumber, setExpiry, setCvc, setName, setEmail, handlePay,
-  } = useCheckout({ courseId: course.id, isFree, onSuccess });
+  } = useCheckout({ courseId: course.id, kind, planId, onSuccess, onFailure });
 
   return (
     <motion.div
@@ -85,10 +104,10 @@ export function StripeCheckoutModal({ course, price, onSuccess, onCancel }: Stri
           </div>
           <div style={{ marginTop: 18, display: "flex", alignItems: "baseline", gap: 6 }}>
             <span style={{ fontFamily: FONT, fontSize: 38, color: "#fff", lineHeight: 1 }}>
-              {isFree ? "مجانية" : `$${price}`}
+              {amountLabel}
             </span>
             {!isFree && (
-              <span style={{ fontFamily: FONT, fontSize: 13, color: "rgba(255,255,255,0.62)" }}>USD · دفعة واحدة</span>
+              <span style={{ fontFamily: FONT, fontSize: 13, color: "rgba(255,255,255,0.62)" }}>{termsLabel}</span>
             )}
           </div>
         </div>
@@ -145,7 +164,7 @@ export function StripeCheckoutModal({ course, price, onSuccess, onCancel }: Stri
                   }}
                 >
                   <Lock size={15} strokeWidth={2} />
-                  {isFree ? "ابدأ التعلم مجاناً" : `ادفع $${price} وابدأ التعلم`}
+                  {isFree ? "ابدأ التعلم مجاناً" : `ادفع ${amountLabel} وابدأ التعلم`}
                 </motion.button>
 
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginTop: 14 }}>
