@@ -27,6 +27,9 @@ export function LessonPage({
     prevLesson,
     nextLesson,
     isMarkedComplete,
+    isLocked,
+    isQuizRequired,
+    completionError,
     description,
     videoUrl,
     navigateToLesson,
@@ -52,10 +55,14 @@ export function LessonPage({
           </div>
         ) : (
           <LessonForm
+            courseId={courseId}
             currentLesson={currentLesson}
             prevLesson={prevLesson}
             nextLesson={nextLesson}
             isMarkedComplete={isMarkedComplete}
+            isLocked={isLocked}
+            isQuizRequired={isQuizRequired}
+            completionError={completionError}
             description={description}
             videoUrl={videoUrl}
             onBackToCourseDetails={onBackToCourseDetails}
@@ -63,6 +70,7 @@ export function LessonPage({
             onBackToHome={onBackToHome}
             onNavigateToLesson={navigateToLesson}
             onMarkComplete={markComplete}
+            onQuizPassed={markComplete}
           />
         )}
       </AnimatePresence>

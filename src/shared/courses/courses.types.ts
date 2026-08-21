@@ -61,6 +61,10 @@ export interface LessonRequest {
  * Learner-facing lesson. The attached quiz is the learner view, so course and lesson
  * browsing can never hand out an answer key.
  *
+ * When `locked` is true the viewer has not earned the lesson's content, and the fields
+ * that carry it — `videoUrl`, `description` and `quiz` — are absent. What is left is the
+ * title, length and position, which is what a locked row in the curriculum shows.
+ *
  * @see InstructorLessonResponse for the authoring view
  */
 export interface LessonResponse {
@@ -74,6 +78,8 @@ export interface LessonResponse {
   courseId: number;
   moduleId: number | null;
   isCompleted: boolean | null;
+  /** True when the viewer may see this lesson listed but not open it. */
+  locked: boolean | null;
   quiz: LearnerQuizResponse | null;
   createdAt: string | null;
 }
@@ -143,6 +149,8 @@ export interface LearnerCourseModuleResponse {
   orderIndex: number;
   lessons: LessonResponse[];
   quiz: LearnerQuizResponse | null;
+  /** True while an earlier module is unfinished, which is what keeps this one shut. */
+  locked: boolean | null;
 }
 
 // ── Courses ───────────────────────────────────────────────────────────────────
@@ -289,6 +297,11 @@ export interface CourseDetailsInfo {
 /**
  * Learner-facing course details. Like the editor response, only the branch matching
  * `structure` is populated. Every quiz in the tree is the learner view.
+ *
+ * The progression fields describe the viewing learner's own standing, so a client
+ * renders locks, the progress bar and "continue where you left off" from what the server
+ * decided rather than from rules of its own. They are absent for a viewer the course
+ * tracks no progress for — course discovery, typically.
  */
 export interface CourseDetailsResponse {
   course: CourseDetailsInfo;
@@ -297,6 +310,32 @@ export interface CourseDetailsResponse {
   lessons: LessonResponse[] | null;
   modules: LearnerCourseModuleResponse[] | null;
   finalQuiz: LearnerQuizResponse | null;
+  /** Percentage of the course's lessons this learner has completed, 0–100. */
+  progress: number | null;
+  /** True once the curriculum is finished and the final exam, if there is one, is passed. */
+  courseCompleted: boolean | null;
+  /** The lesson to open next, or `null` when nothing is left to open. */
+  nextLessonId: number | null;
+}
+
+// ── Lesson completion ─────────────────────────────────────────────────────────
+
+/**
+ * What completing a lesson changed.
+ *
+ * Marking a lesson done moves the course progress, may open the next module and may
+ * finish the course. All of that is decided by the server and reported back here rather
+ * than left for a client to re-derive.
+ */
+export interface LessonCompletionResponse {
+  lessonId: number;
+  completed: boolean | null;
+  /** Percentage of the course's lessons now complete, 0–100. */
+  courseProgress: number | null;
+  /** The lesson to open next, or `null` when nothing is left to open. */
+  nextLessonId: number | null;
+  /** True once the curriculum is finished and the final exam, if there is one, is passed. */
+  courseCompleted: boolean | null;
 }
 
 // ── Enrollment / checkout ─────────────────────────────────────────────────────

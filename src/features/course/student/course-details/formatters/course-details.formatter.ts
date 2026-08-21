@@ -1,7 +1,8 @@
 import {
-  CheckCircle2, Play, PlayCircle, Lock,
+  CheckCircle2, ClipboardList, Play, PlayCircle, Lock,
 } from "lucide-react";
-import type { LessonStatus } from "../types/course-details.types";
+import type { QuizView } from "@/features/quiz/student/quiz-player";
+import type { LessonApi, LessonStatus } from "../types/course-details.types";
 
 export const PRIMARY = "#4E5B92";
 export const FONT = "'Cairo', sans-serif";
@@ -34,6 +35,39 @@ export const LESSON_STATUS_CONFIG: Record<LessonStatus, LessonStatusConfig> = {
   "not-started": { icon: Play,         color: "#9BA3C4", bg: "rgba(155,163,196,0.08)", label: "غير مكتمل" },
   locked:        { icon: Lock,         color: "#C4C9DE", bg: "rgba(196,201,222,0.06)", label: "مقفل" },
 };
+
+/**
+ * The row's state, decided entirely by what the server sent.
+ *
+ * `locked` is the curriculum's own verdict, `isCompleted` the learner's record, and
+ * `nextLessonId` the server's answer to "where do I go next" — a lesson's position in
+ * the list says nothing about any of the three.
+ */
+export function toLessonStatus(lesson: LessonApi, nextLessonId: number | null): LessonStatus {
+  if (lesson.locked) return "locked";
+  if (lesson.isCompleted) return "completed";
+  if (nextLessonId !== null && lesson.id === nextLessonId) return "current";
+  return "not-started";
+}
+
+/** An exam row borrows the lesson row's states, so the curriculum reads as one list. */
+export function toExamStatus(quiz: QuizView): LessonStatus {
+  if (quiz.passed) return "completed";
+  if (!quiz.available) return "locked";
+  return "current";
+}
+
+export const EXAM_ICON = ClipboardList;
+
+export function formatExamStatusLabel(quiz: QuizView): string {
+  if (quiz.passed) return `تم الاجتياز · ${quiz.bestScore ?? 0}%`;
+  if (!quiz.available) return "مقفل";
+  return "متاح الآن";
+}
+
+export function formatQuestionCount(count: number): string {
+  return `${count} سؤال`;
+}
 
 export function formatStudentsCount(n: number): string {
   return n.toLocaleString("ar-EG");

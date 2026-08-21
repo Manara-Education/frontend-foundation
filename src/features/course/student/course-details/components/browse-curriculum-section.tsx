@@ -1,18 +1,30 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { BookOpen, Lock, ChevronDown } from "lucide-react";
+import { BookOpen, Layers, Lock, ChevronDown } from "lucide-react";
 import { FONT, PRIMARY } from "../formatters/course-details.formatter";
-import type { Lesson } from "../types/course-details.types";
+import type { CurriculumModule, Lesson } from "../types/course-details.types";
 import { BrowseLessonItem } from "./browse-lesson-item";
+import { BrowseModuleGroupCard } from "./browse-module-group-card";
 
 interface BrowseCurriculumSectionProps {
   lessons: Lesson[];
+  modules: CurriculumModule[];
+  structure: "FLAT" | "MODULES";
   enrolled: boolean;
 }
 
-export function BrowseCurriculumSection({ lessons, enrolled }: BrowseCurriculumSectionProps) {
+export function BrowseCurriculumSection({
+  lessons,
+  modules,
+  structure,
+  enrolled,
+}: BrowseCurriculumSectionProps) {
   const [showAll, setShowAll] = useState(false);
   const displayed = showAll ? lessons : lessons.slice(0, 8);
+  const isModules = structure === "MODULES" && modules.length > 0;
+  const totalLessons = isModules
+    ? modules.reduce((sum, m) => sum + m.lessons.length, 0)
+    : lessons.length;
 
   return (
     <motion.div
@@ -31,12 +43,14 @@ export function BrowseCurriculumSection({ lessons, enrolled }: BrowseCurriculumS
               color: PRIMARY,
             }}
           >
-            <BookOpen size={15} strokeWidth={1.8} />
+            {isModules ? <Layers size={15} strokeWidth={1.8} /> : <BookOpen size={15} strokeWidth={1.8} />}
           </div>
           <div>
             <div style={{ fontFamily: FONT, fontSize: 16, color: "#1F2937" }}>منهج الدورة</div>
             <div style={{ fontFamily: FONT, fontSize: 11, color: "#9BA3C4" }}>
-              {lessons.length} درس {enrolled ? "— جميعها متاحة" : "— مقفلة حتى الاشتراك"}
+              {isModules ? `${modules.length} وحدات · ${totalLessons} درس` : `${totalLessons} درس`}
+              {" "}
+              {enrolled ? "— جميعها متاحة" : "— مقفلة حتى الاشتراك"}
             </div>
           </div>
         </div>
@@ -48,6 +62,13 @@ export function BrowseCurriculumSection({ lessons, enrolled }: BrowseCurriculumS
         )}
       </div>
 
+      {isModules ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {modules.map((mod, i) => (
+            <BrowseModuleGroupCard key={mod.id} module={mod} index={i} enrolled={enrolled} />
+          ))}
+        </div>
+      ) : (
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <AnimatePresence>
           {displayed.map((lesson, i) => (
@@ -55,8 +76,9 @@ export function BrowseCurriculumSection({ lessons, enrolled }: BrowseCurriculumS
           ))}
         </AnimatePresence>
       </div>
+      )}
 
-      {lessons.length > 8 && (
+      {!isModules && lessons.length > 8 && (
         <motion.button
           whileTap={{ scale: 0.97 }}
           onClick={() => setShowAll(!showAll)}

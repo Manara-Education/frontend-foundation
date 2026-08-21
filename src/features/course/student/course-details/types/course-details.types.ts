@@ -10,6 +10,7 @@ export type {
   CourseDetailsInstructorInfo as InstructorInfoApi,
   CourseDetailsResponse as CourseDetailsApiResponse,
   CourseViewMode,
+  LearnerCourseModuleResponse as CourseModuleApi,
   LessonResponse as LessonApi,
 } from "@/shared/courses";
 
@@ -18,9 +19,16 @@ import type {
   CourseStructure,
   SubscriptionPlanResponse,
 } from "@/shared/courses";
+import type { QuizView } from "@/features/quiz/student/quiz-player";
 
 // ── Domain / view shapes ──────────────────────────────────────────────────────
 
+/**
+ * The four states a curriculum row can be in.
+ *
+ * Every one of them comes from the server's own answer — `locked`, `isCompleted` and
+ * `nextLessonId` — never from a lesson's position in the list.
+ */
 export type LessonStatus = "completed" | "current" | "not-started" | "locked";
 
 export type CourseDetailsMode = "enrolled" | "browse";
@@ -31,6 +39,25 @@ export interface Lesson {
   title: string;
   duration: string;
   status: LessonStatus;
+  /** The lesson's own quiz, when the learner may see it. */
+  quiz: QuizView | null;
+}
+
+/**
+ * A module of a `MODULES` course, with the exam that closes it.
+ *
+ * `locked` is the backend's answer to "is an earlier module still unfinished", so the
+ * card never decides for itself which modules have opened.
+ */
+export interface CurriculumModule {
+  id: number;
+  number: number;
+  title: string;
+  description: string;
+  locked: boolean;
+  lessons: Lesson[];
+  /** The module exam, when the module has one. */
+  quiz: QuizView | null;
 }
 
 /**
@@ -53,6 +80,7 @@ export interface StudentCourseModel {
   outcomes: string[];
   skills: string[];
   image: string;
+  /** The server's figure, 0–100. Not recomputed here. */
   progress: number;
   totalLessons: number;
   completedLessons: number;
@@ -69,14 +97,22 @@ export interface StudentCourseModel {
   purchasePrice: number | null;
   accessType: CourseAccessType;
   subscriptionPlans: SubscriptionPlanResponse[];
-  /**
-   * `MODULES` courses currently have their module lessons flattened into `lessons` so
-   * the existing curriculum UI keeps working. The module tree itself lands with the
-   * module UI.
-   */
   structure: CourseStructure;
   currentLesson: { number: number; title: string; remaining: string };
+  /**
+   * Reading order across the whole course. A `MODULES` course fills this too, by
+   * flattening its modules, so "continue learning" and the browse list keep working
+   * without knowing which branch the course uses.
+   */
   lessons: Lesson[];
+  /** Populated only for a `MODULES` course. */
+  modules: CurriculumModule[];
+  /** The course final exam, when it has one. */
+  finalQuiz: QuizView | null;
+  /** True once the curriculum is finished and the final exam, if any, is passed. */
+  courseCompleted: boolean;
+  /** The lesson the server says to open next, or `null` when nothing is left. */
+  nextLessonId: number | null;
 }
 
 /** @deprecated Local alias kept while components migrate to `StudentCourseModel`. */

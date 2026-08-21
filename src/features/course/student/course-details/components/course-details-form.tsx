@@ -17,6 +17,7 @@ interface CourseDetailsFormProps {
   onBack: () => void;
   onLessonClick?: (lessonId: number) => void;
   onEnrolled: () => void;
+  onProgressionChanged: () => void;
 }
 
 export function CourseDetailsForm({
@@ -27,6 +28,7 @@ export function CourseDetailsForm({
   onBack,
   onLessonClick,
   onEnrolled,
+  onProgressionChanged,
 }: CourseDetailsFormProps) {
   return (
     <motion.div
@@ -42,12 +44,25 @@ export function CourseDetailsForm({
       {mode === "browse" ? (
         <>
           <PaymentCTASection course={courseData} price={browsePrice} onPay={onEnrolled} />
-          <BrowseCurriculumSection lessons={courseData.lessons} enrolled={false} />
+          <BrowseCurriculumSection
+            lessons={courseData.lessons}
+            modules={courseData.modules}
+            structure={courseData.structure}
+            enrolled={false}
+          />
         </>
       ) : (
         <>
           <ContinueLearningCard course={courseData} onLessonClick={onLessonClick} />
-          <CurriculumSection lessons={courseData.lessons} onLessonClick={onLessonClick} />
+          <CurriculumSection
+            courseId={courseId}
+            lessons={courseData.lessons}
+            modules={courseData.modules}
+            structure={courseData.structure}
+            finalQuiz={courseData.finalQuiz}
+            onLessonClick={onLessonClick}
+            onProgressionChanged={onProgressionChanged}
+          />
         </>
       )}
 

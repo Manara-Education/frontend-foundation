@@ -1,62 +1,88 @@
 import { normalizeCourseAccessType, normalizeCourseStructure } from "@/shared/courses";
+import { toQuizView } from "@/features/quiz/student/quiz-player";
+import { toLessonStatus } from "../formatters/course-details.formatter";
 import type {
   CourseDetailsApiResponse,
+  CourseModuleApi,
+  CurriculumModule,
   Lesson,
   LessonApi,
-  LessonStatus,
   StudentCourseModel,
 } from "../types/course-details.types";
 
-function pickCurrentLessonIndex(lessons: LessonApi[]): number {
-  const idx = lessons.findIndex((l) => !l.isCompleted);
-  return idx === -1 ? lessons.length - 1 : idx;
+function byOrderIndex<T extends { orderIndex: number }>(items: readonly T[]): T[] {
+  return [...items].sort((a, b) => a.orderIndex - b.orderIndex);
 }
 
-function toLesson(api: LessonApi, status: LessonStatus, number: number): Lesson {
+/**
+ * `number` is the row's position in reading order, which is what the curriculum prints
+ * beside a lesson. It is *not* what decides the row's state — that is `status`, which
+ * comes entirely from the server.
+ */
+function toLesson(dto: LessonApi, number: number, nextLessonId: number | null): Lesson {
   return {
-    id: api.id,
+    id: dto.id,
     number,
-    title: api.title,
-    duration: api.duration ?? "",
-    status,
+    title: dto.title,
+    duration: dto.duration ?? "",
+    status: toLessonStatus(dto, nextLessonId),
+    quiz: dto.quiz ? toQuizView(dto.quiz) : null,
+  };
+}
+
+function toModule(
+  dto: CourseModuleApi,
+  number: number,
+  nextLessonId: number | null,
+  numberOfFirstLesson: number,
+): CurriculumModule {
+  return {
+    id: dto.id,
+    number,
+    title: dto.title,
+    description: dto.description ?? "",
+    locked: dto.locked ?? false,
+    lessons: byOrderIndex(dto.lessons ?? []).map((lesson, i) =>
+      toLesson(lesson, numberOfFirstLesson + i, nextLessonId),
+    ),
+    quiz: dto.quiz ? toQuizView(dto.quiz) : null,
   };
 }
 
 /**
- * A module course fills `modules` and leaves `lessons` empty. Flattening keeps the
- * existing flat curriculum UI working until the module UI lands; module order then
- * lesson order is the reading order the backend already sorts by.
+ * Only the branch matching `structure` is populated, so the modules are walked once and
+ * their lessons kept in both places: grouped for the module cards, flattened for
+ * "continue learning" and for the browse list, which has no module of its own to show.
  */
-function collectLessons(dto: CourseDetailsApiResponse): LessonApi[] {
-  if (dto.lessons?.length) return dto.lessons;
+function toModules(
+  dto: CourseDetailsApiResponse,
+  nextLessonId: number | null,
+): CurriculumModule[] {
+  let lessonNumber = 1;
 
-  return (dto.modules ?? [])
-    .slice()
-    .sort((a, b) => a.orderIndex - b.orderIndex)
-    .flatMap((module) => module.lessons ?? []);
+  return byOrderIndex(dto.modules ?? []).map((module, index) => {
+    const mapped = toModule(module, index + 1, nextLessonId, lessonNumber);
+    lessonNumber += mapped.lessons.length;
+    return mapped;
+  });
 }
 
 export function mapCourseDetailsResponseToStudentCourseModel(
   dto: CourseDetailsApiResponse,
 ): StudentCourseModel {
   const { course, instructor } = dto;
+  const nextLessonId = dto.nextLessonId ?? null;
 
-  const ordered = [...collectLessons(dto)].sort((a, b) => a.orderIndex - b.orderIndex);
-  const currentIdx = pickCurrentLessonIndex(ordered);
+  const modules = toModules(dto, nextLessonId);
+  const flatLessons = byOrderIndex(dto.lessons ?? []).map((lesson, i) =>
+    toLesson(lesson, i + 1, nextLessonId),
+  );
+  // A module course leaves `lessons` empty; the flattened modules are its reading order.
+  const lessons = flatLessons.length > 0 ? flatLessons : modules.flatMap((m) => m.lessons);
 
-  const mappedLessons = ordered.map((l, i) => {
-    let status: LessonStatus;
-    if (l.isCompleted) status = "completed";
-    else if (i === currentIdx) status = "current";
-    else status = "not-started";
-    return toLesson(l, status, i + 1);
-  });
-
-  const completedLessons = mappedLessons.filter((l) => l.status === "completed").length;
-  const totalLessons = course.lessonCount ?? mappedLessons.length;
-  const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
-
-  const currentLessonApi = ordered[currentIdx];
+  const completedLessons = lessons.filter((l) => l.status === "completed").length;
+  const totalLessons = course.lessonCount ?? lessons.length;
+  const currentLesson = lessons.find((l) => l.id === nextLessonId);
   const purchasePrice = course.purchasePrice ?? course.price ?? null;
 
   return {
@@ -72,7 +98,8 @@ export function mapCourseDetailsResponseToStudentCourseModel(
     outcomes: [],
     skills: [],
     image: course.image ?? "",
-    progress,
+    // The server's own figure: exams gate what opens next, they do not move this bar.
+    progress: dto.progress ?? 0,
     totalLessons,
     completedLessons,
     totalDuration: course.duration ?? "",
@@ -86,10 +113,14 @@ export function mapCourseDetailsResponseToStudentCourseModel(
     subscriptionPlans: course.subscriptionPlans ?? [],
     structure: normalizeCourseStructure(dto.structure),
     currentLesson: {
-      number: currentLessonApi ? currentIdx + 1 : 0,
-      title: currentLessonApi?.title ?? "",
+      number: currentLesson?.number ?? 0,
+      title: currentLesson?.title ?? "",
       remaining: course.remainingDuration ?? "",
     },
-    lessons: mappedLessons,
+    lessons,
+    modules,
+    finalQuiz: dto.finalQuiz ? toQuizView(dto.finalQuiz) : null,
+    courseCompleted: dto.courseCompleted ?? false,
+    nextLessonId,
   };
 }
