@@ -4,6 +4,7 @@
  * rather than client-side.
  */
 export type {
+  CourseDetailsResponse,
   LessonCompletionResponse,
   LessonDetailsResponse,
   LessonRef,
@@ -34,6 +35,24 @@ export interface LessonView {
   quiz: QuizView | null;
   previousLesson: LessonRef | null;
   nextLesson: LessonRef | null;
+}
+
+/**
+ * The course the lesson belongs to, reduced to what the player's header prints: its name
+ * and how far through it the learner is.
+ *
+ * The lesson endpoint answers with the lesson alone, so this is read from the course
+ * endpoint — the same figures the course details screen shows, not a second count.
+ */
+export interface LessonCourseSummary {
+  id: number;
+  title: string;
+  /** Lessons in the course, as the server counts them. */
+  totalLessons: number;
+  /** How many of those this learner has finished. */
+  completedLessons: number;
+  /** The server's own percentage, 0–100, or `null` when it reported none. */
+  progress: number | null;
 }
 
 /** What completing a lesson changed, as the server reported it. */

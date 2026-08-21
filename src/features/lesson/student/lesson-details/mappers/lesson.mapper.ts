@@ -1,8 +1,10 @@
 import { toQuizView } from "@/features/quiz/student/quiz-player";
 import { toLessonStatus } from "../formatters/lesson.formatter";
 import type {
+  CourseDetailsResponse,
   LessonCompletion,
   LessonCompletionResponse,
+  LessonCourseSummary,
   LessonDetailsResponse,
   LessonView,
 } from "../types/lesson.types";
@@ -22,6 +24,30 @@ export function toLessonView(details: LessonDetailsResponse): LessonView {
     quiz: lesson.quiz ? toQuizView(lesson.quiz) : null,
     previousLesson: previous ?? null,
     nextLesson: next ?? null,
+  };
+}
+
+/**
+ * Keeps the course's name and the learner's standing in it, and drops the curriculum the
+ * course response carries — the player already has its own lesson.
+ *
+ * Only the branch matching the course's structure is populated, so both are walked: a
+ * `FLAT` course counts `lessons`, a `MODULES` course the lessons under its modules.
+ * `lessonCount` is the server's own total and is preferred over the length of whichever
+ * branch answered.
+ */
+export function toCourseSummary(dto: CourseDetailsResponse): LessonCourseSummary {
+  const lessons = [
+    ...(dto.lessons ?? []),
+    ...(dto.modules ?? []).flatMap((module) => module.lessons),
+  ];
+
+  return {
+    id: dto.course.id,
+    title: dto.course.title,
+    totalLessons: dto.course.lessonCount ?? lessons.length,
+    completedLessons: lessons.filter((lesson) => lesson.isCompleted).length,
+    progress: dto.progress ?? null,
   };
 }
 

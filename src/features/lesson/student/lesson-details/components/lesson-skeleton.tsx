@@ -1,5 +1,4 @@
 import type { CSSProperties } from "react";
-import { LP_SHIMMER } from "./lesson.constants";
 
 function SkEl({
   w,
@@ -23,7 +22,6 @@ function SkEl({
 export function LessonSkeleton() {
   return (
     <>
-      <style>{LP_SHIMMER}</style>
       {/* Breadcrumb */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24 }}>
         {[60, 8, 50, 8, 80, 8, 120].map((w, i) => (
@@ -40,11 +38,27 @@ export function LessonSkeleton() {
           marginBottom: 16,
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-          <SkEl h={13} w={80} r={6} />
-          <SkEl h={22} w={100} r={99} />
+        {/* Lesson pill + course title, then duration + status — the loaded header's row. */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 12,
+            gap: 8,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+            <SkEl h={26} w={80} r={99} />
+            <SkEl h={13} w={120} r={5} />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <SkEl h={13} w={44} r={5} />
+            <SkEl h={26} w={92} r={99} />
+          </div>
         </div>
-        <SkEl h={28} w="65%" r={8} style={{ marginBottom: 14 }} />
+        {/* Sized like the loaded 22px title, so the card barely settles when it lands. */}
+        <SkEl h={31} w="65%" r={8} style={{ marginBottom: 16 }} />
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 7 }}>
           <SkEl h={12} w={160} r={5} />
           <SkEl h={12} w={40} r={5} />
