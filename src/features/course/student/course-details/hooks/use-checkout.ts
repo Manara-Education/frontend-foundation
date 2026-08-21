@@ -36,7 +36,7 @@ export function useCheckout({ courseId, isFree, onSuccess }: UseCheckoutArgs) {
     if (!canPay) return;
     setStep("processing");
     try {
-      await processCheckout(courseId, isFree, isFree ? undefined : form);
+      await processCheckout(courseId, isFree ? undefined : form);
       setStep("success");
       setTimeout(onSuccess, 1300);
     } catch (err) {

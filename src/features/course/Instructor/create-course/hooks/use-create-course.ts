@@ -52,9 +52,10 @@ export function useCreateCourse({ onCancel }: UseCreateCourseArgs) {
       });
       setCreatedCourseId(newCourse.id.toString());
       setShowSuccess(true);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err?.message || "Failed to create course");
+      // ApiError sets `message` from the first backend error, so both branches read the same.
+      setError(err instanceof Error ? err.message : "Failed to create course");
     } finally {
       setIsSubmitting(false);
     }

@@ -17,7 +17,7 @@ export function getYouTubeThumbnail(videoId: string): string {
   return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 }
 
-export function formatLessonDurationLabel(duration?: string): string {
+export function formatLessonDurationLabel(duration?: string | null): string {
   return duration && duration.trim() ? duration : "درس مرئي";
 }
 

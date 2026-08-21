@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ApiError } from "@/shared/api";
-import { getBrowsePrice, loadCourseDetail } from "../services/course-details.service";
+import { loadCourseDetail } from "../services/course-details.service";
 import type { CourseDetailData, CourseDetailsMode } from "../types/course-details.types";
 
 interface UseCourseDetailsArgs {

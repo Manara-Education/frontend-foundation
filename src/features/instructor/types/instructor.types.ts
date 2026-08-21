@@ -5,18 +5,5 @@ export interface InstructorPublicResponse {
   specialization: string;
 }
 
-export interface InstructorCourse {
-  id: number;
-  title: string;
-  subtitle?: string;
-  image?: string;
-  description?: string;
-  duration?: number;
-  lessonCount?: number;
-  price: number;
-  studentsCount?: number;
-  instructorId?: number;
-  instructorName?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
+/** The instructor's public course list is the canonical course summary shape. */
+export type { CourseResponse as InstructorCourse } from "@/shared/courses";

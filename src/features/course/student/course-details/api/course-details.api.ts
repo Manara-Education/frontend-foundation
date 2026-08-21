@@ -1,4 +1,5 @@
-import { apiClient, type ApiResponse } from "@/shared/api";
+import { apiClient, unwrap, type ApiResponse } from "@/shared/api";
+import type { CheckoutRequest, EnrollmentResponse } from "@/shared/courses";
 import type {
   CourseDetailsApiResponse,
   CourseDetailsMode,
@@ -16,26 +17,19 @@ export async function fetchCourseDetail(
   courseId: number,
   mode: CourseDetailsMode,
 ): Promise<CourseDetailsApiResponse> {
-  const { data } = await apiClient.get<ApiResponse<CourseDetailsApiResponse>>(
+  const response = await apiClient.get<ApiResponse<CourseDetailsApiResponse>>(
     `/${STUDENT_COURSE_BASE_V1}/${courseId}`,
     { params: { mode: VIEW_MODE_MAP[mode] } },
   );
-  return data.data!;
-}
-
-// TODO: connect to real API — pricing endpoint for browse mode
-export function fetchBrowsePrice(_courseId: number): number | null {
-  return null;
+  return unwrap(response);
 }
 
 export async function processCheckout(
   courseId: number,
-  isFree: boolean,
-  paymentDetails?: { cardNumber: string; expiry: string; cvc: string; name: string }
+  paymentDetails?: CheckoutRequest,
 ): Promise<void> {
-  const payload = paymentDetails ? {
-    ...paymentDetails,
-    email: "student@manara.com",
-  } : {};
-  await apiClient.post(`/v1/student/courses/${courseId}/checkout`, payload);
+  await apiClient.post<ApiResponse<EnrollmentResponse>>(
+    `/${STUDENT_COURSE_BASE_V1}/${courseId}/checkout`,
+    paymentDetails ?? {},
+  );
 }

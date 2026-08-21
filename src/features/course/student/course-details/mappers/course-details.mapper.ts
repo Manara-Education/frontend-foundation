@@ -1,9 +1,10 @@
+import { normalizeCourseAccessType, normalizeCourseStructure } from "@/shared/courses";
 import type {
-  CourseDetailData,
   CourseDetailsApiResponse,
+  Lesson,
   LessonApi,
-  LessonResponse,
   LessonStatus,
+  StudentCourseModel,
 } from "../types/course-details.types";
 
 function pickCurrentLessonIndex(lessons: LessonApi[]): number {
@@ -11,7 +12,7 @@ function pickCurrentLessonIndex(lessons: LessonApi[]): number {
   return idx === -1 ? lessons.length - 1 : idx;
 }
 
-function toLesson(api: LessonApi, status: LessonStatus, number: number): LessonResponse {
+function toLesson(api: LessonApi, status: LessonStatus, number: number): Lesson {
   return {
     id: api.id,
     number,
@@ -21,10 +22,26 @@ function toLesson(api: LessonApi, status: LessonStatus, number: number): LessonR
   };
 }
 
-export function toCourseDetail(dto: CourseDetailsApiResponse): CourseDetailData {
-  const { course, instructor, lessons } = dto;
+/**
+ * A module course fills `modules` and leaves `lessons` empty. Flattening keeps the
+ * existing flat curriculum UI working until the module UI lands; module order then
+ * lesson order is the reading order the backend already sorts by.
+ */
+function collectLessons(dto: CourseDetailsApiResponse): LessonApi[] {
+  if (dto.lessons?.length) return dto.lessons;
 
-  const ordered = [...lessons].sort((a, b) => a.orderIndex - b.orderIndex);
+  return (dto.modules ?? [])
+    .slice()
+    .sort((a, b) => a.orderIndex - b.orderIndex)
+    .flatMap((module) => module.lessons ?? []);
+}
+
+export function mapCourseDetailsResponseToStudentCourseModel(
+  dto: CourseDetailsApiResponse,
+): StudentCourseModel {
+  const { course, instructor } = dto;
+
+  const ordered = [...collectLessons(dto)].sort((a, b) => a.orderIndex - b.orderIndex);
   const currentIdx = pickCurrentLessonIndex(ordered);
 
   const mappedLessons = ordered.map((l, i) => {
@@ -40,6 +57,7 @@ export function toCourseDetail(dto: CourseDetailsApiResponse): CourseDetailData 
   const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
   const currentLessonApi = ordered[currentIdx];
+  const purchasePrice = course.purchasePrice ?? course.price ?? null;
 
   return {
     id: course.id,
@@ -62,7 +80,11 @@ export function toCourseDetail(dto: CourseDetailsApiResponse): CourseDetailData 
     students: course.studentsCount ?? 0,
     rating: 0,
     category: course.subtitle ?? "",
-    price: course.price,
+    price: purchasePrice,
+    purchasePrice,
+    accessType: normalizeCourseAccessType(course.accessType),
+    subscriptionPlans: course.subscriptionPlans ?? [],
+    structure: normalizeCourseStructure(dto.structure),
     currentLesson: {
       number: currentLessonApi ? currentIdx + 1 : 0,
       title: currentLessonApi?.title ?? "",

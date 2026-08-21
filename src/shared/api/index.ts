@@ -3,6 +3,7 @@ export {
   registerCsrfBootstrap,
   registerUnauthenticatedHandler,
 } from "./api-client";
+export { unwrap, unwrapList } from "./api.envelope";
 export { ApiError } from "./api.types";
 export type {
   ApiResponse,

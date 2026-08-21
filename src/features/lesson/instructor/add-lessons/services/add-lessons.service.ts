@@ -1,33 +1,29 @@
-import * as api from "../api/add-lessons.api";
+import { unwrap, unwrapList } from "@/shared/api";
 import { getMyCourses } from "@/shared/courses";
-import type { CourseRequest, LessonRequest } from "../types/add-lessons.types";
+import type { CourseRequest, LessonRequest } from "@/shared/courses";
+import * as api from "../api/add-lessons.api";
 
 export const addLessonsService = {
   getMyCourses,
 
   async updateCourse(courseId: number, payload: CourseRequest) {
-    const { data } = await api.updateCourse(courseId, payload);
-    return data.data!;
+    return unwrap(await api.updateCourse(courseId, payload));
   },
 
   async uploadFile(file: File) {
-    const { data } = await api.uploadFile(file);
-    return data.data!.url;
+    return unwrap(await api.uploadFile(file)).url;
   },
 
   async getCourseLessons(courseId: number) {
-    const { data } = await api.getCourseLessons(courseId);
-    return data.data!;
+    return unwrapList(await api.getCourseLessons(courseId));
   },
 
   async addLesson(courseId: number, payload: LessonRequest) {
-    const { data } = await api.addLesson(courseId, payload);
-    return data.data!;
+    return unwrap(await api.addLesson(courseId, payload));
   },
 
   async updateLesson(courseId: number, lessonId: number, payload: LessonRequest) {
-    const { data } = await api.updateLesson(courseId, lessonId, payload);
-    return data.data!;
+    return unwrap(await api.updateLesson(courseId, lessonId, payload));
   },
 
   async deleteLesson(courseId: number, lessonId: number) {

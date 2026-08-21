@@ -1,6 +1,6 @@
 import { apiClient, type ApiResponse } from "@/shared/api";
-import type { CourseExploreDto } from "../types/explore.types";
+import type { CourseResponse } from "@/shared/courses";
 
 export function getExploreCourses() {
-  return apiClient.get<ApiResponse<CourseExploreDto[]>>("/v1/student/courses");
+  return apiClient.get<ApiResponse<CourseResponse[]>>("/v1/student/courses");
 }

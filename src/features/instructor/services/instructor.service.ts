@@ -1,13 +1,12 @@
+import { unwrap, unwrapList } from "@/shared/api";
 import * as api from "../api/instructor.api";
 
 export const instructorService = {
   async getInstructorProfile(instructorId: number) {
-    const { data } = await api.getInstructorProfile(instructorId);
-    return data.data!;
+    return unwrap(await api.getInstructorProfile(instructorId));
   },
 
   async getInstructorCourses(instructorId: number) {
-    const { data } = await api.getInstructorCourses(instructorId);
-    return data.data!;
-  }
+    return unwrapList(await api.getInstructorCourses(instructorId));
+  },
 };
