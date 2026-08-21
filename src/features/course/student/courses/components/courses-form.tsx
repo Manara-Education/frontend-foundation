@@ -6,6 +6,7 @@ import { CoursesHeader } from "./courses-header";
 import { CoursesSearchFilters } from "./courses-search-filters";
 import { CoursesSkeleton } from "./courses-skeleton";
 import { WelcomeBanner } from "./welcome-banner";
+import { StudentBannerCarousel } from "@/features/banner/student/banner-carousel/components/student-banner-carousel";
 
 interface CoursesFormProps {
   isLoading: boolean;
@@ -48,7 +49,8 @@ export function CoursesForm({
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
           >
-            <WelcomeBanner />
+            {/* Promotional banners, or the welcome banner when nobody is running one. */}
+            <StudentBannerCarousel fallback={<WelcomeBanner />} />
 
             <CoursesHeader total={total} completed={completed} inProgress={inProgress} />
 
