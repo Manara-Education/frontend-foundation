@@ -17,6 +17,7 @@ interface LessonFormProps {
   course: LessonCourseSummary | null;
   prevLesson: LessonRef | null;
   nextLesson: LessonRef | null;
+  isNextLessonLocked: boolean;
   isMarkedComplete: boolean;
   isLocked: boolean;
   isQuizRequired: boolean;
@@ -37,6 +38,7 @@ export function LessonForm({
   course,
   prevLesson,
   nextLesson,
+  isNextLessonLocked,
   isMarkedComplete,
   isLocked,
   isQuizRequired,
@@ -132,6 +134,7 @@ export function LessonForm({
                 <LessonNavigation
                   prevLesson={prevLesson}
                   nextLesson={nextLesson}
+                  isNextLessonLocked={isNextLessonLocked}
                   onNavigate={onNavigateToLesson}
                 />
               </div>
