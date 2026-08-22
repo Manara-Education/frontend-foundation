@@ -4,10 +4,12 @@ import { ExploreSkeleton } from "../components/explore-skeleton";
 
 interface ExplorePageProps {
   onCourseClick?: (id: number) => void;
+  /** The shell's own "back to home" navigation, behind the breadcrumb's first crumb. */
+  onGoHome?: () => void;
   enrolledCourseIds?: Set<number>;
 }
 
-export function ExplorePage({ onCourseClick, enrolledCourseIds }: ExplorePageProps) {
+export function ExplorePage({ onCourseClick, onGoHome, enrolledCourseIds }: ExplorePageProps) {
   const explore = useExploreCourses();
 
   if (explore.isLoading) {
@@ -31,6 +33,7 @@ export function ExplorePage({ onCourseClick, enrolledCourseIds }: ExplorePagePro
       onQueryChange={explore.setQuery}
       onResetQuery={explore.resetQuery}
       onCourseClick={onCourseClick}
+      onGoHome={onGoHome}
       enrolledCourseIds={enrolledCourseIds}
     />
   );
