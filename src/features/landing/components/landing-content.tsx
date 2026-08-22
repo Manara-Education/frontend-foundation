@@ -1,7 +1,6 @@
 import { LandingNavbar } from "./landing-navbar";
 import { LandingFooter } from "./landing-footer";
 import { HeroSection } from "./hero-section";
-import { EarlyAccessSection } from "./early-access-section";
 import { ProblemSection } from "./problem-section";
 import { FeaturesSection } from "./features-section";
 import { HowItWorksSection } from "./how-it-works-section";
@@ -26,7 +25,6 @@ export function LandingContent({ onRegister, onSignIn }: LandingContentProps) {
       <LandingNavbar onSignIn={onSignIn} />
       <main>
         <HeroSection onCta={onRegister} />
-        <EarlyAccessSection onCta={onRegister} />
         <ProblemSection />
         <FeaturesSection />
         <HowItWorksSection />
