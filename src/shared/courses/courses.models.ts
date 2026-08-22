@@ -43,6 +43,17 @@ export interface CourseCardModel {
   instructorId?: number;
   instructorName?: string;
   createdAt?: string;
+  /**
+   * When the course last changed, falling back to `createdAt` for a payload that does
+   * not carry it — the same fallback the banner list already makes for its own rows.
+   */
+  updatedAt?: string;
+  /**
+   * Cheapest subscription plan of a `SUBSCRIPTION` course, or `undefined` when the list
+   * payload did not inline the plans. The card then names the access type without a
+   * price rather than inventing one.
+   */
+  subscriptionMinPrice?: number;
 }
 
 // ── Course editor ─────────────────────────────────────────────────────────────

@@ -229,6 +229,16 @@ export interface CourseResponse {
   instructorId: number;
   instructorName: string | null;
   createdAt: string;
+  /**
+   * Last time the course itself changed. Optional because the older list payloads carry
+   * only `createdAt`; readers fall back to it rather than printing nothing.
+   */
+  updatedAt?: string | null;
+  /**
+   * Populated only by list endpoints that inline the plans. A `SUBSCRIPTION` course
+   * whose payload omits them is still a subscription — the price is what is unknown.
+   */
+  subscriptionPlans?: SubscriptionPlanResponse[] | null;
   /** Populated only by endpoints that inline the lesson list. */
   lessons: LessonResponse[] | null;
 }
