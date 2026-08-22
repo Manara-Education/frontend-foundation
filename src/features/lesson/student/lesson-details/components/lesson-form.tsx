@@ -2,6 +2,7 @@ import { motion } from "motion/react";
 import { QuizPlayer } from "@/features/quiz/student/quiz-player";
 import type { LessonCourseSummary, LessonRef, LessonView } from "../types/lesson.types";
 import { CompletionErrorNotice } from "./completion-error-notice";
+import { LessonCompletionBanner } from "./lesson-completion-banner";
 import { LessonContentSection } from "./lesson-content-section";
 import { LessonHeaderCard } from "./lesson-header-card";
 import { LessonLockedCard } from "./lesson-locked-card";
@@ -26,7 +27,7 @@ interface LessonFormProps {
   onBackToCourses: () => void;
   onBackToHome: () => void;
   onNavigateToLesson: (lessonId: number) => void;
-  onMarkComplete: () => void;
+  onVideoEnd: () => void;
   onQuizPassed: () => void;
 }
 
@@ -46,7 +47,7 @@ export function LessonForm({
   onBackToCourses,
   onBackToHome,
   onNavigateToLesson,
-  onMarkComplete,
+  onVideoEnd,
   onQuizPassed,
 }: LessonFormProps) {
   return (
@@ -63,6 +64,12 @@ export function LessonForm({
         onCourseDetails={onBackToCourseDetails}
         lessonTitle={currentLesson.title}
       />
+
+      {/*
+        The lesson's own completion, announced above the header the moment the server
+        agrees the lesson is done. It reads the same state the header's chip does.
+      */}
+      {isMarkedComplete && <LessonCompletionBanner courseTitle={course?.title ?? null} />}
 
       <LessonHeaderCard
         lesson={currentLesson}
@@ -81,7 +88,7 @@ export function LessonForm({
           <YouTubePlayer
             videoUrl={videoUrl}
             lessonTitle={currentLesson.title}
-            onMarkComplete={onMarkComplete}
+            onVideoEnd={onVideoEnd}
             isMarked={isMarkedComplete}
             quizRequired={isQuizRequired}
           />

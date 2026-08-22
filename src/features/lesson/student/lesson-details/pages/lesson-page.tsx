@@ -35,6 +35,7 @@ export function LessonPage({
     videoUrl,
     navigateToLesson,
     markComplete,
+    handleVideoEnd,
   } = useLesson({ courseId, lessonId, onLessonChange });
 
   return (
@@ -74,7 +75,7 @@ export function LessonPage({
             onBackToCourses={onBackToCourses}
             onBackToHome={onBackToHome}
             onNavigateToLesson={navigateToLesson}
-            onMarkComplete={markComplete}
+            onVideoEnd={handleVideoEnd}
             onQuizPassed={markComplete}
           />
         )}

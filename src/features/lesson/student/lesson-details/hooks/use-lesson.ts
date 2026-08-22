@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/shared/api";
 import { loadCourseSummary, loadLesson, markLessonCompleted } from "../services/lesson.service";
 import type {
@@ -33,6 +33,8 @@ export interface UseLessonResult {
   videoUrl: string;
   navigateToLesson: (id: number) => void;
   markComplete: () => void;
+  /** Called when the lesson's video reports that it reached its end. */
+  handleVideoEnd: () => void;
 }
 
 export function useLesson({
@@ -90,7 +92,22 @@ export function useLesson({
     };
   }, [courseId, lessonId, reloadToken]);
 
+  // A completion is claimed at most once per lesson. The player can report the video's
+  // end more than once — a replay ends too — and the claim must not be sent again for a
+  // lesson the server has already been told about.
+  const completionSubmittedRef = useRef(false);
+
+  // Nothing is written back into a screen the learner has already left.
+  const isMountedRef = useRef(true);
   useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    completionSubmittedRef.current = false;
     setReloadToken(0);
     setCompletion(null);
     setCompletionError(null);
@@ -113,12 +130,14 @@ export function useLesson({
    * sees rather than a tick that silently disagrees with the server.
    */
   const markComplete = useCallback(() => {
-    if (isMarkedComplete || isCompleting || isLocked) return;
+    if (isMarkedComplete || isCompleting || isLocked || completionSubmittedRef.current) return;
+    completionSubmittedRef.current = true;
     setIsCompleting(true);
     setCompletionError(null);
 
     markLessonCompleted(courseId, lessonId)
       .then((result) => {
+        if (!isMountedRef.current) return;
         setCompletion(result);
         // Re-read the lesson so its state, its quiz and the next lesson all come from
         // the server's new answer rather than from a local edit of the old one.
@@ -126,14 +145,31 @@ export function useLesson({
       })
       .catch((err) => {
         console.error("Failed to mark lesson completed", err);
+        // A refused claim is not a claim on record, so the next end of the video — or a
+        // quiz passed afterwards — may ask again.
+        completionSubmittedRef.current = false;
+        if (!isMountedRef.current) return;
         setCompletionError(
           err instanceof ApiError
             ? err.errors[0] ?? "تعذر تسجيل إكمال الدرس، حاول مرة أخرى"
             : "تعذر تسجيل إكمال الدرس، حاول مرة أخرى",
         );
       })
-      .finally(() => setIsCompleting(false));
+      .finally(() => {
+        if (isMountedRef.current) setIsCompleting(false);
+      });
   }, [courseId, lessonId, isMarkedComplete, isCompleting, isLocked]);
+
+  /**
+   * The video reaching its end is what completes a lesson now, in place of a button.
+   *
+   * The quiz stays the backend's rule rather than the video's: a gated lesson is left
+   * watched-but-incomplete here, and the quiz's own pass is what completes it.
+   */
+  const handleVideoEnd = useCallback(() => {
+    if (isMarkedComplete || isLocked || isQuizRequired) return;
+    markComplete();
+  }, [isMarkedComplete, isLocked, isQuizRequired, markComplete]);
 
   return {
     isLoading,
@@ -152,5 +188,6 @@ export function useLesson({
     videoUrl: currentLesson?.videoUrl ?? "",
     navigateToLesson,
     markComplete,
+    handleVideoEnd,
   };
 }
