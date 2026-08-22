@@ -10,7 +10,7 @@ interface CoursesListProps {
   courses: Course[];
   filtered: Course[];
   isFiltered: boolean;
-  onResetQuery: () => void;
+  onResetFilters: () => void;
   onCourseClick?: (courseId: string) => void;
   onCreateCourse?: () => void;
 }
@@ -19,7 +19,7 @@ export function CoursesList({
   courses,
   filtered,
   isFiltered,
-  onResetQuery,
+  onResetFilters,
   onCourseClick,
   onCreateCourse,
 }: CoursesListProps) {
@@ -36,7 +36,7 @@ export function CoursesList({
           >
             <EmptyState
               isFiltered={isFiltered}
-              onReset={onResetQuery}
+              onReset={onResetFilters}
               onCreateCourse={onCreateCourse}
             />
           </motion.div>

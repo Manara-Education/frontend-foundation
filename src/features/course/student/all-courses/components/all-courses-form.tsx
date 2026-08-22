@@ -2,8 +2,13 @@ import { motion, AnimatePresence } from "motion/react";
 import { PageSkeleton } from "./skeleton";
 import { HeaderSection } from "./header-section";
 import { SearchBar } from "./search-bar";
+import { StatusFilterPills } from "./status-filter-pills";
 import { CoursesList } from "./courses-list";
-import type { Course } from "../types/all-courses.types";
+import type {
+  Course,
+  CourseStatusCounts,
+  CourseStatusFilter,
+} from "../types/all-courses.types";
 
 const FONT = "'Cairo', sans-serif";
 
@@ -12,9 +17,12 @@ interface AllCoursesFormProps {
   courses: Course[];
   filtered: Course[];
   query: string;
+  statusFilter: CourseStatusFilter;
+  statusCounts: CourseStatusCounts;
   isFiltered: boolean;
   onQueryChange: (q: string) => void;
-  onResetQuery: () => void;
+  onStatusFilterChange: (status: CourseStatusFilter) => void;
+  onResetFilters: () => void;
   onBack?: () => void;
   onCourseClick?: (courseId: string) => void;
   onCreateCourse?: () => void;
@@ -25,9 +33,12 @@ export function AllCoursesForm({
   courses,
   filtered,
   query,
+  statusFilter,
+  statusCounts,
   isFiltered,
   onQueryChange,
-  onResetQuery,
+  onStatusFilterChange,
+  onResetFilters,
   onBack,
   onCourseClick,
   onCreateCourse,
@@ -59,11 +70,17 @@ export function AllCoursesForm({
 
             <SearchBar query={query} onQueryChange={onQueryChange} />
 
+            <StatusFilterPills
+              statusFilter={statusFilter}
+              counts={statusCounts}
+              onStatusFilterChange={onStatusFilterChange}
+            />
+
             <CoursesList
               courses={courses}
               filtered={filtered}
               isFiltered={isFiltered}
-              onResetQuery={onResetQuery}
+              onResetFilters={onResetFilters}
               onCourseClick={onCourseClick}
               onCreateCourse={onCreateCourse}
             />
