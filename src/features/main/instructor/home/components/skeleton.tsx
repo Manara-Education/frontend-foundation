@@ -59,9 +59,8 @@ export function PageSkeleton() {
       </div>
 
       {/* Section title */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center mb-5">
         <Sk h={22} w={150} r={8} />
-        <Sk h={15} w={65} r={6} />
       </div>
 
       {/* Course rows */}
@@ -69,8 +68,8 @@ export function PageSkeleton() {
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="flex overflow-hidden rounded-2xl"
-            style={{ background: "#fff", border: `1px solid ${BORDER}` }}
+            className="flex overflow-hidden"
+            style={{ background: "#fff", borderRadius: 20, border: `1.5px solid ${BORDER}` }}
           >
             <Sk w={128} h={92} r={0} />
             <div className="flex flex-col gap-2.5 justify-center p-5 flex-1">

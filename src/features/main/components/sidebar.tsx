@@ -1,5 +1,5 @@
 import { Fragment, type ElementType } from "react";
-import { Home, Compass, User, LogOut, PlusSquare, Megaphone } from "lucide-react";
+import { Home, BookOpen, Compass, User, LogOut, PlusSquare, Megaphone } from "lucide-react";
 import { ManaraLogoIcon } from "@/shared/components/ManaraLogo";
 
 const PRIMARY = "#4E5B92";
@@ -29,6 +29,7 @@ const instructorSection: NavSection = {
   label: "المدرّب",
   items: [
     { icon: Home, label: "الرئيسية", view: "instructor-home" },
+    { icon: BookOpen, label: "دوراتي", view: "instructor-courses" },
     { icon: PlusSquare, label: "إنشاء دورة", view: "instructor-create" },
     { icon: Megaphone, label: "الإعلانات", view: "instructor-banners" },
     { icon: User, label: "ملفي الشخصي", view: "profile" },

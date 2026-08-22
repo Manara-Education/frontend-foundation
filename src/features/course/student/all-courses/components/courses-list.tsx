@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "motion/react";
-import { CourseCard } from "./course-card";
+import { InstructorCourseCard } from "@/features/course/components/instructor-course-card";
 import { EmptyState } from "./empty-state";
 import type { Course } from "../types/all-courses.types";
 
@@ -63,7 +63,7 @@ export function CoursesList({
             </div>
 
             {filtered.map((course, i) => (
-              <CourseCard
+              <InstructorCourseCard
                 key={course.id}
                 course={course}
                 delay={i * 0.05}
