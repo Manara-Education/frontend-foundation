@@ -1,15 +1,33 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { BookOpen, DollarSign, PlayCircle, Clock3 } from "lucide-react";
+import { BookOpen, Calendar, CreditCard, RefreshCw, Users } from "lucide-react";
 import { ImageWithFallback } from "@/shared/components/ImageWithFallback";
 import type { Course } from "../types/all-courses.types";
-import { formatDuration } from "../formatters/all-courses.formatter";
+import { formatPrice, formatUpdatedAt } from "../formatters/all-courses.formatter";
 
 const PRIMARY = "#4E5B92";
 const FONT = "'Cairo', sans-serif";
 const TEXT_DARK = "#1A1F3C";
-const TEXT_MID = "#6B708A";
+const TEXT_MUTE = "#A8ADCA";
 const BORDER = "rgba(78,91,146,0.09)";
+
+/** The two neutral count badges — students and lessons — share one shell. */
+const COUNT_BADGE = {
+  background: "rgba(78,91,146,0.04)",
+  border: "1px solid rgba(78,91,146,0.09)",
+} as const;
+
+/** The two priced access types share the stronger primary tint. */
+const PRICED_BADGE = {
+  background: "rgba(78,91,146,0.07)",
+  border: "1px solid rgba(78,91,146,0.14)",
+} as const;
+
+/** A free course carries nothing but the word, so its badge sits a shade lighter. */
+const FREE_BADGE = {
+  background: "rgba(78,91,146,0.06)",
+  border: "1px solid rgba(78,91,146,0.12)",
+} as const;
 
 interface CourseCardProps {
   course: Course;
@@ -20,6 +38,8 @@ interface CourseCardProps {
 export function CourseCard({ course, delay = 0, onNavigate }: CourseCardProps) {
   const [hovered, setHovered] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
+
+  const isPublished = course.status === "PUBLISHED";
 
   return (
     <motion.div
@@ -92,74 +112,86 @@ export function CourseCard({ course, delay = 0, onNavigate }: CourseCardProps) {
             {course.title}
           </div>
 
-          {/* Badges container */}
+          <div
+            className="flex items-center gap-1.5"
+            style={{ fontFamily: FONT, fontSize: 12, color: TEXT_MUTE }}
+          >
+            <Calendar size={11} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+            آخر تحديث: {formatUpdatedAt(course.updatedAt ?? course.createdAt)}
+          </div>
+
+          {/* Stats row */}
           <div className="flex items-center gap-2 flex-wrap">
-            {course.price === 0 ? (
-              <div
-                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 w-fit"
+            {/* Publication state — the segment the filter pills narrow the list by. */}
+            <div
+              className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1"
+              style={
+                isPublished
+                  ? { background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.18)" }
+                  : { background: "rgba(234,156,26,0.08)", border: "1px solid rgba(234,156,26,0.25)" }
+              }
+            >
+              <span
                 style={{
-                  background: "rgba(34,197,94,0.10)",
-                  border: "1px solid rgba(34,197,94,0.20)",
+                  fontFamily: FONT,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: isPublished ? "#15803D" : "#A16207",
                 }}
               >
-                <span style={{ fontFamily: FONT, fontSize: 11, fontWeight: 600, color: "#15803D" }}>
-                  مجانية
-                </span>
-              </div>
-            ) : (
-              <div
-                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 w-fit"
-                style={{
-                  background: "rgba(78,91,146,0.08)",
-                  border: "1px solid rgba(78,91,146,0.14)",
-                }}
-              >
-                <DollarSign size={10} strokeWidth={2.2} style={{ color: PRIMARY }} />
-                <span
-                  style={{
-                    fontFamily: FONT,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: PRIMARY,
-                    direction: "ltr",
-                  }}
-                >
-                  {course.price % 1 === 0 ? course.price : course.price.toFixed(2)}
+                {isPublished ? "منشورة" : "مسودة"}
+              </span>
+            </div>
+
+            {/*
+              How the course is sold. The three types are mutually exclusive, and each
+              names itself rather than leaving a bare number to be read as a price.
+            */}
+            {course.accessType === "FREE" && (
+              <div className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1" style={FREE_BADGE}>
+                <span style={{ fontFamily: FONT, fontSize: 11, fontWeight: 600, color: PRIMARY }}>
+                  مجاني
                 </span>
               </div>
             )}
 
-            {/* Lesson Count badge */}
-            {course.lessonCount !== undefined && course.lessonCount > 0 && (
-              <div
-                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 w-fit"
-                style={{
-                  background: "rgba(107,112,138,0.06)",
-                  border: "1px solid rgba(107,112,138,0.12)",
-                }}
-              >
-                <PlayCircle size={10} style={{ color: TEXT_MID }} strokeWidth={2.2} />
-                <span style={{ fontFamily: FONT, fontSize: 11, fontWeight: 600, color: TEXT_MID }}>
-                  {course.lessonCount} درس
+            {course.accessType === "PURCHASE" && (
+              <div className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1" style={PRICED_BADGE}>
+                <CreditCard size={10} strokeWidth={2.2} style={{ color: PRIMARY, flexShrink: 0 }} />
+                <span style={{ fontFamily: FONT, fontSize: 11, fontWeight: 600, color: PRIMARY }}>
+                  {formatPrice(course.purchasePrice ?? course.price)} ج.م
                 </span>
               </div>
             )}
 
-            {/* Duration badge */}
-            {course.duration !== undefined && course.duration > 0 && (
-              <div
-                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 w-fit"
-                style={{
-                  background: "rgba(107,112,138,0.06)",
-                  border: "1px solid rgba(107,112,138,0.12)",
-                }}
-              >
-                <Clock3 size={10} style={{ color: TEXT_MID }} strokeWidth={2.2} />
-                <span style={{ fontFamily: FONT, fontSize: 11, fontWeight: 600, color: TEXT_MID }}>
-                  {formatDuration(course.duration)}
+            {course.accessType === "SUBSCRIPTION" && (
+              <div className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1" style={PRICED_BADGE}>
+                <RefreshCw size={10} strokeWidth={2.2} style={{ color: PRIMARY, flexShrink: 0 }} />
+                <span style={{ fontFamily: FONT, fontSize: 11, fontWeight: 600, color: PRIMARY }}>
+                  {/*
+                    The list payload does not always inline the plans. Without one the badge
+                    still says the course is a subscription and leaves the price unstated.
+                  */}
+                  {course.subscriptionMinPrice === undefined
+                    ? "اشتراك"
+                    : `اشتراك يبدأ من ${formatPrice(course.subscriptionMinPrice)} ج.م`}
                 </span>
               </div>
             )}
+
+            <div className="inline-flex items-center gap-1 rounded-lg px-2 py-1" style={COUNT_BADGE}>
+              <Users size={10} strokeWidth={2.2} style={{ color: TEXT_MUTE, flexShrink: 0 }} />
+              <span style={{ fontFamily: FONT, fontSize: 11, color: TEXT_MUTE }}>
+                {course.studentsCount ?? 0} طالب
+              </span>
+            </div>
+
+            <div className="inline-flex items-center gap-1 rounded-lg px-2 py-1" style={COUNT_BADGE}>
+              <BookOpen size={10} strokeWidth={2.2} style={{ color: TEXT_MUTE, flexShrink: 0 }} />
+              <span style={{ fontFamily: FONT, fontSize: 11, color: TEXT_MUTE }}>
+                {course.lessonCount ?? 0} درس
+              </span>
+            </div>
           </div>
         </div>
 

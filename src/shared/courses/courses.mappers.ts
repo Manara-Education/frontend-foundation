@@ -45,6 +45,14 @@ function optionalNumber(value: number | null | undefined): number | undefined {
 
 // ── List / card ───────────────────────────────────────────────────────────────
 
+/** The cheapest plan of an inlined set, or `undefined` when none was sent. */
+function minSubscriptionPrice(
+  plans: SubscriptionPlanResponse[] | null | undefined,
+): number | undefined {
+  if (!plans?.length) return undefined;
+  return Math.min(...plans.map((plan) => plan.price));
+}
+
 /**
  * `CourseResponse` → the shape the course cards render.
  *
@@ -70,6 +78,10 @@ export function mapCourseResponseToCourseCardModel(dto: CourseResponse): CourseC
     instructorId: dto.instructorId,
     instructorName: optional(dto.instructorName),
     createdAt: dto.createdAt,
+    // A list payload that predates `updatedAt` still has a date worth printing, so the
+    // card falls back to the creation date rather than losing the line entirely.
+    updatedAt: optional(dto.updatedAt) ?? dto.createdAt,
+    subscriptionMinPrice: minSubscriptionPrice(dto.subscriptionPlans),
   };
 }
 
