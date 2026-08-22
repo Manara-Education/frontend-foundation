@@ -27,6 +27,7 @@ export function LessonPage({
     course,
     prevLesson,
     nextLesson,
+    isNextLessonLocked,
     isMarkedComplete,
     isLocked,
     isQuizRequired,
@@ -65,6 +66,7 @@ export function LessonPage({
             course={course}
             prevLesson={prevLesson}
             nextLesson={nextLesson}
+            isNextLessonLocked={isNextLessonLocked}
             isMarkedComplete={isMarkedComplete}
             isLocked={isLocked}
             isQuizRequired={isQuizRequired}

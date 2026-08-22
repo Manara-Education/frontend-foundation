@@ -53,6 +53,14 @@ export interface LessonCourseSummary {
   completedLessons: number;
   /** The server's own percentage, 0–100, or `null` when it reported none. */
   progress: number | null;
+  /**
+   * The lessons of this course the curriculum has not opened for this learner, by id.
+   *
+   * The lesson endpoint's `previous`/`next` carry an id and a title and nothing else, so
+   * whether the lesson the rail offers next is still shut is read from the course's own
+   * curriculum — the same `locked` flag the course details screen prints.
+   */
+  lockedLessonIds: number[];
 }
 
 /** What completing a lesson changed, as the server reported it. */

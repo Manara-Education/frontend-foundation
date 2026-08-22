@@ -22,6 +22,8 @@ export interface UseLessonResult {
   course: LessonCourseSummary | null;
   prevLesson: LessonRef | null;
   nextLesson: LessonRef | null;
+  /** True when `nextLesson` exists but the curriculum has not opened it yet. */
+  isNextLessonLocked: boolean;
   isMarkedComplete: boolean;
   isLocked: boolean;
   /** True while the lesson's quiz still stands between the learner and completion. */
@@ -115,6 +117,18 @@ export function useLesson({
 
   const isMarkedComplete = currentLesson?.status === "completed";
   const isLocked = currentLesson?.locked ?? false;
+  const nextLesson = currentLesson?.nextLesson ?? null;
+
+  /**
+   * Whether the lesson the rail offers next may be opened.
+   *
+   * The lesson response names the next lesson without saying anything about its state, so
+   * the verdict comes from the course's curriculum, re-read alongside the lesson. A course
+   * summary that would not load leaves this false: the rail then offers the lesson and the
+   * server refuses it there, which is better than locking a lesson on a guess.
+   */
+  const isNextLessonLocked =
+    !!nextLesson && (course?.lockedLessonIds.includes(nextLesson.id) ?? false);
   const quiz = currentLesson?.quiz ?? null;
   const isQuizRequired = !!quiz && !quiz.passed && !isMarkedComplete;
 
@@ -177,7 +191,8 @@ export function useLesson({
     currentLesson,
     course,
     prevLesson: currentLesson?.previousLesson ?? null,
-    nextLesson: currentLesson?.nextLesson ?? null,
+    nextLesson,
+    isNextLessonLocked,
     isMarkedComplete,
     isLocked,
     isQuizRequired,
