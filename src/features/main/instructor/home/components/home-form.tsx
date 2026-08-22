@@ -15,7 +15,6 @@ interface HomeFormProps {
   firstName: string;
   onCreateCourse?: () => void;
   onCourseClick?: (courseId: string) => void;
-  onViewAllCourses?: () => void;
 }
 
 export function HomeForm({
@@ -26,7 +25,6 @@ export function HomeForm({
   firstName,
   onCreateCourse,
   onCourseClick,
-  onViewAllCourses,
 }: HomeFormProps) {
   return (
     <div dir="rtl" style={{ fontFamily: FONT }}>
@@ -65,7 +63,6 @@ export function HomeForm({
               hasCourses={hasCourses}
               onCreateCourse={onCreateCourse}
               onCourseClick={onCourseClick}
-              onViewAllCourses={onViewAllCourses}
             />
 
             <CreateCourseBanner onCreateCourse={onCreateCourse} />

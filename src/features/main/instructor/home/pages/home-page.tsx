@@ -4,13 +4,11 @@ import { useHome } from "../hooks/use-home";
 interface InstructorHomePageProps {
   onCreateCourse?: () => void;
   onCourseClick?: (courseId: string) => void;
-  onViewAllCourses?: () => void;
 }
 
 export function InstructorHomePage({
   onCreateCourse,
   onCourseClick,
-  onViewAllCourses,
 }: InstructorHomePageProps) {
   const { courses, isLoading, hasCourses, totalEnrolled, firstName } = useHome();
 
@@ -23,7 +21,6 @@ export function InstructorHomePage({
       firstName={firstName}
       onCreateCourse={onCreateCourse}
       onCourseClick={onCourseClick}
-      onViewAllCourses={onViewAllCourses}
     />
   );
 }

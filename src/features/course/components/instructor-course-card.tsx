@@ -1,9 +1,16 @@
+/**
+ * The instructor's course row — one card per course, shared by every instructor surface
+ * that lists courses: "دوراتي" (My Courses) and the home page's "دوراتي الأخيرة".
+ *
+ * It sits at the course feature's root rather than inside either list so the two stay one
+ * design instead of drifting into two near-identical cards, which is what they were before.
+ */
 import { useState } from "react";
 import { motion } from "motion/react";
 import { BookOpen, Calendar, CreditCard, RefreshCw, Users } from "lucide-react";
 import { ImageWithFallback } from "@/shared/components/ImageWithFallback";
-import type { Course } from "../types/all-courses.types";
-import { formatPrice, formatUpdatedAt } from "../formatters/all-courses.formatter";
+import type { CourseCardModel } from "@/shared/courses";
+import { formatPrice, formatUpdatedAt } from "../formatters/instructor-course-card.formatter";
 
 const PRIMARY = "#4E5B92";
 const FONT = "'Cairo', sans-serif";
@@ -29,13 +36,13 @@ const FREE_BADGE = {
   border: "1px solid rgba(78,91,146,0.12)",
 } as const;
 
-interface CourseCardProps {
-  course: Course;
+interface InstructorCourseCardProps {
+  course: CourseCardModel;
   delay?: number;
   onNavigate?: () => void;
 }
 
-export function CourseCard({ course, delay = 0, onNavigate }: CourseCardProps) {
+export function InstructorCourseCard({ course, delay = 0, onNavigate }: InstructorCourseCardProps) {
   const [hovered, setHovered] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
 

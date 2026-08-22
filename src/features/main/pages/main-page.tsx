@@ -311,7 +311,6 @@ export function MainPage() {
                     {activeView === "instructor-home" && (
                       <InstructorHomePage
                         onCreateCourse={() => goTo("instructor-create")}
-                        onViewAllCourses={() => goTo("instructor-courses")}
                         onCourseClick={(courseId) => setInstructorCourseId(courseId)}
                       />
                     )}
