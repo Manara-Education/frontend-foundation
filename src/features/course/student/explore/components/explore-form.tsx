@@ -1,13 +1,29 @@
-import { Search, X, BookOpen } from "lucide-react";
+/**
+ * The "استكشاف الدورات" screen: breadcrumb, heading, search, and the responsive grid of
+ * course tiles.
+ *
+ * The result count lives inside the search field rather than on a line of its own, which
+ * is where the reference puts it and what the standalone "عرض جميع الدورات (N)" line used
+ * to say twice over.
+ */
+import { useState } from "react";
+import { ChevronRight, Compass, Search, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { ExploreCourseCard } from "./explore-course-card";
+import { ExploreEmptyState } from "./explore-empty-state";
 import type { CourseExploreView } from "../types/explore.types";
+import { BORDER, FONT, PRIMARY, TEXT_DARK, TEXT_MUTE } from "../formatters/explore.formatter";
 
-const PRIMARY = "#4E5B92";
-const FONT = "'Cairo', sans-serif";
-const TEXT_DARK = "#1A1F3C";
-const TEXT_MID = "#6B708A";
-const TEXT_MUTE = "#A8ADCA";
+/**
+ * `auto-fill` decides the column count from the width the shell actually gives us, so
+ * the grid steps down from four columns to one without a breakpoint naming a viewport.
+ * 250px is the narrowest a tile reads at — below it the CTA row starts to crowd.
+ */
+const GRID_STYLE = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fill, minmax(min(250px, 100%), 1fr))",
+  gap: 22,
+} as const;
 
 interface ExploreFormProps {
   courses: CourseExploreView[];
@@ -17,6 +33,7 @@ interface ExploreFormProps {
   onQueryChange: (q: string) => void;
   onResetQuery: () => void;
   onCourseClick?: (id: number) => void;
+  onGoHome?: () => void;
   enrolledCourseIds?: Set<number>;
 }
 
@@ -28,164 +45,220 @@ export function ExploreForm({
   onQueryChange,
   onResetQuery,
   onCourseClick,
+  onGoHome,
   enrolledCourseIds,
 }: ExploreFormProps) {
+  const [focused, setFocused] = useState(false);
+
   return (
     <div dir="rtl" style={{ fontFamily: FONT }}>
-      {/* Header Title */}
-      <section className="mb-9">
-        <h1
+      {/* ── Breadcrumb ─────────────────────────────────────────────────── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 28 }}>
+        <button
+          type="button"
+          onClick={onGoHome}
+          disabled={!onGoHome}
           style={{
             fontFamily: FONT,
-            fontWeight: 700,
-            fontSize: 28,
-            color: TEXT_DARK,
-            lineHeight: 1.3,
-            letterSpacing: -0.3,
+            fontSize: 13,
+            color: TEXT_MUTE,
+            background: "none",
+            border: "none",
+            cursor: onGoHome ? "pointer" : "default",
+            padding: 0,
+            transition: "color 0.15s",
+          }}
+          onMouseEnter={(e) => {
+            if (onGoHome) e.currentTarget.style.color = PRIMARY;
+          }}
+          onMouseLeave={(e) => (e.currentTarget.style.color = TEXT_MUTE)}
+        >
+          الرئيسية
+        </button>
+        {/* Same separator the course-details and lesson breadcrumbs use */}
+        <ChevronRight size={13} color="#C4C9DE" strokeWidth={2} style={{ flexShrink: 0 }} />
+        <span style={{ fontFamily: FONT, fontSize: 13, color: PRIMARY }}>استكشاف الدورات</span>
+      </div>
+
+      {/* ── Heading ────────────────────────────────────────────────────── */}
+      <motion.section
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.05 }}
+        style={{ marginBottom: 36 }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 14,
+              background: "rgba(78,91,146,0.10)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: PRIMARY,
+              flexShrink: 0,
+            }}
+          >
+            <Compass size={20} strokeWidth={1.8} />
+          </div>
+          <h1
+            style={{
+              fontFamily: FONT,
+              fontWeight: 700,
+              fontSize: 30,
+              color: TEXT_DARK,
+              margin: 0,
+              lineHeight: 1.2,
+            }}
+          >
+            استكشف الدورات التعليمية
+          </h1>
+        </div>
+        <p
+          style={{
+            fontFamily: FONT,
+            fontSize: 15,
+            color: TEXT_MUTE,
+            // Indents past the icon tile — inline-start, so RTL indents from the right.
             margin: 0,
+            marginInlineStart: 56,
+            lineHeight: 1.7,
+            maxWidth: 520,
           }}
         >
-          استكشاف الدورات
-        </h1>
-        <p style={{ fontFamily: FONT, fontSize: 14.5, color: TEXT_MID, marginTop: 6, marginBottom: 0, lineHeight: 1.7 }}>
-          اكتشف مئات الدورات التعليمية في مجالات اللغة العربية وآدابها
+          ابدأ رحلتك التعليمية واختر الدورة المناسبة لهدفك القادم — {courses.length} دورة متاحة
         </p>
+      </motion.section>
 
-        {/* Stats Pill */}
-        <div className="flex items-center gap-2.5 mt-5 flex-wrap">
-          <div
-            className="flex items-center gap-1.5 rounded-xl px-3 py-1.5"
-            style={{ background: "rgba(78,91,146,0.07)", border: "1px solid rgba(78,91,146,0.12)" }}
-          >
-            <div className="rounded-full flex-shrink-0" style={{ width: 5, height: 5, background: PRIMARY }} />
-            <span style={{ fontFamily: FONT, fontSize: 12, fontWeight: 600, color: PRIMARY }}>
-              {courses.length} دورة متاحة
-            </span>
-          </div>
+      {/* ── Search ─────────────────────────────────────────────────────── */}
+      <motion.section
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.1 }}
+        style={{ marginBottom: 36, position: "relative" }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            insetInlineStart: 18,
+            top: "50%",
+            transform: "translateY(-50%)",
+            color: focused ? PRIMARY : "#C4C9DE",
+            pointerEvents: "none",
+            display: "flex",
+            transition: "color 0.18s",
+          }}
+        >
+          <Search size={17} strokeWidth={1.8} />
         </div>
-      </section>
 
-      {/* Search Input */}
-      <section className="mb-7">
-        <div className="relative">
-          <div className="absolute inset-y-0 flex items-center pointer-events-none" style={{ right: 16 }}>
-            <Search size={16} style={{ color: TEXT_MUTE }} strokeWidth={1.8} />
-          </div>
+        <input
+          type="text"
+          dir="rtl"
+          value={query}
+          onChange={(e) => onQueryChange(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          placeholder="ابحث عن دورة، مهارة، أو مجال تعليمي..."
+          style={{
+            width: "100%",
+            height: 52,
+            borderRadius: 18,
+            border: `1.5px solid ${focused ? "rgba(78,91,146,0.38)" : BORDER}`,
+            background: "#FFFFFF",
+            paddingInlineStart: 48,
+            // Leaves room for the count pill and the clear button on the far edge.
+            paddingInlineEnd: query ? 116 : 20,
+            fontFamily: FONT,
+            fontSize: 14,
+            color: TEXT_DARK,
+            outline: "none",
+            transition: "border-color 0.18s, box-shadow 0.18s, padding 0.18s",
+            boxShadow: focused
+              ? "0 0 0 4px rgba(78,91,146,0.08), 0 4px 18px rgba(78,91,146,0.07)"
+              : "0 2px 12px rgba(78,91,146,0.04)",
+            boxSizing: "border-box",
+          }}
+        />
 
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
-            placeholder="ابحث عن دورة..."
-            dir="rtl"
+        {/* Result count and clear, on the edge opposite the search icon */}
+        {query.trim() && (
+          <motion.div
+            // `y` is animated rather than written into `transform`, which motion owns and
+            // would otherwise overwrite along with the scale — losing the centring.
+            initial={{ opacity: 0, scale: 0.9, y: "-50%" }}
+            animate={{ opacity: 1, scale: 1, y: "-50%" }}
             style={{
-              width: "100%",
-              height: 50,
-              paddingRight: 44,
-              paddingLeft: query ? 44 : 18,
-              fontFamily: FONT,
-              fontSize: 14,
-              color: TEXT_DARK,
-              background: "#fff",
-              border: `1.5px solid rgba(78,91,146,0.13)`,
-              borderRadius: 16,
-              outline: "none",
-              boxShadow: "0 2px 12px rgba(78,91,146,0.05)",
-              transition: "border-color 0.18s, box-shadow 0.18s",
-              boxSizing: "border-box",
+              position: "absolute",
+              insetInlineEnd: 14,
+              top: "50%",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
             }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = "rgba(78,91,146,0.35)";
-              e.currentTarget.style.boxShadow = "0 0 0 3px rgba(78,91,146,0.08)";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = "rgba(78,91,146,0.13)";
-              e.currentTarget.style.boxShadow = "0 2px 12px rgba(78,91,146,0.05)";
-            }}
-          />
-
-          {/* Clear button */}
-          {query && (
+          >
+            <span
+              style={{
+                fontFamily: FONT,
+                fontSize: 12,
+                color: TEXT_MUTE,
+                padding: "3px 10px",
+                borderRadius: 99,
+                background: "rgba(78,91,146,0.06)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {filtered.length} نتيجة
+            </span>
             <button
+              type="button"
               onClick={onResetQuery}
-              className="absolute inset-y-0 flex items-center"
-              style={{ left: 14, background: "none", border: "none", cursor: "pointer", color: TEXT_MUTE }}
+              aria-label="مسح البحث"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                background: "none",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                color: TEXT_MUTE,
+              }}
             >
               <X size={15} strokeWidth={2} />
             </button>
-          )}
-        </div>
-      </section>
+          </motion.div>
+        )}
+      </motion.section>
 
-      {/* Courses List */}
+      {/* ── Courses grid ───────────────────────────────────────────────── */}
       <section>
         <AnimatePresence mode="wait">
           {filtered.length === 0 ? (
             <motion.div
               key="empty"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.22 }}
-              className="flex flex-col items-center justify-center text-center py-20 px-8"
-              style={{ background: "#ffffff", borderRadius: 24, border: "1.5px dashed rgba(78,91,146,0.18)" }}
             >
-              <div
-                className="rounded-3xl flex items-center justify-center mb-6"
-                style={{ width: 80, height: 80, background: "rgba(78,91,146,0.07)" }}
-              >
-                <BookOpen size={30} style={{ color: PRIMARY }} strokeWidth={1.5} />
-              </div>
-
-              <h3 style={{ fontFamily: FONT, fontWeight: 700, fontSize: 19, color: TEXT_DARK, margin: "0 0 8px 0" }}>
-                لا توجد نتائج مطابقة
-              </h3>
-
-              <p style={{ fontFamily: FONT, fontSize: 13.5, color: TEXT_MUTE, margin: 0, maxWidth: 300, lineHeight: 1.9 }}>
-                جرّب تغيير كلمة البحث أو إزالة الفلتر المحدد
-              </p>
-
-              {isFiltered && (
-                <motion.button
-                  onClick={onResetQuery}
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="flex items-center gap-2 mt-7 rounded-2xl px-6 py-3"
-                  style={{
-                    background: "rgba(78,91,146,0.08)",
-                    color: PRIMARY,
-                    border: `1.5px solid rgba(78,91,146,0.15)`,
-                    cursor: "pointer",
-                    fontFamily: FONT,
-                    fontWeight: 600,
-                    fontSize: 14,
-                  }}
-                >
-                  <X size={15} strokeWidth={2.2} />
-                  إعادة ضبط البحث
-                </motion.button>
-              )}
+              <ExploreEmptyState isFiltered={isFiltered} onReset={onResetQuery} />
             </motion.div>
           ) : (
             <motion.div
-              key="list"
+              key="grid"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="flex flex-col gap-3"
+              style={GRID_STYLE}
             >
-              <div style={{ fontFamily: FONT, fontSize: 12.5, color: TEXT_MID, marginBottom: 4 }}>
-                {filtered.length === courses.length
-                  ? `عرض جميع الدورات (${courses.length})`
-                  : `${filtered.length} نتيجة من أصل ${courses.length}`}
-              </div>
-
               {filtered.map((course, i) => (
                 <ExploreCourseCard
                   key={course.id}
                   course={course}
-                  delay={i * 0.05}
+                  index={i}
                   onNavigate={() => onCourseClick?.(course.id)}
                   isEnrolled={enrolledCourseIds?.has(course.id)}
                 />

@@ -299,6 +299,7 @@ export function MainPage() {
                     {activeView === "explore" && (
                       <ExplorePage
                         enrolledCourseIds={enrolledIds}
+                        onGoHome={() => goTo("home")}
                         onCourseClick={(id) => {
                           const isEnrolled = enrolledIds.has(id);
                           setStudentCourseId(id, isEnrolled ? "enrolled" : "browse");
