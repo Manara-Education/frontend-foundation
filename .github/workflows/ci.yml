@@ -1,0 +1,72 @@
+# Continuous integration for frontend-foundation.
+#
+# This is the validation gate for every pull request into `develop` (the default
+# branch) and `main`. It exists so that dependency-update PRs raised by Dependabot
+# are proven to still install, type-check and build before anyone merges them —
+# but it is not Dependabot-specific: human PRs run exactly the same checks.
+#
+# The steps below run only commands this repository actually has:
+#   * `npm ci`            — installs strictly from package-lock.json
+#   * `npx tsc --noEmit`  — the repo's own tsconfig.json in strict mode; this is
+#                           what catches breaking @types/* bumps, which `vite build`
+#                           would not, because vite strips types without checking them
+#   * `npm run build`     — the only build script defined in package.json
+#
+# There is deliberately no lint or unit-test step: this repository defines no
+# lint or test script and has no ESLint config or test runner installed.
+# Inventing one here would fail on the first run and block every PR.
+#
+# No secrets are read by this workflow. That is intentional: workflow runs
+# triggered by Dependabot pull requests receive Dependabot secrets rather than
+# Actions secrets, so a CI job that depended on production secrets would fail or
+# silently degrade on exactly the PRs this pipeline exists to validate.
+
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  push:
+    branches:
+      - develop
+
+# Least privilege: this job only reads the repository. It never writes to the
+# repo, comments on PRs, or touches deployments.
+permissions:
+  contents: read
+
+# A newer push to the same PR supersedes the previous run.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Install, type-check and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      # `npm ci` fails outright if package.json and package-lock.json disagree,
+      # which is precisely the regression a bad dependency PR would introduce.
+      - name: Install dependencies from the lockfile
+        run: npm ci
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
