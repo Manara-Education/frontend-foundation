@@ -104,6 +104,9 @@ ${colorConfig
 
 const ChartTooltip = RechartsPrimitive.Tooltip;
 
+// recharts 3 moved the props the chart supplies from context (payload, label,
+// active, coordinate) out of Tooltip's own props and into TooltipContentProps,
+// which is what a custom tooltip content component actually receives.
 function ChartTooltipContent({
   active,
   payload,
@@ -118,7 +121,7 @@ function ChartTooltipContent({
   color,
   nameKey,
   labelKey,
-}: React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
+}: Partial<RechartsPrimitive.TooltipContentProps> &
   React.ComponentProps<"div"> & {
     hideLabel?: boolean;
     hideIndicator?: boolean;
@@ -183,10 +186,17 @@ function ChartTooltipContent({
           const key = `${nameKey || item.name || item.dataKey || "value"}`;
           const itemConfig = getPayloadConfigFromPayload(config, item, key);
           const indicatorColor = color || item.payload.fill || item.color;
+          // recharts 3 widened dataKey to allow an accessor function, which is
+          // not a valid React key. Keep dataKey identity when it is a plain
+          // value, and fall back to the series name, then the index.
+          const itemKey =
+            typeof item.dataKey === "string" || typeof item.dataKey === "number"
+              ? item.dataKey
+              : (item.name ?? index);
 
           return (
             <div
-              key={item.dataKey}
+              key={itemKey}
               className={cn(
                 "[&>svg]:text-muted-foreground flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5",
                 indicator === "dot" && "items-center",
@@ -250,6 +260,8 @@ function ChartTooltipContent({
 
 const ChartLegend = RechartsPrimitive.Legend;
 
+// recharts 3 removed `payload` from LegendProps; legend entries are supplied
+// from context and typed as LegendPayload.
 function ChartLegendContent({
   className,
   hideIcon = false,
@@ -257,7 +269,8 @@ function ChartLegendContent({
   verticalAlign = "bottom",
   nameKey,
 }: React.ComponentProps<"div"> &
-  Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
+  Pick<RechartsPrimitive.LegendProps, "verticalAlign"> & {
+    payload?: ReadonlyArray<RechartsPrimitive.LegendPayload>;
     hideIcon?: boolean;
     nameKey?: string;
   }) {
