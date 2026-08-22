@@ -8,8 +8,18 @@ interface AllCoursesPageProps {
 }
 
 export function AllCoursesPage({ onBack, onCourseClick, onCreateCourse }: AllCoursesPageProps) {
-  const { courses, filtered, isLoading, query, setQuery, isFiltered, resetQuery } =
-    useAllCourses();
+  const {
+    courses,
+    filtered,
+    isLoading,
+    query,
+    setQuery,
+    statusFilter,
+    setStatusFilter,
+    statusCounts,
+    isFiltered,
+    resetFilters,
+  } = useAllCourses();
 
   return (
     <AllCoursesForm
@@ -17,9 +27,12 @@ export function AllCoursesPage({ onBack, onCourseClick, onCreateCourse }: AllCou
       courses={courses}
       filtered={filtered}
       query={query}
+      statusFilter={statusFilter}
+      statusCounts={statusCounts}
       isFiltered={isFiltered}
       onQueryChange={setQuery}
-      onResetQuery={resetQuery}
+      onStatusFilterChange={setStatusFilter}
+      onResetFilters={resetFilters}
       onBack={onBack}
       onCourseClick={onCourseClick}
       onCreateCourse={onCreateCourse}

@@ -59,11 +59,16 @@ export function PageSkeleton() {
         <Sk h={15} w={280} r={7} />
       </div>
 
-      {/* Search + filter skeleton */}
-      <div className="flex gap-3 mb-8">
-        <Sk h={48} r={16} style={{ flex: 1 }} />
-        <Sk h={48} w={90} r={16} />
-        <Sk h={48} w={90} r={16} />
+      {/* Search input skeleton */}
+      <div className="mb-4">
+        <Sk h={50} r={16} />
+      </div>
+
+      {/* Status filter pills skeleton */}
+      <div className="flex gap-2 mb-7">
+        <Sk h={38} w={86} r={14} />
+        <Sk h={38} w={100} r={14} />
+        <Sk h={38} w={96} r={14} />
       </div>
 
       {/* Cards */}

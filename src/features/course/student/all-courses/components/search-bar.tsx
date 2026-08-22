@@ -16,9 +16,9 @@ export function SearchBar({ query, onQueryChange }: SearchBarProps) {
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.14 }}
-      className="mb-7"
+      className="mb-4"
     >
-      <div className="relative mb-4">
+      <div className="relative">
         <div
           className="absolute inset-y-0 flex items-center pointer-events-none"
           style={{ right: 16 }}

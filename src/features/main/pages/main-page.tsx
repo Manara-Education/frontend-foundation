@@ -55,7 +55,7 @@ const VIEW_META: Record<ActiveView, { title: string; subtitle: string }> = {
   explore:              { title: "استكشاف الدورات",    subtitle: "اكتشف محتوى جديداً" },
   profile:              { title: "ملفي الشخصي",        subtitle: "إدارة حسابك بسهولة" },
   "instructor-home":    { title: "لوحة المدرّب",        subtitle: "نظرة عامة على نشاطك التدريسي" },
-  "instructor-courses": { title: "كل دوراتي",           subtitle: "أدر وعدّل جميع دوراتك" },
+  "instructor-courses": { title: "دوراتي",              subtitle: "إدارة كافة دوراتك التعليمية" },
   "instructor-create":  { title: "إنشاء دورة جديدة",    subtitle: "ابدأ بإعداد دورتك التالية" },
   "instructor-banners": { title: "الإعلانات",            subtitle: "إدارة الإعلانات الترويجية" },
 };
