@@ -4,6 +4,7 @@ import { verifyOtp, verifyResetOtp, resendOtp } from "../services/otp.service";
 import type { OtpErrors, OtpContextType } from "../types/otp.types";
 import { ApiError } from "@/shared/api";
 import { useAuth } from "@/shared/auth";
+import { paths, resolvePostLoginPath } from "@/shared/navigation";
 import * as React from "react";
 
 export const OTP_LENGTH = 6;
@@ -12,13 +13,19 @@ export function useOtp() {
   const navigate = useNavigate();
   const location = useLocation();
   const { setUser } = useAuth();
-  const state = location.state as { email?: string; context?: OtpContextType } | null;
+  const state = location.state as
+    | { email?: string; context?: OtpContextType; from?: string }
+    | null;
   const email = state?.email || "";
   const context = state?.context || "email-verification";
+  /** Carried through from the login screen when a guard sent the visitor there. */
+  const from = state?.from;
 
   useEffect(() => {
+    // Reached without the address the code was sent to, this screen has nothing to verify.
+    // Replace: an entry that cannot be returned to should not be left in history.
     if (!email) {
-      navigate("/login");
+      navigate(paths.login, { replace: true });
     }
   }, [email, navigate]);
 
@@ -99,11 +106,14 @@ export function useOtp() {
         const user = await verifyOtp({ email, code });
         setUser(user);
         setSuccess(true);
-        setTimeout(() => navigate("/main", { replace: true }), 1200);
+        setTimeout(
+          () => navigate(resolvePostLoginPath(user.role, from), { replace: true }),
+          1200,
+        );
       } else if (context === "password-reset") {
         await verifyResetOtp({ email, code });
         setSuccess(true);
-        setTimeout(() => navigate("/reset-password", { state: { email, code } }), 1200);
+        setTimeout(() => navigate(paths.resetPassword, { state: { email, code } }), 1200);
       }
     } catch (err) {
       if (err instanceof ApiError) {

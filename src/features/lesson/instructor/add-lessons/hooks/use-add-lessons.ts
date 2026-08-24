@@ -1,11 +1,21 @@
 import { useCallback, useState } from "react";
 import { useCourseEditor } from "@/features/course/Instructor/course-editor/hooks/use-course-editor";
 import type { LessonDraft } from "@/features/course/Instructor/course-editor/types/course-editor.types";
+import type { CourseEditorTab } from "@/shared/navigation";
 
-export type CourseTab = "overview" | "content" | "quizzes" | "pricing";
+export type CourseTab = CourseEditorTab;
 
 interface UseAddLessonsArgs {
   courseId: string;
+  /**
+   * Which tab is open, and how to open another one.
+   *
+   * Both come from the route rather than from state held here: the tab is a section of
+   * the course with an address of its own, so it has to survive a reload and answer to
+   * Back like any other navigation.
+   */
+  activeTab: CourseTab;
+  onTabChange: (tab: CourseTab) => void;
 }
 
 /**
@@ -16,10 +26,10 @@ interface UseAddLessonsArgs {
  * form is showing, and the two inline messages the reference puts next to the publish
  * and pricing actions.
  */
-export function useAddLessons({ courseId }: UseAddLessonsArgs) {
+export function useAddLessons({ courseId, activeTab, onTabChange }: UseAddLessonsArgs) {
   const editor = useCourseEditor({ type: "EDIT", courseId });
 
-  const [activeTab, setActiveTab] = useState<CourseTab>("content");
+  const setActiveTab = onTabChange;
   const [lessonFormOpen, setLessonFormOpen] = useState(false);
   const [lessonEditKey, setLessonEditKey] = useState<string | null>(null);
   const [publishError, setPublishError] = useState("");
@@ -123,7 +133,7 @@ export function useAddLessons({ courseId }: UseAddLessonsArgs) {
     }
     setPublishError("");
     await editor.setStatus("PUBLISHED");
-  }, [editor]);
+  }, [editor, setActiveTab]);
 
   const unpublish = useCallback(async () => {
     setPublishError("");

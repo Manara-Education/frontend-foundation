@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/shared/api";
 import { bannersService } from "../services/banners.service";
-import type { BannersSubView, InstructorBanner } from "../types/banners.types";
+import type { InstructorBanner } from "../types/banners.types";
 
 /**
  * The management screen's list: what is in it, and everything that can be done to a row.
+ *
+ * Opening the editor is not one of those things any more — creating and editing a banner
+ * are addresses of their own, so this hook has no "which sub-view is showing" state left
+ * to keep in step with anything.
  *
  * Every action goes to the server and re-reads what came back, rather than editing the local
  * copy and assuming. Two of them make that mandatory — a toggle changes a banner's status,
@@ -16,8 +20,6 @@ export function useBanners() {
   const [error, setError] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [subView, setSubView] = useState<BannersSubView>("list");
-  const [editingBanner, setEditingBanner] = useState<InstructorBanner | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -108,28 +110,6 @@ export function useBanners() {
     [banners],
   );
 
-  const openCreate = useCallback(() => {
-    setEditingBanner(null);
-    setSubView("create");
-  }, []);
-
-  const openEdit = useCallback((banner: InstructorBanner) => {
-    setEditingBanner(banner);
-    setSubView("edit");
-  }, []);
-
-  const closeEditor = useCallback(() => {
-    setEditingBanner(null);
-    setSubView("list");
-  }, []);
-
-  /** A save lands the editor back on a list that already reflects it. */
-  const handleSaved = useCallback(() => {
-    setEditingBanner(null);
-    setSubView("list");
-    void load();
-  }, [load]);
-
   const activeCount = banners.filter((b) => b.status === "ACTIVE").length;
   const bannerToDelete = banners.find((b) => b.id === deleteId) ?? null;
 
@@ -141,18 +121,12 @@ export function useBanners() {
     deleteId,
     bannerToDelete,
     activeCount,
-    subView,
-    editingBanner,
     onRequestDelete: setDeleteId,
     onCancelDelete: () => setDeleteId(null),
     onConfirmDelete: handleDelete,
     onToggleEnabled: handleToggleEnabled,
     onDuplicate: handleDuplicate,
     onReorder: handleReorder,
-    onCreateBanner: openCreate,
-    onEditBanner: openEdit,
-    onCancelEditor: closeEditor,
-    onSaved: handleSaved,
     onRetry: load,
   };
 }

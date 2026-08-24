@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { paths } from "@/shared/navigation";
 import { forgotPassword } from "../services/forgot-password.service";
 import type { ForgotPasswordErrors, ForgotPasswordFormState } from "../types/forgot-password.types";
 import { ApiError } from "@/shared/api";
@@ -31,7 +32,7 @@ export function useForgotPassword() {
 
     try {
       await forgotPassword({ email: form.email });
-      navigate("/otp", { state: { email: form.email, context: "password-reset" } });
+      navigate(paths.otp, { state: { email: form.email, context: "password-reset" } });
     } catch (err) {
       if (err instanceof ApiError) {
         setErrors({ general: err.errors[0] });

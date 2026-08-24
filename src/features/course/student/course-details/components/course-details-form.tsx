@@ -16,6 +16,7 @@ interface CourseDetailsFormProps {
   courseId: number;
   mode: CourseDetailsMode;
   onBack: () => void;
+  onHome?: () => void;
   onLessonClick?: (lessonId: number) => void;
   onEnrolled: () => void;
   onProgressionChanged: () => void;
@@ -26,6 +27,7 @@ export function CourseDetailsForm({
   courseId,
   mode,
   onBack,
+  onHome,
   onLessonClick,
   onEnrolled,
   onProgressionChanged,
@@ -50,7 +52,7 @@ export function CourseDetailsForm({
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
     >
-      <Breadcrumb onBack={onBack} mode={mode} />
+      <Breadcrumb onBack={onBack} onHome={onHome} mode={mode} />
       <HeroSection course={courseData} />
 
       {mode === "browse" ? (

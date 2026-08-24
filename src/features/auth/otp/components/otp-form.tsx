@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router";
+import { paths } from "@/shared/navigation";
 import { ArrowRight, RefreshCw } from "lucide-react";
 import { AuthCard } from "@/features/auth/components/AuthCard";
 import { PrimaryButton } from "@/features/auth/components/FormField";
@@ -160,7 +161,7 @@ export function OtpForm({
         <div className="flex justify-center">
           <button
             type="button"
-            onClick={() => navigate(context === "password-reset" ? "/forgot-password" : "/")}
+            onClick={() => navigate(context === "password-reset" ? paths.forgotPassword : paths.landing)}
             className="flex items-center gap-2 transition-colors duration-150"
             style={{
               fontFamily: "'Cairo', sans-serif",

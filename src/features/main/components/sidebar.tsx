@@ -1,58 +1,28 @@
-import { Fragment, type ElementType } from "react";
-import { Home, BookOpen, Compass, User, LogOut, PlusSquare, Megaphone } from "lucide-react";
+import { Fragment } from "react";
+import { Link } from "react-router";
+import { LogOut } from "lucide-react";
 import { ManaraLogoIcon } from "@/shared/components/ManaraLogo";
+import { isInstructorRole } from "@/shared/auth/roles";
+import type { NavSectionId } from "@/shared/navigation/paths";
+import { getNavSectionsForRole } from "./nav-sections";
 
 const PRIMARY = "#4E5B92";
 
-export type ActiveView =
-  | "home"
-  | "explore"
-  | "profile"
-  | "instructor-home"
-  | "instructor-courses"
-  | "instructor-create"
-  | "instructor-banners";
-
-interface NavItem { icon: ElementType; label: string; view: ActiveView }
-interface NavSection { label: string; items: NavItem[] }
-
-const studentSection: NavSection = {
-  label: "الطالب",
-  items: [
-    { icon: Home, label: "دوراتي", view: "home" },
-    { icon: Compass, label: "استكشاف الدورات", view: "explore" },
-    { icon: User, label: "ملفي الشخصي", view: "profile" },
-  ],
-};
-
-const instructorSection: NavSection = {
-  label: "المدرّب",
-  items: [
-    { icon: Home, label: "الرئيسية", view: "instructor-home" },
-    { icon: BookOpen, label: "دوراتي", view: "instructor-courses" },
-    { icon: PlusSquare, label: "إنشاء دورة", view: "instructor-create" },
-    { icon: Megaphone, label: "الإعلانات", view: "instructor-banners" },
-    { icon: User, label: "ملفي الشخصي", view: "profile" },
-  ],
-};
-
-export function isInstructorRole(role: string | undefined): boolean {
-  return role?.toUpperCase() === "INSTRUCTOR";
-}
-
-export function getNavSectionsForRole(role: string | undefined): NavSection[] {
-  return isInstructorRole(role) ? [instructorSection] : [studentSection];
-}
-
 interface SidebarProps {
-  activeView: ActiveView;
-  onNavigate: (view: ActiveView) => void;
+  /**
+   * The primary area the current route belongs to, taken from that route's own metadata.
+   *
+   * The sidebar keeps no selection of its own. There is nothing here that can fall out of
+   * step with the URL after a refresh, a deep link, or a browser Back — the route decides,
+   * every time.
+   */
+  activeSection?: NavSectionId;
   onLogout: () => void;
   role?: string;
   fullName?: string;
 }
 
-export function Sidebar({ activeView, onNavigate, onLogout, role, fullName }: SidebarProps) {
+export function Sidebar({ activeSection, onLogout, role, fullName }: SidebarProps) {
   const navSections = getNavSectionsForRole(role);
   return (
     <aside
@@ -145,12 +115,17 @@ export function Sidebar({ activeView, onNavigate, onLogout, role, fullName }: Si
             >
               {section.label}
             </div>
-            {section.items.map(({ icon: Icon, label, view }) => {
-              const isActive = activeView === view;
+            {section.items.map(({ icon: Icon, label, id, to }) => {
+              const isActive = activeSection === id;
               return (
-                <button
-                  key={view}
-                  onClick={() => onNavigate(view)}
+                /*
+                  A real anchor rather than a click handler: the entry has an address the
+                  browser can show in the status bar, open in a new tab, and restore on Back.
+                */
+                <Link
+                  key={id}
+                  to={to}
+                  aria-current={isActive ? "page" : undefined}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -168,6 +143,8 @@ export function Sidebar({ activeView, onNavigate, onLogout, role, fullName }: Si
                     fontWeight: isActive ? 600 : 500,
                     fontSize: 14,
                     textAlign: "right",
+                    textDecoration: "none",
+                    flexShrink: 0,
                     position: "relative",
                     transition: "background 0.15s, color 0.15s",
                     outline: "none",
@@ -225,7 +202,7 @@ export function Sidebar({ activeView, onNavigate, onLogout, role, fullName }: Si
                       style={{ width: 6, height: 6, background: PRIMARY, flexShrink: 0 }}
                     />
                   )}
-                </button>
+                </Link>
               );
             })}
           </Fragment>

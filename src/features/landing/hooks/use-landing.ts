@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useNavigate } from "react-router";
+import { paths } from "@/shared/navigation";
 
 /**
  * Navigation for the landing page's call-to-action buttons. Every destination
@@ -9,8 +10,8 @@ import { useNavigate } from "react-router";
 export function useLanding() {
   const navigate = useNavigate();
 
-  const onRegister = useCallback(() => navigate("/register"), [navigate]);
-  const onSignIn = useCallback(() => navigate("/login"), [navigate]);
+  const onRegister = useCallback(() => navigate(paths.register), [navigate]);
+  const onSignIn = useCallback(() => navigate(paths.login), [navigate]);
 
   return { onRegister, onSignIn };
 }
