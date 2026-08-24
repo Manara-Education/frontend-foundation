@@ -7,9 +7,10 @@
 #
 # The steps below run only commands this repository actually has:
 #   * `npm ci`            — installs strictly from package-lock.json
-#   * `npx tsc --noEmit`  — the repo's own tsconfig.json in strict mode; this is
-#                           what catches breaking @types/* bumps, which `vite build`
-#                           would not, because vite strips types without checking them
+#   * `npm run typecheck` — `tsc --noEmit` against the repo's own tsconfig.json in
+#                           strict mode; this is what catches breaking @types/* bumps,
+#                           which `vite build` would not, because vite strips types
+#                           without checking them
 #   * `npm test`          — the Vitest suite, added with the multi-provider video
 #                           work; it runs in jsdom and needs no browser or network
 #   * `npm run build`     — the production build
@@ -56,10 +57,12 @@ jobs:
         with:
           persist-credentials: false
 
+      # Reads .nvmrc so CI, local development and the Docker build all agree on
+      # one Node version. Bumping .nvmrc is the only change needed to move them.
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       # `npm ci` fails outright if package.json and package-lock.json disagree,
@@ -68,7 +71,7 @@ jobs:
         run: npm ci
 
       - name: Type-check
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
       - name: Test
         run: npm test
