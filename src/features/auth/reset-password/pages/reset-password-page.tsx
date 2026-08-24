@@ -3,7 +3,8 @@ import { ResetPasswordForm } from "../components/reset-password-form";
 import { useResetPassword } from "../hooks/use-reset-password";
 
 export function ResetPasswordPage() {
-  const { form, errors, loading, done, fromProfile, setField, handleSubmit, evaluatedRules } = useResetPassword();
+  const { form, errors, loading, done, forced, fromProfile, setField, handleSubmit, evaluatedRules } =
+    useResetPassword();
 
   return (
     <AuthLayout>
@@ -12,6 +13,7 @@ export function ResetPasswordPage() {
         errors={errors}
         loading={loading}
         done={done}
+        forced={forced}
         fromProfile={fromProfile}
         evaluatedRules={evaluatedRules}
         onChange={setField}

@@ -2,6 +2,8 @@ export interface AuthResponse {
   fullName: string;
   email: string;
   role: string;
+  /** Server-owned. See `AuthUser` in `@/shared/auth` — verifying an email signs the user in too. */
+  requiresPasswordReset: boolean;
 }
 
 export type OtpContextType = "email-verification" | "password-reset";

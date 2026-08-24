@@ -15,6 +15,7 @@ interface ResetPasswordFormProps {
   errors: ResetPasswordErrors;
   loading: boolean;
   done: boolean;
+  forced: boolean;
   fromProfile: boolean;
   evaluatedRules: EvaluatedRule[];
   onChange: (k: keyof ResetPasswordFormState) => (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -26,6 +27,7 @@ export function ResetPasswordForm({
   errors,
   loading,
   done,
+  forced,
   fromProfile,
   evaluatedRules,
   onChange,
@@ -119,8 +121,12 @@ export function ResetPasswordForm({
 
   return (
     <AuthCard
-      title="إعادة تعيين كلمة المرور"
-      subtitle="اختر كلمة مرور قوية تحمي حسابك على منارة"
+      title={forced ? "تغيير كلمة المرور" : "إعادة تعيين كلمة المرور"}
+      subtitle={
+        forced
+          ? "لأسباب أمنية، عليك إنشاء كلمة مرور جديدة قبل المتابعة"
+          : "اختر كلمة مرور قوية تحمي حسابك على منارة"
+      }
     >
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
         {/* General error */}
@@ -144,7 +150,9 @@ export function ResetPasswordForm({
           </div>
         )}
 
-        {fromProfile && (
+        {/* A forced reset outranks the way back: the guard would bounce them straight here
+            again, so offering the link would only flash the profile screen. */}
+        {fromProfile && !forced && (
           <button
             type="button"
             onClick={() => navigate(paths.profile, { replace: true })}
@@ -165,6 +173,21 @@ export function ResetPasswordForm({
           </button>
         )}
       
+        {/* Only the forced flow asks for this: the anonymous reset proves the account with an
+            emailed code instead, and renders exactly as it did before. */}
+        {forced && (
+          <FormField
+            label="كلمة المرور الحالية"
+            isPassword
+            placeholder="أدخل كلمة المرور الحالية"
+            value={form.currentPassword}
+            onChange={onChange("currentPassword")}
+            error={errors.currentPassword}
+            icon={<Lock size={17} />}
+            autoComplete="current-password"
+          />
+        )}
+
         <FormField
           label="كلمة المرور الجديدة"
           isPassword

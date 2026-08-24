@@ -3,8 +3,8 @@ import { useLocation, useNavigate } from "react-router";
 import { verifyOtp, verifyResetOtp, resendOtp } from "../services/otp.service";
 import type { OtpErrors, OtpContextType } from "../types/otp.types";
 import { ApiError } from "@/shared/api";
-import { useAuth } from "@/shared/auth";
-import { paths, resolvePostLoginPath } from "@/shared/navigation";
+import { postAuthPath, useAuth } from "@/shared/auth";
+import { paths } from "@/shared/navigation";
 import * as React from "react";
 
 export const OTP_LENGTH = 6;
@@ -106,10 +106,9 @@ export function useOtp() {
         const user = await verifyOtp({ email, code });
         setUser(user);
         setSuccess(true);
-        setTimeout(
-          () => navigate(resolvePostLoginPath(user.role, from), { replace: true }),
-          1200,
-        );
+        // Verifying the email signs the user in, so it faces the same question sign-in
+        // does — including whether the account owes a password change before anything else.
+        setTimeout(() => navigate(postAuthPath(user, from), { replace: true }), 1200);
       } else if (context === "password-reset") {
         await verifyResetOtp({ email, code });
         setSuccess(true);

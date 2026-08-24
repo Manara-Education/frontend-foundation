@@ -115,10 +115,12 @@ export const router = createBrowserRouter([
         handle: handle({ title: "التحقق من الرمز" }),
       },
 
-      // Reset has two ways in: a verified one-time code, and a signed-in user
-      // changing their own password from their profile. It therefore cannot sit
-      // behind `PublicOnlyRoute` — that would turn the second one away — and it
-      // checks for itself that it was reached legitimately.
+      // Reset has three ways in: a verified one-time code, a signed-in user changing
+      // their own password from their profile, and a signed-in user the guard turned
+      // away because the server says their account owes a password change. It therefore
+      // cannot sit behind `PublicOnlyRoute` — that would turn the last two away — and
+      // `ProtectedRoute` redirects *here*, so nesting it there would make the screen
+      // redirect to itself. It checks for itself that it was reached legitimately.
       {
         path: "reset-password",
         Component: ResetPasswordPage,
