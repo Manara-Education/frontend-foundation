@@ -1,0 +1,34 @@
+# Code owners for this repository.
+#
+# A pattern listed here requests a review from its owner automatically when a
+# pull request touches a matching file. Only real GitHub accounts with access to
+# this repository appear below — an unknown or unauthorised username makes the
+# whole entry silently do nothing, which is worse than having no CODEOWNERS at
+# all because it looks like protection that is not there.
+#
+# Verified collaborators at the time of writing:
+#   @Mohamed-Hamza  @Hamed-mohamed-Git
+#
+# Note: CODEOWNERS requests a review; it does not require one. Requiring owner
+# approval is a separate switch in the branch ruleset, deliberately left off
+# while the team is small enough that it would block every merge.
+
+# Default owners for everything not matched more specifically below.
+*                       @Mohamed-Hamza @Hamed-mohamed-Git
+
+# ---------------------------------------------------------------------------
+# Anything that changes how the application is built, released or deployed.
+# A mistake in these files does not fail a test — it fails a deployment.
+# ---------------------------------------------------------------------------
+/.github/workflows/     @Mohamed-Hamza @Hamed-mohamed-Git
+/Dockerfile             @Mohamed-Hamza @Hamed-mohamed-Git
+/.dockerignore          @Mohamed-Hamza @Hamed-mohamed-Git
+/docker-compose.yml     @Mohamed-Hamza @Hamed-mohamed-Git
+
+# Caddy owns TLS, the SPA fallback and the /api and /uploads proxying. A wrong
+# line here means every deep link 404s in production while CI stays green.
+/Caddyfile              @Mohamed-Hamza @Hamed-mohamed-Git
+
+# The shared API client carries session, CSRF and error handling for every
+# request the application makes.
+/src/shared/api/        @Mohamed-Hamza @Hamed-mohamed-Git
