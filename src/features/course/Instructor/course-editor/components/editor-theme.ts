@@ -1,3 +1,5 @@
+import type { VideoProvider } from "@/shared/video";
+
 /**
  * The literal style tokens the reference instructor screens are drawn with.
  *
@@ -7,6 +9,17 @@
  */
 export const PRIMARY = "#4E5B92";
 export const FONT = "'Cairo', sans-serif";
+
+/**
+ * How each video platform is badged on a lesson row.
+ *
+ * A record keyed by provider rather than a hardcoded YouTube chip: adding a platform means adding
+ * an entry here, and TypeScript points at this object if one is ever missed.
+ */
+export const VIDEO_PROVIDER_BADGE: Record<VideoProvider, { color: string; background: string }> = {
+  YOUTUBE: { color: "#CC0000", background: "rgba(255,0,0,0.07)" },
+  VIMEO: { color: "#0F7FA5", background: "rgba(26,183,234,0.10)" },
+};
 
 /** Create-wizard input: 46px tall, tinted once it holds a value. */
 export function inputStyle(hasValue: boolean, hasError?: boolean): React.CSSProperties {

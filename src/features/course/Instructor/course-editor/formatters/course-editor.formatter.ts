@@ -1,4 +1,5 @@
 import type { CourseAccessType, CourseStructure, SubscriptionUnit } from "@/shared/courses";
+import type { VideoProvider, VideoResolutionError } from "@/shared/video";
 
 const MODULE_ORDINALS = [
   "الأولى",
@@ -65,21 +66,34 @@ export function formatAccessSummary(
   return `اشتراك — ${planCount} خطة`;
 }
 
-export function extractYouTubeId(url: string): string | null {
-  if (!url.trim()) return null;
-  const patterns = [
-    /(?:youtube\.com\/watch[?&]v=)([a-zA-Z0-9_-]{11})/,
-    /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-    /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
-    /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
-  ];
-  for (const p of patterns) {
-    const m = url.match(p);
-    if (m) return m[1];
+/**
+ * The Arabic message for a video URL the product cannot play.
+ *
+ * Video parsing itself is not here. It lives in `@/shared/video`, which the student player, the
+ * instructor preview and the lesson card all share — this formatter only turns the resolver's
+ * verdict into words. The prototype had the parsing in this file *and* a second copy inside the
+ * player component, which is how the two could disagree about the same URL.
+ */
+export function formatVideoUrlError(error: VideoResolutionError): string {
+  switch (error) {
+    case "EMPTY":
+      return "يرجى إدخال رابط الفيديو";
+    case "UNSUPPORTED_PROVIDER":
+      return "منصة الفيديو غير مدعومة. استخدم يوتيوب أو فيميو";
+    case "NO_VIDEO_ID":
+      return "هذا الرابط لا يشير إلى فيديو";
+    case "MALFORMED":
+    default:
+      return "رابط الفيديو غير صحيح";
   }
-  return null;
 }
 
-export function getYouTubeThumbnail(videoId: string): string {
-  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+/** The platform's name as an instructor should see it. */
+export function formatVideoProviderLabel(provider: VideoProvider): string {
+  return VIDEO_PROVIDER_LABELS[provider];
 }
+
+const VIDEO_PROVIDER_LABELS: Record<VideoProvider, string> = {
+  YOUTUBE: "YouTube",
+  VIMEO: "Vimeo",
+};

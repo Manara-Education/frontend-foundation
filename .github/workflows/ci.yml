@@ -10,11 +10,13 @@
 #   * `npx tsc --noEmit`  — the repo's own tsconfig.json in strict mode; this is
 #                           what catches breaking @types/* bumps, which `vite build`
 #                           would not, because vite strips types without checking them
-#   * `npm run build`     — the only build script defined in package.json
+#   * `npm test`          — the Vitest suite, added with the multi-provider video
+#                           work; it runs in jsdom and needs no browser or network
+#   * `npm run build`     — the production build
 #
-# There is deliberately no lint or unit-test step: this repository defines no
-# lint or test script and has no ESLint config or test runner installed.
-# Inventing one here would fail on the first run and block every PR.
+# There is still deliberately no lint step: this repository defines no lint script
+# and has no ESLint config installed. Inventing one here would fail on the first
+# run and block every PR.
 #
 # No secrets are read by this workflow. That is intentional: workflow runs
 # triggered by Dependabot pull requests receive Dependabot secrets rather than
@@ -67,6 +69,9 @@ jobs:
 
       - name: Type-check
         run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test
 
       - name: Build
         run: npm run build

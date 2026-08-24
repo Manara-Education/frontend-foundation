@@ -1,4 +1,5 @@
 import { toQuizView } from "@/features/quiz/student/quiz-player";
+import { videoSourceFromResponse } from "@/shared/video";
 import { toLessonStatus } from "../formatters/lesson.formatter";
 import type {
   CourseDetailsResponse,
@@ -18,7 +19,9 @@ export function toLessonView(details: LessonDetailsResponse): LessonView {
     title: lesson.title,
     duration: lesson.duration ?? "",
     status: toLessonStatus(lesson),
-    videoUrl: lesson.videoUrl ?? "",
+    // Resolved from the response the server sent: its URL first, with the provider fields as the
+    // fallback. A lesson saved before those fields existed resolves from its URL exactly as before.
+    video: videoSourceFromResponse(lesson),
     description: lesson.description ?? "",
     locked: lesson.locked ?? false,
     quiz: lesson.quiz ? toQuizView(lesson.quiz) : null,
