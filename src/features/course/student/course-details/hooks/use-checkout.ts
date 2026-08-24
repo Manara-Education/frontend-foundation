@@ -1,11 +1,6 @@
 import { useState } from "react";
 import { ApiError } from "@/shared/api";
-import {
-  formatCardNumber,
-  formatExpiry,
-  isCheckoutValid,
-  sanitizeCvc,
-} from "../formatters/course-details.formatter";
+import { isCheckoutValid } from "../formatters/course-details.formatter";
 import {
   enrollFree,
   purchaseCourse,
@@ -31,13 +26,13 @@ interface UseCheckoutArgs {
   onFailure: () => void;
 }
 
-const EMPTY: CheckoutFormState = { cardNumber: "", expiry: "", cvc: "", name: "", email: "" };
+const EMPTY: CheckoutFormState = { name: "", email: "" };
 
 /**
  * Drives the checkout modal.
  *
- * The three paths differ only in what they send: nothing for a free course, an instrument
- * for a purchase, an instrument plus the chosen plan's id for a subscription. What each one
+ * The three paths differ only in what they send: nothing for a free course, contact details
+ * for a purchase, contact details plus the chosen plan's id for a subscription. What each one
  * costs, and how long it lasts, is the backend's decision — this hook has no figure to send
  * and none to check.
  */
@@ -51,9 +46,6 @@ export function useCheckout({ courseId, kind, planId, onSuccess, onFailure }: Us
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  const setCardNumber = (v: string) => update("cardNumber", formatCardNumber(v));
-  const setExpiry = (v: string) => update("expiry", formatExpiry(v));
-  const setCvc = (v: string) => update("cvc", sanitizeCvc(v));
   const setName = (v: string) => update("name", v);
   const setEmail = (v: string) => update("email", v);
 
@@ -65,10 +57,10 @@ export function useCheckout({ courseId, kind, planId, onSuccess, onFailure }: Us
     if (!canPay) return;
     setStep("processing");
     try {
+      // Exactly what PaymentMethodRequest accepts, and nothing more. The card fields that
+      // used to be here were dropped by Jackson on arrival, so sending them moved real card
+      // numbers and CVCs to a server with no acquirer and no PCI scope to achieve nothing.
       const paymentMethod = {
-        cardNumber: form.cardNumber,
-        expiry: form.expiry,
-        cvc: form.cvc,
         name: form.name,
         email: form.email || undefined,
       };
@@ -84,9 +76,9 @@ export function useCheckout({ courseId, kind, planId, onSuccess, onFailure }: Us
       setStep("success");
       setTimeout(onSuccess, 1300);
     } catch (err) {
-      // The backend refuses a malformed card, a plan that is not this course's, and a course
-      // that is not for sale. All of them land on the same notice the reference already shows
-      // when a payment does not complete.
+      // The backend refuses a plan that is not this course's, and a course that is not for
+      // sale. Both land on the same notice the reference already shows when a checkout does
+      // not complete.
       console.error("Checkout failed", err instanceof ApiError ? err.errors : err);
       setStep("form");
       onFailure();
@@ -97,9 +89,6 @@ export function useCheckout({ courseId, kind, planId, onSuccess, onFailure }: Us
     step,
     form,
     canPay,
-    setCardNumber,
-    setExpiry,
-    setCvc,
     setName,
     setEmail,
     handlePay,

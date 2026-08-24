@@ -6,7 +6,7 @@ import type {
   CourseDetailData,
   SubscriptionPlanOption,
 } from "../types/course-details.types";
-import { StripeCheckoutModal } from "./stripe-checkout-modal";
+import { CheckoutModal } from "./checkout-modal";
 
 interface SubscriptionCTASectionProps {
   course: CourseDetailData;
@@ -47,7 +47,7 @@ export function SubscriptionCTASection({ course, plans, onPay }: SubscriptionCTA
     <>
       <AnimatePresence>
         {showCheckout && selectedPlan && (
-          <StripeCheckoutModal
+          <CheckoutModal
             course={course}
             kind="subscription"
             amountLabel={selectedPlan.priceLabel}
