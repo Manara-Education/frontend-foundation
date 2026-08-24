@@ -98,7 +98,16 @@ export interface CourseLessonEditorState {
   title: string;
   summary: string;
   description: string;
+  /** The address the instructor typed, on any supported platform. The only video field sent back. */
   videoUrl: string;
+  /**
+   * The still the server resolved for this video, carried so the editor's lesson cards can show a
+   * Vimeo thumbnail — which, unlike YouTube's, has no address derivable from the URL.
+   *
+   * Read-only: it is filled from the response and never sent on write. A lesson whose URL has just
+   * been changed has none until the server has looked the new video up.
+   */
+  videoThumbnailUrl: string | null;
   quiz: QuizEditorState | null;
 }
 

@@ -14,6 +14,7 @@ export type {
 // ── Domain / view shape ───────────────────────────────────────────────────────
 import type { LessonRef } from "@/shared/courses";
 import type { QuizView } from "@/features/quiz/student/quiz-player";
+import type { VideoSource } from "@/shared/video";
 
 export type LessonStatus = "completed" | "current" | "not-started" | "locked";
 
@@ -23,7 +24,13 @@ export interface LessonView {
   title: string;
   duration: string;
   status: LessonStatus;
-  videoUrl: string;
+  /**
+   * The lesson's video, resolved once here so no screen or player parses a URL of its own.
+   *
+   * Null for a locked lesson — the backend withholds the video entirely — and for a link Manara
+   * cannot place, which the player renders as its unavailable state rather than an empty frame.
+   */
+  video: VideoSource | null;
   description: string;
   /**
    * True when the curriculum has not opened this lesson. The request still succeeds —

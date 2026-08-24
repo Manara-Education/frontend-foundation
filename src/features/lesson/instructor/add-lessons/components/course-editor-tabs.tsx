@@ -534,7 +534,7 @@ export function CourseEditorTabs({
                 <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#9BA3C4", marginTop: 2 }}>
                   {state.structure === "FLAT"
                     ? state.lessons.length === 0
-                      ? "أضف دروسك — كل درس مرتبط بفيديو YouTube"
+                      ? "أضف دروسك — كل درس مرتبط بفيديو من يوتيوب أو فيميو"
                       : `${state.lessons.length} درس — اسحب لإعادة الترتيب`
                     : state.modules.length === 0
                       ? "أضف وحدات لتنظيم محتوى دورتك"

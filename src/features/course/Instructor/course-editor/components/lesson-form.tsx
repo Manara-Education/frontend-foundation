@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { PlayCircle, Link2, AlignLeft, BookOpen, CheckCircle, X } from "lucide-react";
 import type { CourseLessonEditorState, QuizEditorState } from "@/shared/courses";
-import { extractYouTubeId } from "../formatters/course-editor.formatter";
+import { resolveVideoUrl, type VideoSource } from "@/shared/video";
+import { formatVideoUrlError } from "../formatters/course-editor.formatter";
 import type { LessonDraft } from "../types/course-editor.types";
 import { QuizBuilder } from "./quiz-builder";
-import { YtPreview } from "./yt-preview";
+import { VideoPreview } from "./video-preview";
 import { FONT, PRIMARY } from "./editor-theme";
 
 interface LessonFormErrors {
@@ -30,10 +31,16 @@ interface LessonFormProps {
 export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFormProps) {
   const [lessonTitle, setLessonTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
-  const [ytUrl, setYtUrl] = useState(initial?.videoUrl ?? "");
-  const [videoId, setVideoId] = useState<string | null>(
-    initial?.videoUrl ? extractYouTubeId(initial.videoUrl) : null,
-  );
+  const [videoUrl, setVideoUrl] = useState(initial?.videoUrl ?? "");
+  // The video the URL currently resolves to, on whichever platform. Null while the field is empty
+  // or holds something Manara cannot play — the two cases the error below tells apart.
+  const [video, setVideo] = useState<VideoSource | null>(() => {
+    if (!initial?.videoUrl) return null;
+    const resolution = resolveVideoUrl(initial.videoUrl);
+    return resolution.ok
+      ? { ...resolution.source, thumbnailUrl: initial.videoThumbnailUrl ?? resolution.source.thumbnailUrl }
+      : null;
+  });
   const [quiz, setQuiz] = useState<QuizEditorState | null>(initial?.quiz ?? null);
   const [errors, setErrors] = useState<LessonFormErrors>({});
   const titleRef = useRef<HTMLInputElement>(null);
@@ -42,25 +49,46 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
     titleRef.current?.focus();
   }, []);
 
-  // Debounced YouTube URL parsing
+  /*
+    Debounced resolution of whatever has been typed. The instructor finds out which platform the
+    link belongs to — and whether it is one Manara can play — without waiting for a save, and the
+    answer comes from the same resolver the student player will use on it later.
+  */
   useEffect(() => {
-    const t = setTimeout(() => {
-      const id = extractYouTubeId(ytUrl);
-      setVideoId(id);
-      if (ytUrl && !id) {
-        setErrors((p) => ({ ...p, url: "رابط YouTube غير صالح" }));
-      } else {
-        setErrors((p) => ({ ...p, url: undefined }));
+    const timer = setTimeout(() => {
+      const resolution = resolveVideoUrl(videoUrl);
+
+      if (resolution.ok) {
+        // A stored still only belongs to the URL it was resolved for.
+        const isUnchanged = videoUrl.trim() === (initial?.videoUrl ?? "").trim();
+        setVideo({
+          ...resolution.source,
+          thumbnailUrl: isUnchanged
+            ? (initial?.videoThumbnailUrl ?? resolution.source.thumbnailUrl)
+            : resolution.source.thumbnailUrl,
+        });
+        setErrors((prev) => ({ ...prev, url: undefined }));
+        return;
       }
+
+      setVideo(null);
+      // An empty field is not yet an error — it becomes one on save.
+      setErrors((prev) => ({
+        ...prev,
+        url: resolution.error === "EMPTY" ? undefined : formatVideoUrlError(resolution.error),
+      }));
     }, 400);
-    return () => clearTimeout(t);
-  }, [ytUrl]);
+    return () => clearTimeout(timer);
+  }, [videoUrl, initial?.videoUrl, initial?.videoThumbnailUrl]);
 
   const handleSave = () => {
     const e: LessonFormErrors = {};
     if (!lessonTitle.trim()) e.title = "يرجى إدخال عنوان الدرس";
-    if (!ytUrl.trim()) e.url = "يرجى إدخال رابط الفيديو";
-    else if (!videoId) e.url = "رابط YouTube غير صالح";
+
+    // Re-resolved rather than trusting the debounced state: saving before the timer has fired
+    // would otherwise let an unresolved URL through.
+    const resolution = resolveVideoUrl(videoUrl);
+    if (!resolution.ok) e.url = formatVideoUrlError(resolution.error);
 
     if (Object.keys(e).length > 0) {
       setErrors(e);
@@ -70,7 +98,8 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
     onSave({
       title: lessonTitle.trim(),
       description: description.trim(),
-      videoUrl: ytUrl.trim(),
+      // The URL as typed. The server derives the platform from it — the client never sends one.
+      videoUrl: videoUrl.trim(),
       quiz,
     });
   };
@@ -221,34 +250,34 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
           />
         </div>
 
-        {/* YouTube URL */}
+        {/* Video URL — any supported platform */}
         <div className="flex flex-col gap-1.5">
           <label
             style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: "#1E2340", display: "flex", alignItems: "center", gap: 4 }}
           >
             <PlayCircle size={13} style={{ color: "#FF0000" }} />
-            رابط فيديو YouTube
+            رابط الفيديو
             <span style={{ color: "#D4183D" }}>*</span>
           </label>
           <div className="relative">
             <input
               type="url"
-              value={ytUrl}
-              onChange={(e) => setYtUrl(e.target.value)}
-              placeholder="https://youtube.com/watch?v=..."
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              placeholder="https://youtube.com/watch?v=...  أو  https://vimeo.com/..."
               dir="ltr"
               style={{
                 ...inputBase,
                 height: 48,
                 paddingRight: 14,
-                paddingLeft: videoId && !errors.url ? 44 : 14,
+                paddingLeft: video && !errors.url ? 44 : 14,
                 textAlign: "left",
-                border: `1.5px solid ${errors.url ? "#D4183D" : videoId ? "#27AE60" : ytUrl ? PRIMARY : "rgba(78,91,146,0.16)"}`,
+                border: `1.5px solid ${errors.url ? "#D4183D" : video ? "#27AE60" : videoUrl ? PRIMARY : "rgba(78,91,146,0.16)"}`,
                 boxShadow: errors.url
                   ? "0 0 0 3px rgba(212,24,61,0.07)"
-                  : videoId
+                  : video
                     ? "0 0 0 3px rgba(39,174,96,0.1)"
-                    : ytUrl
+                    : videoUrl
                       ? "0 0 0 3px rgba(78,91,146,0.08)"
                       : "none",
               }}
@@ -259,7 +288,7 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
                 }
               }}
               onBlur={(e) => {
-                if (!errors.url && !videoId) {
+                if (!errors.url && !video) {
                   e.currentTarget.style.borderColor = "rgba(78,91,146,0.16)";
                   e.currentTarget.style.boxShadow = "none";
                 }
@@ -267,7 +296,7 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
             />
             <div className="absolute top-1/2 left-3 flex items-center justify-center" style={{ transform: "translateY(-50%)" }}>
               <AnimatePresence mode="wait">
-                {videoId && !errors.url ? (
+                {video && !errors.url ? (
                   <motion.div
                     key="ok"
                     initial={{ scale: 0 }}
@@ -277,7 +306,7 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
                   >
                     <CheckCircle size={16} color="#27AE60" />
                   </motion.div>
-                ) : ytUrl && !videoId ? (
+                ) : videoUrl && !video ? (
                   <motion.div key="link" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                     <Link2 size={15} color="#9BA3C4" />
                   </motion.div>
@@ -298,7 +327,7 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
               </motion.p>
             )}
           </AnimatePresence>
-          <AnimatePresence>{videoId && !errors.url && <YtPreview videoId={videoId} />}</AnimatePresence>
+          <AnimatePresence>{video && !errors.url && <VideoPreview source={video} />}</AnimatePresence>
         </div>
       </div>
 

@@ -2,8 +2,9 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { PlayCircle, Pencil, Trash2, GripVertical, Video } from "lucide-react";
 import type { CourseLessonEditorState } from "@/shared/courses";
-import { extractYouTubeId, getYouTubeThumbnail } from "../formatters/course-editor.formatter";
-import { FONT, PRIMARY } from "./editor-theme";
+import { VideoThumbnail, videoSourceFromResponse } from "@/shared/video";
+import { formatVideoProviderLabel } from "../formatters/course-editor.formatter";
+import { FONT, PRIMARY, VIDEO_PROVIDER_BADGE } from "./editor-theme";
 
 interface LessonCardProps {
   lesson: CourseLessonEditorState;
@@ -18,7 +19,12 @@ export function LessonCard({ lesson, index, onEdit, onDelete, isDragging }: Less
   const [thumbLoaded, setThumbLoaded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const videoId = extractYouTubeId(lesson.videoUrl) ?? "";
+  // The lesson as the server described it: its own URL plus whatever still was resolved
+  // for it. Vimeo lessons have one only after a save, which the fallback covers.
+  const videoSource = videoSourceFromResponse({
+    videoUrl: lesson.videoUrl,
+    videoThumbnailUrl: lesson.videoThumbnailUrl,
+  });
 
   return (
     <motion.div
@@ -76,11 +82,18 @@ export function LessonCard({ lesson, index, onEdit, onDelete, isDragging }: Less
         {/* Thumbnail */}
         <div className="flex-shrink-0 flex items-center py-3 pl-3">
           <div className="relative overflow-hidden" style={{ width: 112, height: 68, borderRadius: 12, background: "#0F1322" }}>
-            <img
-              src={getYouTubeThumbnail(videoId)}
+            <VideoThumbnail
+              source={videoSource}
               alt={lesson.title}
-              onLoad={() => setThumbLoaded(true)}
-              style={{ width: "100%", height: "100%", objectFit: "cover", opacity: thumbLoaded ? 1 : 0, transition: "opacity 0.3s" }}
+              onLoadedChange={setThumbLoaded}
+              fallback={
+                <div
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{ background: "linear-gradient(135deg, #1a1f3c 0%, #2d3563 100%)" }}
+                >
+                  <Video size={18} color="rgba(255,255,255,0.25)" />
+                </div>
+              }
             />
             <div className="absolute inset-0 flex items-center justify-center" style={{ pointerEvents: "none" }}>
               <div
@@ -90,14 +103,6 @@ export function LessonCard({ lesson, index, onEdit, onDelete, isDragging }: Less
                 <PlayCircle size={16} color="#fff" />
               </div>
             </div>
-            {!thumbLoaded && (
-              <div
-                className="absolute inset-0 flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg, #1a1f3c 0%, #2d3563 100%)" }}
-              >
-                <Video size={18} color="rgba(255,255,255,0.25)" />
-              </div>
-            )}
           </div>
         </div>
 
@@ -124,10 +129,28 @@ export function LessonCard({ lesson, index, onEdit, onDelete, isDragging }: Less
             </div>
           )}
           <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-            <div className="rounded-md px-2 py-0.5 flex items-center gap-1" style={{ background: "rgba(255,0,0,0.07)" }}>
-              <PlayCircle size={10} color="#FF0000" />
-              <span style={{ fontFamily: FONT, fontSize: 10, color: "#CC0000", fontWeight: 600 }}>YouTube</span>
-            </div>
+            {/*
+              The platform this lesson actually plays from, read from its own URL. A lesson whose
+              link Manara cannot place shows no badge rather than claiming the wrong platform.
+            */}
+            {videoSource && (
+              <div
+                className="rounded-md px-2 py-0.5 flex items-center gap-1"
+                style={{ background: VIDEO_PROVIDER_BADGE[videoSource.provider].background }}
+              >
+                <PlayCircle size={10} color={VIDEO_PROVIDER_BADGE[videoSource.provider].color} />
+                <span
+                  style={{
+                    fontFamily: FONT,
+                    fontSize: 10,
+                    color: VIDEO_PROVIDER_BADGE[videoSource.provider].color,
+                    fontWeight: 600,
+                  }}
+                >
+                  {formatVideoProviderLabel(videoSource.provider)}
+                </span>
+              </div>
+            )}
             {lesson.quiz && (
               <div className="rounded-md px-2 py-0.5 flex items-center gap-1" style={{ background: "rgba(78,91,146,0.08)" }}>
                 <span style={{ fontFamily: FONT, fontSize: 10, color: PRIMARY, fontWeight: 600 }}>اختبار</span>

@@ -33,7 +33,7 @@ export function LessonPage({
     isQuizRequired,
     completionError,
     description,
-    videoUrl,
+    video,
     navigateToLesson,
     markComplete,
     handleVideoEnd,
@@ -72,7 +72,7 @@ export function LessonPage({
             isQuizRequired={isQuizRequired}
             completionError={completionError}
             description={description}
-            videoUrl={videoUrl}
+            video={video}
             onBackToCourseDetails={onBackToCourseDetails}
             onBackToCourses={onBackToCourses}
             onBackToHome={onBackToHome}

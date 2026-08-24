@@ -7,6 +7,7 @@ import type {
   LessonRef,
   LessonView,
 } from "../types/lesson.types";
+import type { VideoSource } from "@/shared/video";
 
 export interface UseLessonArgs {
   courseId: number;
@@ -32,7 +33,8 @@ export interface UseLessonResult {
   completionError: string | null;
   completion: LessonCompletion | null;
   description: string;
-  videoUrl: string;
+  /** The lesson's video, already resolved. Null when there is nothing playable to show. */
+  video: VideoSource | null;
   navigateToLesson: (id: number) => void;
   markComplete: () => void;
   /** Called when the lesson's video reports that it reached its end. */
@@ -200,7 +202,7 @@ export function useLesson({
     completionError,
     completion,
     description: currentLesson?.description ?? "",
-    videoUrl: currentLesson?.videoUrl ?? "",
+    video: currentLesson?.video ?? null,
     navigateToLesson,
     markComplete,
     handleVideoEnd,

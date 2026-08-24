@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import type { VideoSource } from "@/shared/video";
 import { QuizPlayer } from "@/features/quiz/student/quiz-player";
 import type { LessonCourseSummary, LessonRef, LessonView } from "../types/lesson.types";
 import { CompletionErrorNotice } from "./completion-error-notice";
@@ -9,7 +10,7 @@ import { LessonLockedCard } from "./lesson-locked-card";
 import { LessonNavigation } from "./lesson-navigation";
 import { LPBreadcrumb } from "./lp-breadcrumb";
 import { QuizRequiredNotice } from "./quiz-required-notice";
-import { YouTubePlayer } from "./youtube-player";
+import { VideoPlayer } from "./video-player";
 
 interface LessonFormProps {
   courseId: number;
@@ -23,7 +24,7 @@ interface LessonFormProps {
   isQuizRequired: boolean;
   completionError: string | null;
   description: string;
-  videoUrl: string;
+  video: VideoSource | null;
   onBackToCourseDetails: () => void;
   onBackToCourses: () => void;
   onBackToHome: () => void;
@@ -44,7 +45,7 @@ export function LessonForm({
   isQuizRequired,
   completionError,
   description,
-  videoUrl,
+  video,
   onBackToCourseDetails,
   onBackToCourses,
   onBackToHome,
@@ -87,8 +88,8 @@ export function LessonForm({
         <LessonLockedCard />
       ) : (
         <>
-          <YouTubePlayer
-            videoUrl={videoUrl}
+          <VideoPlayer
+            source={video}
             lessonTitle={currentLesson.title}
             onVideoEnd={onVideoEnd}
             isMarked={isMarkedComplete}

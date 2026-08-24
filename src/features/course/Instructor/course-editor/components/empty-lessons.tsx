@@ -30,7 +30,7 @@ export function EmptyLessons({ onAdd }: { onAdd: () => void }) {
         لم تقم بإضافة أي دروس بعد
       </h3>
       <p style={{ fontFamily: FONT, fontSize: 13, color: "#9BA3C4", marginTop: 6, maxWidth: 300, lineHeight: 1.75 }}>
-        ابدأ بإضافة درسك الأول وربطه بفيديو YouTube — يمكنك إضافة المزيد لاحقاً
+        ابدأ بإضافة درسك الأول وربطه بفيديو من يوتيوب أو فيميو — يمكنك إضافة المزيد لاحقاً
       </p>
       <motion.button
         onClick={onAdd}

@@ -121,6 +121,7 @@ function mapInstructorLessonResponseToEditorState(
     summary: dto.summary ?? "",
     description: dto.description ?? "",
     videoUrl: dto.videoUrl ?? "",
+    videoThumbnailUrl: dto.videoThumbnailUrl ?? null,
     quiz: mapInstructorQuizResponseToEditorState(dto.quiz),
   };
 }

@@ -19,6 +19,8 @@ import type {
   LearnerQuizResponse,
   QuizRequest,
 } from "./quiz.types";
+// The video domain is owned by the shared video module, not by the course contracts.
+import type { VideoProvider } from "@/shared/video";
 
 // ── Subscription plans ────────────────────────────────────────────────────────
 
@@ -64,8 +66,8 @@ export interface LessonRequest {
  * browsing can never hand out an answer key.
  *
  * When `locked` is true the viewer has not earned the lesson's content, and the fields
- * that carry it — `videoUrl`, `description` and `quiz` — are absent. What is left is the
- * title, length and position, which is what a locked row in the curriculum shows.
+ * that carry it — every `video*` field, `description` and `quiz` — are absent. What is left
+ * is the title, length and position, which is what a locked row in the curriculum shows.
  *
  * @see InstructorLessonResponse for the authoring view
  */
@@ -75,6 +77,21 @@ export interface LessonResponse {
   summary: string | null;
   description: string | null;
   videoUrl: string | null;
+  /**
+   * Which platform hosts `videoUrl`. Derived by the server from the URL, so it is authoritative
+   * and never has to be sent on write. Null when the stored URL is one no adapter recognises,
+   * which a client shows as "no player available" rather than as an error.
+   */
+  videoProvider: VideoProvider | null;
+  /** The provider's own id for the video. */
+  externalVideoId: string | null;
+  /** What to point an iframe at. Carries no player options; clients append their own. */
+  videoEmbedUrl: string | null;
+  /**
+   * Still image for the video. Present immediately for YouTube, and once the server has fetched
+   * it for Vimeo — whose thumbnails have no address derivable from an id.
+   */
+  videoThumbnailUrl: string | null;
   duration: string | null;
   orderIndex: number;
   courseId: number;
@@ -96,6 +113,21 @@ export interface InstructorLessonResponse {
   summary: string | null;
   description: string | null;
   videoUrl: string | null;
+  /**
+   * Which platform hosts `videoUrl`. Derived by the server from the URL, so it is authoritative
+   * and never has to be sent on write. Null when the stored URL is one no adapter recognises,
+   * which a client shows as "no player available" rather than as an error.
+   */
+  videoProvider: VideoProvider | null;
+  /** The provider's own id for the video. */
+  externalVideoId: string | null;
+  /** What to point an iframe at. Carries no player options; clients append their own. */
+  videoEmbedUrl: string | null;
+  /**
+   * Still image for the video. Present immediately for YouTube, and once the server has fetched
+   * it for Vimeo — whose thumbnails have no address derivable from an id.
+   */
+  videoThumbnailUrl: string | null;
   duration: string | null;
   orderIndex: number;
   courseId: number;
