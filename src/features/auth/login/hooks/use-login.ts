@@ -1,14 +1,21 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { login } from "../services/auth.service";
 import { ApiError } from "@/shared/api";
-import { useAuth } from "@/shared/auth";
+import { useAuth, type FromLocationState } from "@/shared/auth";
+import { paths, resolvePostLoginPath } from "@/shared/navigation";
 import type { LoginErrors } from "../types/login.types";
 import * as React from "react";
 
 export function useLogin() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setUser } = useAuth();
+  /*
+    The protected URL a guard turned away, if this screen was reached that way. Signing in
+    then resumes that journey instead of dropping everyone on the same dashboard.
+  */
+  const from = (location.state as FromLocationState | null)?.from;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -40,11 +47,13 @@ export function useLogin() {
     try {
       const user = await login({ email, password });
       setUser(user);
-      navigate("/main", { replace: true });
+      // Replace: the login screen is a step on the way somewhere, not somewhere to go back to.
+      navigate(resolvePostLoginPath(user.role, from), { replace: true });
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.errors[0] === "يرجى تأكيد بريدك الإلكتروني قبل تسجيل الدخول") {
-          navigate("/otp", { state: { email, context: "email-verification" } });
+          // The intended destination rides along, so it survives the verification detour.
+          navigate(paths.otp, { state: { email, context: "email-verification", from } });
           return;
         }
         setErrors({ general: err.errors[0] });

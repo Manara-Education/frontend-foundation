@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
-import { ShieldOff, LogOut, AlertTriangle } from "lucide-react";
+import { Link } from "react-router";
+import { ShieldOff, LogOut, AlertTriangle, Home } from "lucide-react";
 import { ManaraLogoIcon, ManaraLogoFull } from "@/shared/components/ManaraLogo";
 
 const PRIMARY = "#4E5B92";
@@ -7,9 +8,14 @@ const FONT = "'Cairo', sans-serif";
 
 interface AccessDeniedCardProps {
   handleLogout: () => void;
+  /**
+   * Where this account *can* go. Given one, the card offers it: a refused page should not
+   * leave signing out as the only way forward.
+   */
+  homePath?: string;
 }
 
-export function AccessDeniedCard({ handleLogout }: AccessDeniedCardProps) {
+export function AccessDeniedCard({ handleLogout, homePath }: AccessDeniedCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -171,6 +177,34 @@ export function AccessDeniedCard({ handleLogout }: AccessDeniedCardProps) {
           transition={{ delay: 0.42, duration: 0.4 }}
           style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}
         >
+          {homePath && (
+            <Link
+              to={homePath}
+              replace
+              style={{
+                width: "100%",
+                padding: "13px 20px",
+                borderRadius: 14,
+                background: `linear-gradient(135deg, ${PRIMARY} 0%, #6B7AB8 100%)`,
+                color: "#FFFFFF",
+                fontFamily: FONT,
+                fontWeight: 600,
+                fontSize: 14,
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                textDecoration: "none",
+                boxShadow: "0 4px 16px rgba(78,91,146,0.22)",
+              }}
+            >
+              <Home size={15} strokeWidth={2} />
+              العودة إلى الصفحة الرئيسية
+            </Link>
+          )}
+
           <motion.button
             onClick={handleLogout}
             whileHover={{ y: -1, background: "rgba(78,91,146,0.05)" }}

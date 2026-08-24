@@ -7,7 +7,10 @@ import type { CourseDetailsMode } from "../types/course-details.types";
 
 interface CourseDetailsPageProps {
   courseId: number;
+  /** Back to the list this course was opened from. */
   onBack: () => void;
+  /** The learner's home, for the first breadcrumb. Falls back to `onBack`. */
+  onHome?: () => void;
   onLessonClick?: (lessonId: number) => void;
   mode?: CourseDetailsMode;
   onEnrolled?: () => void;
@@ -16,6 +19,7 @@ interface CourseDetailsPageProps {
 export function CourseDetailsPage({
   courseId,
   onBack,
+  onHome,
   onLessonClick,
   mode = "enrolled",
   onEnrolled,
@@ -46,6 +50,7 @@ export function CourseDetailsPage({
             courseId={courseId}
             mode={mode}
             onBack={onBack}
+            onHome={onHome}
             onLessonClick={onLessonClick}
             onEnrolled={handleEnrolled}
             onProgressionChanged={refreshProgression}

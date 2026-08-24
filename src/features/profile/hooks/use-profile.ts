@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
+import { paths } from "@/shared/navigation";
 import { getProfile, updateProfile } from "../services/profile.service";
 
 export function useProfile() {
@@ -46,8 +47,15 @@ export function useProfile() {
     setDraftName(name);
   }, [name]);
 
+  /**
+   * Changing your own password is an ordinary step forward, so it is pushed.
+   *
+   * It used to replace the profile entry, which erased the page the user had just come
+   * from and left Back pointing outside the flow — a gap that was then papered over with a
+   * `popstate` listener on the reset screen. Pushing removes the need for either.
+   */
   const navigateToResetPassword = useCallback(() => {
-    navigate("/reset-password", {replace: true,  state: { from: "profile" } });
+    navigate(paths.resetPassword, { state: { from: "profile" } });
   }, [navigate]);
 
   return {

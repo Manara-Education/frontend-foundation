@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { paths } from "@/shared/navigation";
 import { registerUser } from "../services/register.service";
 import type { RegisterErrors, RegisterFormState, PasswordStrength } from "../types/register.types";
 import { ApiError } from "@/shared/api";
@@ -36,7 +37,7 @@ export function useRegister() {
 
     try {
       await registerUser({ fullName: form.name, email: form.email, password: form.password });
-      navigate("/otp", { state: { email: form.email, context: "email-verification" } });
+      navigate(paths.otp, { state: { email: form.email, context: "email-verification" } });
     } catch (err) {
       if (err instanceof ApiError) {
         setErrors({ general: err.errors[0] });

@@ -1,62 +1,38 @@
-import { AnimatePresence, motion } from "motion/react";
 import { BannersList } from "../components/banners-list";
 import { useBanners } from "../hooks/use-banners";
-import { BannerFormPage } from "./banner-form-page";
+
+interface BannersPageProps {
+  onCreateBanner: () => void;
+  onEditBanner: (bannerId: number) => void;
+}
 
 /**
- * The instructor's banner management screen: a list that becomes an editor and comes back.
+ * The instructor's banner list.
  *
- * The editor is mounted fresh per sub-view so a create after an edit starts blank, which is
- * what the `key` on each branch is for.
+ * The editor used to be a sub-view this screen swapped itself for. It is now a route of
+ * its own, so this page is only ever the list — which is what lets a half-written banner
+ * survive a refresh and lets "back" mean the list rather than an undo.
  */
-export function BannersPage() {
+export function BannersPage({ onCreateBanner, onEditBanner }: BannersPageProps) {
   const view = useBanners();
 
   return (
-    <AnimatePresence mode="wait">
-      {view.subView === "list" && (
-        <motion.div
-          key="list"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.22 }}
-        >
-          <BannersList
-            banners={view.banners}
-            isLoading={view.isLoading}
-            error={view.error}
-            pendingId={view.pendingId}
-            bannerToDelete={view.bannerToDelete}
-            activeCount={view.activeCount}
-            onCreateBanner={view.onCreateBanner}
-            onEditBanner={view.onEditBanner}
-            onDuplicate={view.onDuplicate}
-            onToggleEnabled={view.onToggleEnabled}
-            onRequestDelete={view.onRequestDelete}
-            onCancelDelete={view.onCancelDelete}
-            onConfirmDelete={view.onConfirmDelete}
-            onReorder={view.onReorder}
-            onRetry={view.onRetry}
-          />
-        </motion.div>
-      )}
-
-      {(view.subView === "create" || view.subView === "edit") && (
-        <motion.div
-          key="form"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.22 }}
-        >
-          <BannerFormPage
-            editingBanner={view.subView === "edit" ? view.editingBanner : null}
-            onSaved={view.onSaved}
-            onCancel={view.onCancelEditor}
-          />
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <BannersList
+      banners={view.banners}
+      isLoading={view.isLoading}
+      error={view.error}
+      pendingId={view.pendingId}
+      bannerToDelete={view.bannerToDelete}
+      activeCount={view.activeCount}
+      onCreateBanner={onCreateBanner}
+      onEditBanner={(banner) => onEditBanner(banner.id)}
+      onDuplicate={view.onDuplicate}
+      onToggleEnabled={view.onToggleEnabled}
+      onRequestDelete={view.onRequestDelete}
+      onCancelDelete={view.onCancelDelete}
+      onConfirmDelete={view.onConfirmDelete}
+      onReorder={view.onReorder}
+      onRetry={view.onRetry}
+    />
   );
 }

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router";
 import { resetPassword } from "../services/reset-password.service";
 import type { ResetPasswordErrors, ResetPasswordFormState } from "../types/reset-password.types";
 import { ApiError } from "@/shared/api";
+import { paths } from "@/shared/navigation";
 import * as React from "react";
 
 export interface EvaluatedRule {
@@ -19,24 +20,15 @@ export function useResetPassword() {
   const code = state?.code;
   const fromProfile = state?.from === "profile";
 
+  /*
+    Two ways in: a verified one-time code, or a signed-in user coming from their profile.
+    Neither present means the screen was opened directly, with nothing to reset.
+  */
   useEffect(() => {
     if (!fromProfile && (!email || !code)) {
-      navigate("/login");
+      navigate(paths.login, { replace: true });
     }
   }, [email, code, fromProfile, navigate]);
-
-  // When coming from profile, intercept browser back to go to profile
-  // and replace the entry so reset-password is removed from the stack
-  useEffect(() => {
-    if (!fromProfile) return;
-
-    const handlePopState = () => {
-      window.location.replace("/main?view=profile");
-    };
-
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, [fromProfile, navigate]);
 
 
   const [form, setForm] = useState<ResetPasswordFormState>({ password: "", confirm: "" });

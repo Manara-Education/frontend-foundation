@@ -106,5 +106,3 @@ export interface BannerFormErrors {
 /** Which of the three buttons at the foot of the editor was pressed. */
 export type BannerSaveAction = "draft" | "schedule" | "publish";
 
-/** The management screen is a list that becomes an editor and comes back. */
-export type BannersSubView = "list" | "create" | "edit";

@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router";
+import { paths } from "@/shared/navigation";
 import { AuthLayout } from "@/features/auth/components/AuthLayout";
 import { RegisterForm } from "../components/register-form";
 import { useRegister } from "../hooks/use-register";
@@ -23,7 +24,7 @@ export function RegisterPage() {
         errors={errors}
         onChange={setField}
         onSubmit={handleSubmit}
-        onLoginClick={() => navigate("/login")}
+        onLoginClick={() => navigate(paths.login)}
       />
     </AuthLayout>
   );

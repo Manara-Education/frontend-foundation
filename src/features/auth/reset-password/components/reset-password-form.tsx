@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router";
+import { paths } from "@/shared/navigation";
 import { Lock, Check, ChevronRight } from "lucide-react";
 import { AuthCard } from "@/features/auth/components/AuthCard";
 import { FormField, PrimaryButton } from "@/features/auth/components/FormField";
@@ -103,7 +104,12 @@ export function ResetPasswordForm({
             <div style={{ flex: 1, height: 1, background: "rgba(78,91,146,0.1)" }} />
           </div>
 
-          <PrimaryButton onClick={() => fromProfile ? window.location.replace("/main?view=profile") : navigate("/login")}>
+          {/*
+            Client navigation, not a page load. This used to be a `window.location.replace`
+            to the old query-parameter address, which threw away the running application —
+            session, caches and all — to move one screen.
+          */}
+          <PrimaryButton onClick={() => navigate(fromProfile ? paths.profile : paths.login, { replace: true })}>
             {fromProfile ? "العودة إلى الملف الشخصي" : "العودة إلى تسجيل الدخول"}
           </PrimaryButton>
         </div>
@@ -141,7 +147,7 @@ export function ResetPasswordForm({
         {fromProfile && (
           <button
             type="button"
-            onClick={() => navigate("/main?view=profile", { replace: true })}
+            onClick={() => navigate(paths.profile, { replace: true })}
             className="flex items-center gap-1.5 transition-opacity duration-150 hover:opacity-70"
             style={{
               fontFamily: "'Cairo', sans-serif",

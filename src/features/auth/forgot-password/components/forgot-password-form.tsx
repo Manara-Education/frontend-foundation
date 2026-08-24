@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router";
+import { paths } from "@/shared/navigation";
 import { Mail, ArrowRight } from "lucide-react";
 import { AuthCard } from "@/features/auth/components/AuthCard";
 import { FormField, PrimaryButton } from "@/features/auth/components/FormField";
@@ -92,7 +93,7 @@ export function ForgotPasswordForm({
         <div className="flex justify-center">
           <button
             type="button"
-            onClick={() => navigate("/login")}
+            onClick={() => navigate(paths.login)}
             className="flex items-center gap-2 transition-colors duration-150"
             style={{
               fontFamily: "'Cairo', sans-serif",
