@@ -54,7 +54,7 @@ export function AuthCard({ children, title, subtitle, maxWidth = 440 }: AuthCard
 
       {/* Card body */}
       <div
-        className="rounded-3xl p-8"
+        className="rounded-3xl p-6 sm:p-8"
         style={{
           background: "#ffffff",
           boxShadow: "0 4px 40px rgba(78,91,146,0.08), 0 1px 8px rgba(0,0,0,0.04)",

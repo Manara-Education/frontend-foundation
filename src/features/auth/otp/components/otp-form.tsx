@@ -52,7 +52,21 @@ export function OtpForm({
       <form onSubmit={onVerify} noValidate className="flex flex-col gap-6">
         {/* OTP Inputs — reversed for RTL visual order */}
         <div className="flex flex-col items-center gap-4">
-          <div className="flex gap-3 justify-center" dir="ltr">
+          {/*
+            One track per digit, so the boxes divide whatever width the card
+            has instead of demanding 6 x 52px + gaps and pushing the page
+            sideways on a phone. At the card's full width the tracks resolve
+            to exactly the original 52px box and 12px gap.
+          */}
+          <div
+            className="grid w-full mx-auto"
+            dir="ltr"
+            style={{
+              gridTemplateColumns: `repeat(${OTP_LENGTH}, minmax(0, 1fr))`,
+              gap: "clamp(6px, 3.3%, 12px)",
+              maxWidth: OTP_LENGTH * 52 + (OTP_LENGTH - 1) * 12,
+            }}
+          >
             {otp.map((digit, idx) => (
               <input
                 key={idx}
@@ -66,8 +80,9 @@ export function OtpForm({
                 onPaste={onPaste}
                 className="transition-all duration-200 outline-none text-center"
                 style={{
-                  width: 52,
-                  height: 60,
+                  width: "100%",
+                  aspectRatio: "52 / 60",
+                  minWidth: 0,
                   borderRadius: 14,
                   border: `2px solid ${
                     error
@@ -81,7 +96,7 @@ export function OtpForm({
                   background: digit ? "rgba(78,91,146,0.05)" : "#F6F7FC",
                   fontFamily: "'Cairo', sans-serif",
                   fontWeight: 700,
-                  fontSize: 22,
+                  fontSize: "clamp(17px, 5vw, 22px)",
                   color: "#1E2340",
                   boxShadow: digit ? `0 0 0 3px rgba(78,91,146,0.10)` : "none",
                 }}
