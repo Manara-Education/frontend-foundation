@@ -39,7 +39,7 @@ export function ResetPasswordForm({
     return (
       <div style={{ width: "100%", maxWidth: 440 }}>
         <div
-          className="rounded-3xl p-10 flex flex-col items-center text-center"
+          className="rounded-3xl p-8 sm:p-10 flex flex-col items-center text-center"
           style={{
             background: "#ffffff",
             boxShadow: "0 4px 40px rgba(78,91,146,0.08), 0 1px 8px rgba(0,0,0,0.04)",

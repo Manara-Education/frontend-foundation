@@ -7,15 +7,28 @@ interface AuthLayoutProps {
   children: ReactNode;
 }
 
+/**
+ * The frame every authentication screen is rendered into: the form on the
+ * reading side, the brand panel on the other.
+ *
+ * The two columns are the flex row's only children — the panel is not wrapped
+ * in a sizing box, because a wrapper that reserves width while its contents
+ * are hidden is exactly what made this layout unusable below `lg`. Sizing and
+ * visibility belong to `BrandPanel` itself; this file decides only the order.
+ */
 export function AuthLayout({ children }: AuthLayoutProps) {
   return (
     <div
-      className="flex min-h-screen w-full"
+      className="flex min-h-dvh w-full"
       dir="rtl"
       style={{ fontFamily: "'Cairo', sans-serif", background: "#F6F7FC" }}
     >
-      {/* Right: Form Panel */}
-      <div className="flex-1 flex flex-col min-h-screen relative">
+      {/*
+        Right: Form Panel. `min-w-0` overrides a flex item's automatic minimum
+        size so the column can narrow to the viewport rather than pushing the
+        page sideways, and the height comes from the row stretching it.
+      */}
+      <div className="flex-1 min-w-0 flex flex-col relative">
         {/* Subtle background pattern */}
         <div
           className="absolute inset-0 pointer-events-none"
@@ -31,7 +44,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
         </div>
 
         {/* Form content */}
-        <div className="flex-1 flex items-center justify-center px-6 py-10 relative z-10">
+        <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-8 sm:py-10 relative z-10">
           {children}
         </div>
 
@@ -44,10 +57,9 @@ export function AuthLayout({ children }: AuthLayoutProps) {
         </div>
       </div>
 
-      {/* Left: Brand Panel (RTL — left is the decorative side) */}
-      <div className="w-[480px] xl:w-[520px] flex-shrink-0">
-        <BrandPanel />
-      </div>
+      {/* Left: Brand Panel (RTL — left is the decorative side). Hidden below `lg`,
+          where it takes no space at all rather than an empty column. */}
+      <BrandPanel />
     </div>
   );
 }

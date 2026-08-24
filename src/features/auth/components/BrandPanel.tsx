@@ -1,13 +1,29 @@
 import { ManaraLogoIcon } from "@/shared/components/ManaraLogo";
+import { AUTH_BRAND_PANEL } from "@/features/auth/content/brand-panel.content";
 
+/**
+ * The decorative column that sits beside every authentication form.
+ *
+ * The panel owns its own column: the width and the "is it shown at all"
+ * decision live here, on the one element, rather than being split between a
+ * sizing wrapper in `AuthLayout` and a `hidden lg:flex` on the panel itself.
+ * That split was the bug — below `lg` the panel painted nothing while its
+ * wrapper still reserved 480px, so every phone and tablet rendered the form
+ * squeezed into whatever was left of the viewport.
+ *
+ * The width is fluid (`clamp`) instead of two fixed pixel steps, so the panel
+ * holds its proportion from a small laptop up to an ultrawide monitor. Height
+ * comes from the flex row stretching it, which keeps the gradient covering the
+ * full page even when a tall form (sign up) makes the document longer than the
+ * viewport.
+ */
 export function BrandPanel() {
   return (
     <div
-      className="hidden lg:flex flex-col justify-between relative overflow-hidden"
+      className="hidden lg:flex shrink-0 flex-col relative overflow-hidden"
       style={{
         background: "linear-gradient(160deg, #2D3563 0%, #4E5B92 45%, #6B7AB8 100%)",
-        minHeight: "100vh",
-        width: "100%",
+        width: "clamp(340px, 36vw, 560px)",
       }}
     >
       {/* Background watermark logo */}
@@ -74,7 +90,7 @@ export function BrandPanel() {
       </svg>
 
       {/* Top logo */}
-      <div className="relative z-10 p-10 flex items-center gap-3" dir="rtl">
+      <div className="relative z-10 p-8 xl:p-10 flex items-center gap-3 shrink-0" dir="rtl">
         <ManaraLogoIcon size={36} color="rgba(255,255,255,0.95)" />
         <div style={{ fontFamily: "'Cairo', sans-serif" }}>
           <div style={{ color: "rgba(255,255,255,0.95)", fontWeight: 700, fontSize: 20 }}>منارة</div>
@@ -84,60 +100,71 @@ export function BrandPanel() {
         </div>
       </div>
 
-      {/* Center content */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-12 text-center" dir="rtl">
-        {/* Central logo glow */}
-        <div className="relative mb-10">
-          <div
-            className="absolute inset-0 rounded-full blur-3xl"
+      {/*
+        Center content. `min-h-0` lets this block shrink below its content on a
+        short viewport instead of being silently cut off by the panel's
+        `overflow-hidden`, and `m-auto` on the inner block centres it while
+        there is room to spare without making the top unreachable once there
+        is not — which plain `justify-center` in a scroll container does.
+      */}
+      <div
+        className="relative z-10 flex-1 min-h-0 overflow-y-auto flex flex-col px-8 xl:px-12 py-6 text-center"
+        dir="rtl"
+      >
+        <div className="m-auto flex flex-col items-center">
+          {/* Central logo glow */}
+          <div className="relative mb-10">
+            <div
+              className="absolute inset-0 rounded-full blur-3xl"
+              style={{
+                background: "radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)",
+                transform: "scale(2.5)",
+              }}
+            />
+            <div
+              className="relative rounded-3xl p-6 flex items-center justify-center"
+              style={{
+                background: "rgba(255,255,255,0.1)",
+                backdropFilter: "blur(12px)",
+                border: "1px solid rgba(255,255,255,0.15)",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+              }}
+            >
+              <ManaraLogoIcon size={72} color="rgba(255,255,255,0.92)" />
+            </div>
+          </div>
+
+          <h2
             style={{
-              background: "radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)",
-              transform: "scale(2.5)",
-            }}
-          />
-          <div
-            className="relative rounded-3xl p-6 flex items-center justify-center"
-            style={{
-              background: "rgba(255,255,255,0.1)",
-              backdropFilter: "blur(12px)",
-              border: "1px solid rgba(255,255,255,0.15)",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+              fontFamily: "'Cairo', sans-serif",
+              color: "rgba(255,255,255,0.95)",
+              fontWeight: 700,
+              fontSize: 28,
+              lineHeight: 1.6,
+              marginBottom: 16,
             }}
           >
-            <ManaraLogoIcon size={72} color="rgba(255,255,255,0.92)" />
+            {AUTH_BRAND_PANEL.heading}
+          </h2>
+          <p
+            style={{
+              fontFamily: "'Cairo', sans-serif",
+              color: "rgba(255,255,255,0.6)",
+              fontWeight: 400,
+              fontSize: 16,
+              lineHeight: 1.8,
+              maxWidth: 320,
+            }}
+          >
+            {AUTH_BRAND_PANEL.tagline}
+          </p>
+
+          {/* Decorative divider */}
+          <div className="flex items-center gap-3 mt-8">
+            <div style={{ width: 40, height: 1, background: "rgba(255,255,255,0.25)" }} />
+            <ManaraLogoIcon size={14} color="rgba(255,255,255,0.4)" />
+            <div style={{ width: 40, height: 1, background: "rgba(255,255,255,0.25)" }} />
           </div>
-        </div>
-
-        <h2
-          style={{
-            fontFamily: "'Cairo', sans-serif",
-            color: "rgba(255,255,255,0.95)",
-            fontWeight: 700,
-            fontSize: 28,
-            lineHeight: 1.6,
-            marginBottom: 16,
-          }}
-        >
-          نور العلم يضيء دروبك
-        </h2>
-        <p
-          style={{
-            fontFamily: "'Cairo', sans-serif",
-            color: "rgba(255,255,255,0.6)",
-            fontWeight: 400,
-            fontSize: 16,
-            lineHeight: 1.8,
-            maxWidth: 320,
-          }}
-        >
-          منصة تعليمية عربية متكاملة تُمكّنك من تعلّم اللغة العربية بأسلوب عصري ومتميز
-        </p>
-
-        {/* Decorative divider */}
-        <div className="flex items-center gap-3 mt-8">
-          <div style={{ width: 40, height: 1, background: "rgba(255,255,255,0.25)" }} />
-          <ManaraLogoIcon size={14} color="rgba(255,255,255,0.4)" />
-          <div style={{ width: 40, height: 1, background: "rgba(255,255,255,0.25)" }} />
         </div>
       </div>
     </div>
