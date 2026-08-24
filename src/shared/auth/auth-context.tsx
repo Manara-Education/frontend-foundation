@@ -19,6 +19,14 @@ interface AuthContextValue {
   user: AuthUser | null;
   status: AuthStatus;
   setUser: (user: AuthUser) => void;
+  /**
+   * Re-reads the signed-in user from the server and adopts the answer.
+   *
+   * The caller is anything that has just changed server-side user state and must not guess at
+   * the result — changing the password being the case that matters, since the flag that gates
+   * the whole application is cleared by that request and only the server knows it happened.
+   */
+  refreshUser: () => Promise<AuthUser | null>;
   logout: () => Promise<void>;
 }
 
@@ -87,6 +95,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser: (u) => {
         setUserState(u);
         setStatus("authenticated");
+      },
+      refreshUser: async () => {
+        const { data: body } = await meRequest();
+        const fresh = body.data ?? null;
+        if (fresh) {
+          setUserState(fresh);
+          setStatus("authenticated");
+        }
+        return fresh;
       },
       logout: async () => {
         try {

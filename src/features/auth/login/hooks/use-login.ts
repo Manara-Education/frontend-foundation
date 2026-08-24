@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { login } from "../services/auth.service";
 import { ApiError } from "@/shared/api";
-import { useAuth, type FromLocationState } from "@/shared/auth";
-import { paths, resolvePostLoginPath } from "@/shared/navigation";
+import { postAuthPath, useAuth, type FromLocationState } from "@/shared/auth";
+import { paths } from "@/shared/navigation";
 import type { LoginErrors } from "../types/login.types";
 import * as React from "react";
 
@@ -48,7 +48,9 @@ export function useLogin() {
       const user = await login({ email, password });
       setUser(user);
       // Replace: the login screen is a step on the way somewhere, not somewhere to go back to.
-      navigate(resolvePostLoginPath(user.role, from), { replace: true });
+      // The destination honours `from`, unless the account owes a password change — that
+      // outranks wherever it was originally headed.
+      navigate(postAuthPath(user, from), { replace: true });
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.errors[0] === "يرجى تأكيد بريدك الإلكتروني قبل تسجيل الدخول") {

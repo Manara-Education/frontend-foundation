@@ -13,6 +13,8 @@ export interface LoginResponse {
   fullName: string;
   email: string;
   role: string;
+  /** Server-owned. See `AuthUser` in `@/shared/auth` — sign-in is only the first place it arrives. */
+  requiresPasswordReset: boolean;
 }
 
 export interface LoginErrors {

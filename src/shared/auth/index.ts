@@ -1,6 +1,7 @@
 export { AuthProvider, useAuth } from "./auth-context";
 export { ProtectedRoute, PublicOnlyRoute, RoleRoute } from "./route-guards";
 export type { FromLocationState } from "./route-guards";
+export { postAuthPath } from "./auth.routes";
 export { useLogoutAction } from "./use-logout-action";
 export {
   ROLES,
