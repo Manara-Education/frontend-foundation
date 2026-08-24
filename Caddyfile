@@ -1,0 +1,70 @@
+# Caddy is the only thing in the production stack that listens on a public port.
+# It terminates TLS, serves the built SPA, and proxies the two paths that belong
+# to the backend. Nothing else is reachable from outside the Docker network.
+#
+# {$SITE_ADDRESS} is supplied by the deployment. In production it is the real
+# hostname, which makes Caddy obtain and renew a Let's Encrypt certificate on its
+# own; locally it is :80, which serves plain HTTP and asks for no certificate.
+{$SITE_ADDRESS} {
+	# --- Backend ----------------------------------------------------------
+	# These two must come BEFORE the SPA fallback. Caddy matches the most
+	# specific path first, but stating the order explicitly is what keeps
+	# /api/... from being answered with index.html if that ever changes.
+	#
+	# `backend` resolves over the internal Docker network. The backend
+	# publishes no port to the host, so this is the only route to it.
+	handle /api/* {
+		reverse_proxy backend:8080
+	}
+
+	# User-uploaded images. Served by the backend from its uploads volume
+	# rather than copied into this image, so a file uploaded a minute ago is
+	# available without a frontend rebuild.
+	handle /uploads/* {
+		reverse_proxy backend:8080
+	}
+
+	# --- Static assets ----------------------------------------------------
+	handle {
+		root * /srv
+
+		# Hashed filenames (index-D3tZKPlS.js) are immutable: the name changes
+		# whenever the contents do, so a year-long cache is safe and means
+		# repeat visitors download nothing.
+		@immutable path /assets/*
+		header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+		# index.html must NOT be cached. It is the file that names the current
+		# hashed bundles, so a cached copy pins a returning visitor to the
+		# previous deployment's assets — which will already have been deleted.
+		@html path / /index.html
+		header @html Cache-Control "no-cache, must-revalidate"
+
+		# SPA fallback. React Router owns the URL space, so a direct request for
+		# /courses/12 or a browser refresh on any route must return index.html
+		# and let the router resolve it. Without this every deep link and every
+		# F5 outside "/" is a 404.
+		try_files {path} /index.html
+		file_server
+	}
+
+	# --- Security headers -------------------------------------------------
+	header {
+		# Strip the header that advertises which server and version this is.
+		-Server
+
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+
+		# Nothing here needs a camera, a microphone or a location.
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+	}
+
+	encode zstd gzip
+
+	log {
+		output stderr
+		format console
+	}
+}
