@@ -1,0 +1,146 @@
+# Continuous integration for frontend-foundation.
+#
+# This is the validation gate for every pull request into `develop` (the default
+# branch) and `main`. It exists so that dependency-update PRs raised by Dependabot
+# are proven to still install, type-check and build before anyone merges them —
+# but it is not Dependabot-specific: human PRs run exactly the same checks.
+#
+# The steps below run only commands this repository actually has:
+#   * `npm ci`            — installs strictly from package-lock.json
+#   * `npm run typecheck` — `tsc --noEmit` against the repo's own tsconfig.json in
+#                           strict mode; this is what catches breaking @types/* bumps,
+#                           which `vite build` would not, because vite strips types
+#                           without checking them
+#   * `npm test`          — the Vitest suite, added with the multi-provider video
+#                           work; it runs in jsdom and needs no browser or network
+#   * `npm run build`     — the production build
+#
+# There is still deliberately no lint step: this repository defines no lint script
+# and has no ESLint config installed. Inventing one here would fail on the first
+# run and block every PR.
+#
+# The second job builds the production container image and checks that Caddy
+# actually serves the built SPA out of it. It proves the Dockerfile and the
+# Caddyfile still work before a change reaches `develop` — otherwise a broken
+# image or a broken routing rule stays invisible until someone tries to deploy.
+# The image is BUILT and DISCARDED: nothing is pushed and nothing is deployed.
+#
+# No secrets are read by this workflow. That is intentional: workflow runs
+# triggered by Dependabot pull requests receive Dependabot secrets rather than
+# Actions secrets, so a CI job that depended on production secrets would fail or
+# silently degrade on exactly the PRs this pipeline exists to validate.
+
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  push:
+    branches:
+      - develop
+
+# Least privilege: this job only reads the repository. It never writes to the
+# repo, comments on PRs, or touches deployments.
+permissions:
+  contents: read
+
+# A newer push to the same PR supersedes the previous run.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Install, type-check and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # Reads .nvmrc so CI, local development and the Docker build all agree on
+      # one Node version. Bumping .nvmrc is the only change needed to move them.
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      # `npm ci` fails outright if package.json and package-lock.json disagree,
+      # which is precisely the regression a bad dependency PR would introduce.
+      - name: Install dependencies from the lockfile
+        run: npm ci
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  image:
+    name: Build the container image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Only after type-check, tests and build pass. The image build repeats all
+    # three inside Docker, so running it against code already known to be broken
+    # only delays the useful error.
+    needs: build
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Read the Node version
+        id: node
+        run: echo "version=$(cat .nvmrc)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build the image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: false
+          load: true
+          tags: frontend-foundation:ci
+          build-args: |
+            NODE_VERSION=${{ steps.node.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # A successful build says the assets compiled. It says nothing about
+      # whether Caddy serves them, or whether the SPA fallback works — and a
+      # broken fallback means every deep link and every browser refresh is a 404
+      # in production while the build stays green.
+      - name: Verify Caddy serves the SPA and its fallback
+        run: |
+          set -euo pipefail
+          docker run -d --name ci-smoke -p 8081:80 frontend-foundation:ci
+
+          for _ in $(seq 1 30); do
+            if curl -fsS -o /dev/null http://localhost:8081/; then break; fi
+            sleep 2
+          done
+
+          fail() { echo "::error::$1"; docker logs ci-smoke 2>&1 | tail -30; docker rm -f ci-smoke >/dev/null; exit 1; }
+
+          curl -fsS -o /dev/null http://localhost:8081/ || fail "The site did not serve."
+
+          # The check that matters: an arbitrary client-side route must return
+          # index.html so React Router can resolve it, not a 404.
+          curl -fsS http://localhost:8081/courses/12 | grep -q '<div id="root"></div>' \
+            || fail "SPA fallback is broken: a deep link did not return index.html."
+
+          echo "Caddy serves the SPA and the client-side routing fallback works."
+          docker rm -f ci-smoke >/dev/null

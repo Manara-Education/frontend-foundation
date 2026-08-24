@@ -1,73 +1,37 @@
-# React + TypeScript + Vite
+# Manara Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Authentication
 
-Currently, two official plugins are available:
+The app uses **HttpOnly cookie sessions** backed by Redis on the server. The frontend never sees or stores the session token.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### Cookies
 
-## React Compiler
+- `MANARA_SESSION` — HttpOnly, Secure (prod), `SameSite=Lax`, 30-min rolling TTL. Not readable by JS.
+- `XSRF-TOKEN` — readable by JS. Echoed back as `X-XSRF-TOKEN` on every state-changing request. Axios attaches it automatically (`xsrfCookieName` / `xsrfHeaderName` in `src/shared/api/api-client.ts`).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Bootstrap sequence
 
-## Expanding the ESLint configuration
+On app load (`AuthProvider` in `src/shared/auth/auth-context.tsx`):
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+1. `GET /api/v1/auth/csrf` — seeds the `XSRF-TOKEN` cookie.
+2. `GET /api/v1/auth/me` — hydrates user state. `200` → authenticated; `401` → anonymous.
+3. Routes render. `ProtectedRoute` and `PublicOnlyRoute` (in `src/shared/auth/route-guards.tsx`) gate access based on `useAuth().status`.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Flows
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- **Login / Verify-OTP (email-verification)**: server establishes the session in the response. The hook receives `{ fullName, email, role }` and calls `setUser(...)`.
+- **Logout**: `POST /api/v1/auth/logout` → server clears cookies via `Set-Cookie: Max-Age=0`. The frontend then drops local state.
+- **401 on a request**: the response interceptor flips auth state to anonymous; guards redirect to `/`.
+- **403 (CSRF mismatch)**: the interceptor refetches `/csrf` and retries the request once.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+### Dev vs prod cookie behavior
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+- In **dev**, the backend issues cookies without `Secure` so `http://localhost` works. The frontend talks to `http://localhost:8081` (configurable via `VITE_API_BASE_URL`).
+- In **prod**, both cookies are `Secure` (HTTPS-only). If the frontend and backend live on different origins, the backend must whitelist the frontend origin explicitly (CORS `Allow-Origin` cannot be `*` when credentials are sent).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Do not
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- Store any token in `localStorage`, `sessionStorage`, `IndexedDB`, or in-memory mirrors.
+- Read `MANARA_SESSION` — it's HttpOnly by design.
+- Add manual `Authorization: Bearer …` headers.
+- Implement a refresh-token loop. Sessions are server-side; expired ones produce a `401` and force re-login.

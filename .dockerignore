@@ -1,0 +1,43 @@
+# Everything the image must never receive.
+#
+# node_modules is the big one: it is hundreds of megabytes, it is rebuilt inside
+# the image by `npm ci` anyway, and copying a host-built tree in would ship
+# whatever platform-specific binaries the developer's machine produced — a macOS
+# arm64 esbuild binary does not run in a linux/amd64 container.
+
+# --- Dependencies and build output ---------------------------------------
+node_modules
+dist
+dist-ssr
+.vite
+
+# --- Secrets --------------------------------------------------------------
+# .env carries build-time VITE_* values on a developer machine. The image gets
+# its own, from the build argument — never a copy of someone's local file.
+.env
+.env.*
+!.env.example
+
+# --- Version control and tooling -----------------------------------------
+.git
+.gitignore
+.github
+.idea
+.vscode
+.claude
+.cursor
+
+# --- Docs, CI and container files ----------------------------------------
+*.md
+!README.md
+Dockerfile
+.dockerignore
+guidelines/
+
+# NOTE: Caddyfile is deliberately NOT ignored — the runtime stage copies it into
+# the image. Excluding it fails the build with "/Caddyfile: not found".
+
+# --- OS noise -------------------------------------------------------------
+.DS_Store
+**/.DS_Store
+*.log

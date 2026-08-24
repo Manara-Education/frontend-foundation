@@ -1,0 +1,125 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  white-space: nowrap;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast),
+    box-shadow var(--transition-fast), opacity var(--transition-fast);
+  min-height: 2.25rem;
+  padding: 0.5rem 1rem;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  & svg {
+    width: 1rem;
+    height: 1rem;
+    pointer-events: none;
+    flex-shrink: 0;
+  }
+
+  /* ── Variants ─────────────────────────── */
+
+  &--default {
+    background: var(--color-primary);
+    color: var(--color-primary-foreground);
+    border-color: var(--color-primary);
+
+    &:hover {
+      opacity: 0.9;
+    }
+  }
+
+  &--destructive {
+    background: var(--color-destructive);
+    color: var(--color-destructive-foreground);
+    border-color: var(--color-destructive);
+    box-shadow: var(--shadow-sm);
+
+    &:hover {
+      opacity: 0.9;
+    }
+  }
+
+  &--outline {
+    background: transparent;
+    border-color: var(--color-border);
+    box-shadow: var(--shadow-xs);
+
+    &:hover {
+      background: var(--color-accent);
+      color: var(--color-accent-foreground);
+    }
+
+    &:active {
+      box-shadow: none;
+    }
+  }
+
+  &--secondary {
+    background: var(--color-secondary);
+    color: var(--color-secondary-foreground);
+    border-color: var(--color-secondary);
+
+    &:hover {
+      opacity: 0.85;
+    }
+  }
+
+  &--ghost {
+    background: transparent;
+    border-color: transparent;
+
+    &:hover {
+      background: var(--color-accent);
+      color: var(--color-accent-foreground);
+    }
+  }
+
+  &--link {
+    background: transparent;
+    border-color: transparent;
+    color: var(--color-primary);
+    text-decoration-line: underline;
+    text-underline-offset: 4px;
+    padding: 0;
+    min-height: auto;
+
+    &:hover {
+      text-decoration-thickness: 2px;
+    }
+  }
+
+  /* ── Sizes ────────────────────────────── */
+
+  &--sm {
+    min-height: 2rem;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  &--lg {
+    min-height: 2.5rem;
+    padding: 0.5rem 2rem;
+  }
+
+  &--icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+  }
+}

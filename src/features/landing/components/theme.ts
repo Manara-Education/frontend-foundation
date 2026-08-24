@@ -1,0 +1,9 @@
+export const PRIMARY = "#4E5B92";
+export const PRIMARY_DARK = "#364178";
+export const FONT = "'Cairo', sans-serif";
+export const BG = "#FFFFFF";
+export const BG_SOFT = "#F8F9FD";
+export const TEXT = "#1E2340";
+export const TEXT_MUTED = "#717182";
+export const TEXT_LIGHT = "#9BA3C4";
+export const BORDER = "rgba(78,91,146,0.12)";
