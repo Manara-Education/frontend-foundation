@@ -68,3 +68,44 @@
 		format console
 	}
 }
+
+# -----------------------------------------------------------------------------
+# Alternate hostnames.
+# -----------------------------------------------------------------------------
+# Every name that resolves to this server must be served by a site block here.
+# A name that reaches Caddy without one gets no certificate at all: the TLS
+# handshake is aborted before any HTTP status can be sent, so the visitor sees a
+# browser security error rather than a redirect. `www.manara-edu.com` and
+# `api.manara-edu.com` both have A records pointing at this host, so both need
+# to be named — listing them is what makes Caddy obtain their certificates.
+#
+# They redirect to the canonical origin rather than serving the application a
+# second time. One origin keeps the session cookie and CSRF token unambiguous:
+# `MANARA_SESSION` is host-scoped, so an app served from two hostnames would
+# sign a visitor out the moment they crossed between them.
+#
+# `{uri}` preserves the path and query, so a shared link to
+# https://www.manara-edu.com/courses/12 lands on the same course.
+#
+# The status code is spelled out as 308 rather than using Caddy's `permanent`
+# keyword, which is 301. Both are permanent, but a browser may turn a
+# redirected POST into a GET on 301, silently dropping the body; 308 is the
+# variant that is required to preserve the method.
+#
+# The default is deliberately an unreachable name: RFC 2606 reserves `.invalid`
+# so it can never resolve, and the explicit `http://` scheme keeps Caddy from
+# requesting a certificate for it. A local `docker run` with the default
+# SITE_ADDRESS=:80 therefore starts cleanly with this block inert, while
+# production sets REDIRECT_FROM to the real names.
+#
+# One sharp edge, because it takes the whole site down rather than degrading:
+# a Caddyfile default fills in only when the variable is UNSET. Set but empty
+# leaves this line with no site address, and a server block with no key is how
+# a Caddyfile declares GLOBAL options — which is an error anywhere but the top
+# of the file, so Caddy refuses to start and the ingress is gone. An empty
+# REDIRECT_FROM= line in .env is enough to trigger it. docker-compose.prod.yml
+# therefore passes ${REDIRECT_FROM:-http://alternate-hostnames.invalid}, whose
+# `:-` substitutes for empty as well as unset, so the empty value never arrives.
+{$REDIRECT_FROM:http://alternate-hostnames.invalid} {
+	redir https://{$SITE_ADDRESS}{uri} 308
+}
