@@ -106,27 +106,15 @@ export function formatAccessEndDate(iso: string | null): string {
   return date.toLocaleDateString("ar-EG", { day: "numeric", month: "long", year: "numeric" });
 }
 
-export function formatCardNumber(v: string): string {
-  return v.replace(/\D/g, "").slice(0, 16).replace(/(\d{4})(?=\d)/g, "$1 ");
-}
-
-export function formatExpiry(v: string): string {
-  const d = v.replace(/\D/g, "").slice(0, 4);
-  return d.length >= 3 ? `${d.slice(0, 2)} / ${d.slice(2)}` : d;
-}
-
-export function sanitizeCvc(v: string): string {
-  return v.replace(/\D/g, "").slice(0, 4);
-}
-
-export function isCheckoutValid(state: {
-  cardNumber: string; expiry: string; cvc: string; name: string;
-}, isFree: boolean): boolean {
+/**
+ * Whether checkout can be submitted.
+ *
+ * `formatCardNumber`, `formatExpiry` and `sanitizeCvc` used to live here and were removed with
+ * the fields they shaped. The 16-digit and CVC-length checks that used to gate this went with
+ * them: validating the shape of a card number is only worth doing when something is going to
+ * charge it, and nothing here ever was.
+ */
+export function isCheckoutValid(state: { name: string }, isFree: boolean): boolean {
   if (isFree) return true;
-  return (
-    state.name.trim().length > 0 &&
-    state.cardNumber.replace(/\s/g, "").length === 16 &&
-    state.expiry.length >= 4 &&
-    state.cvc.length >= 3
-  );
+  return state.name.trim().length > 0;
 }

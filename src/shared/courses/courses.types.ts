@@ -412,15 +412,20 @@ export interface LessonCompletionResponse {
 // ── Enrollment / checkout ─────────────────────────────────────────────────────
 
 /**
- * The payment instrument, as the checkout form produces it.
+ * The payment instrument, mirroring the backend's `PaymentMethodRequest`.
  *
- * Card-shaped and nothing more, because there is no payment provider behind the backend.
- * When a real one arrives this becomes an opaque token.
+ * It carries no card data, and that is deliberate. `cardNumber`, `expiry` and `cvc` were
+ * removed from the backend DTO — Jackson drops unknown properties, so a client still sending
+ * them is not rejected, it is just transmitting real card numbers and CVCs to a server with no
+ * acquirer, no tokenisation and no PCI DSS scope, which then discards them. This type is what
+ * stops the client from doing that.
+ *
+ * `token` is the seam for the day a real provider arrives: the browser exchanges card details
+ * with the provider directly and sends only the opaque token, so card data never reaches this
+ * application at all.
  */
 export interface PaymentMethodRequest {
-  cardNumber: string;
-  expiry: string;
-  cvc: string;
+  token?: string;
   name: string;
   email?: string;
 }

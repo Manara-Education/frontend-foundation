@@ -3,9 +3,9 @@ import { Lock, X, CheckCircle2, ShieldCheck } from "lucide-react";
 import { FONT, PRIMARY } from "../formatters/course-details.formatter";
 import { useCheckout } from "../hooks/use-checkout";
 import type { CheckoutKind, CourseDetailData } from "../types/course-details.types";
-import { StripeField } from "./stripe-field";
+import { CheckoutField } from "./checkout-field";
 
-interface StripeCheckoutModalProps {
+interface CheckoutModalProps {
   course: CourseDetailData;
   kind: CheckoutKind;
   /**
@@ -22,7 +22,7 @@ interface StripeCheckoutModalProps {
   onCancel: () => void;
 }
 
-export function StripeCheckoutModal({
+export function CheckoutModal({
   course,
   kind,
   amountLabel,
@@ -31,11 +31,11 @@ export function StripeCheckoutModal({
   onSuccess,
   onFailure,
   onCancel,
-}: StripeCheckoutModalProps) {
+}: CheckoutModalProps) {
   const isFree = kind === "free";
   const {
     step, form, canPay,
-    setCardNumber, setExpiry, setCvc, setName, setEmail, handlePay,
+    setName, handlePay,
   } = useCheckout({ courseId: course.id, kind, planId, onSuccess, onFailure });
 
   return (
@@ -82,7 +82,7 @@ export function StripeCheckoutModal({
                 <Lock size={16} color="#fff" strokeWidth={2} />
               </div>
               <div>
-                <div style={{ fontFamily: FONT, fontSize: 11, color: "rgba(255,255,255,0.70)", marginBottom: 2 }}>دفع آمن عبر Stripe</div>
+                <div style={{ fontFamily: FONT, fontSize: 11, color: "rgba(255,255,255,0.70)", marginBottom: 2 }}>تأكيد الاشتراك</div>
                 <div style={{ fontFamily: FONT, fontSize: 14, color: "#fff", lineHeight: 1.35 }}>{course.title}</div>
               </div>
             </div>
@@ -124,18 +124,7 @@ export function StripeCheckoutModal({
                     </p>
                   </div>
                 ) : (
-                  <>
-                    <StripeField label="رقم البطاقة" placeholder="1234 5678 9012 3456" value={form.cardNumber} onChange={setCardNumber} showCardIcon />
-                    <div style={{ display: "flex", gap: 12 }}>
-                      <div style={{ flex: 1 }}>
-                        <StripeField label="تاريخ الانتهاء" placeholder="MM / YY" value={form.expiry} onChange={setExpiry} />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <StripeField label="رمز CVC" placeholder="•••" value={form.cvc} onChange={setCvc} type="password" />
-                      </div>
-                    </div>
-                    <StripeField label="الاسم على البطاقة" placeholder="اسمك الكامل" value={form.name} onChange={setName} />
-                  </>
+                  <CheckoutField label="الاسم الكامل" placeholder="اسمك الكامل" value={form.name} onChange={setName} fieldDir="rtl" />
                 )}
 
                 <motion.button
@@ -177,7 +166,7 @@ export function StripeCheckoutModal({
                   <div style={{ width: 3, height: 3, borderRadius: "50%", background: "#D1D5DB" }} />
                   <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                     <ShieldCheck size={12} color="#B0B7D4" strokeWidth={2} />
-                    <span style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4" }}>مشفّر ومحمي بـ Stripe</span>
+                    <span style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4" }}>اتصال مشفّر</span>
                   </div>
                 </div>
               </motion.div>
@@ -233,22 +222,6 @@ export function StripeCheckoutModal({
             )}
           </AnimatePresence>
         </div>
-
-        {step === "form" && (
-          <div
-            style={{
-              padding: "11px 24px",
-              borderTop: "1px solid #F3F4F6",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-            }}
-          >
-            <Lock size={10} color="#C4C9DE" strokeWidth={2} />
-            <span style={{ fontFamily: FONT, fontSize: 10, color: "#C4C9DE" }}>Powered by Stripe · SSL Secured · PCI Compliant</span>
-          </div>
-        )}
       </motion.div>
     </motion.div>
   );

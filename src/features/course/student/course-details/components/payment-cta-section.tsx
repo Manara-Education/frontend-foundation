@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Sparkles, ShieldCheck, X } from "lucide-react";
 import { FONT, PRIMARY } from "../formatters/course-details.formatter";
 import type { CourseDetailData } from "../types/course-details.types";
-import { StripeCheckoutModal } from "./stripe-checkout-modal";
+import { CheckoutModal } from "./checkout-modal";
 import { enrollFree } from "../services/course-details.service";
 
 interface PaymentCTASectionProps {
@@ -64,7 +64,7 @@ export function PaymentCTASection({ course, onPay }: PaymentCTASectionProps) {
     <>
       <AnimatePresence>
         {showCheckout && (
-          <StripeCheckoutModal
+          <CheckoutModal
             course={course}
             kind="purchase"
             amountLabel={course.purchasePriceLabel ?? ""}
@@ -215,7 +215,7 @@ export function PaymentCTASection({ course, onPay }: PaymentCTASectionProps) {
         <p style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4", textAlign: "center", margin: "12px 0 0" }}>
           {isFree
             ? "وصول فوري — لا تحتاج إلى بطاقة ائتمانية"
-            : "ضمان استرداد المبلغ خلال ٧ أيام · دفع آمن عبر Stripe"}
+            : "ضمان استرداد المبلغ خلال ٧ أيام · اتصال مشفّر"}
         </p>
       </motion.div>
     </>
