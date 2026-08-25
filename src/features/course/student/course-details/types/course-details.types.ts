@@ -170,10 +170,15 @@ export type CheckoutStep = "form" | "processing" | "success";
 /** Which of the three checkout paths the modal is running. */
 export type CheckoutKind = "free" | "purchase" | "subscription";
 
+/**
+ * What checkout collects.
+ *
+ * `cardNumber`, `expiry` and `cvc` used to be here and were removed deliberately. There is no
+ * payment provider behind this application, and the backend stopped accepting those fields —
+ * they were being transmitted and then dropped at the network boundary, so the only thing the
+ * form achieved was moving real card numbers and CVCs across the wire for nothing.
+ */
 export interface CheckoutFormState {
-  cardNumber: string;
-  expiry: string;
-  cvc: string;
   name: string;
   email: string;
 }

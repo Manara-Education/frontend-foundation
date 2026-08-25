@@ -7,7 +7,7 @@ import type {
   CourseDetailData,
   SubscriptionPlanOption,
 } from "../types/course-details.types";
-import { StripeCheckoutModal } from "./stripe-checkout-modal";
+import { CheckoutModal } from "./checkout-modal";
 
 interface SubscriptionStatusCardProps {
   course: CourseDetailData;
@@ -50,7 +50,7 @@ export function SubscriptionStatusCard({
   const checkout = (
     <AnimatePresence>
       {showCheckout && selectedPlan && (
-        <StripeCheckoutModal
+        <CheckoutModal
           course={course}
           kind="subscription"
           amountLabel={selectedPlan.priceLabel}
