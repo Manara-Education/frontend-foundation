@@ -229,8 +229,27 @@ export interface CourseRequest {
    */
   price?: number | null;
   subscriptionPlans?: SubscriptionPlanRequest[];
-  /** Defaults to `DRAFT` on create and to the course's current status on update. */
+  /**
+   * Publication state — for **create only**.
+   *
+   * On update the backend still honours it, for clients written against the previous
+   * contract, but the editor deliberately never sends it: publication is changed through
+   * `POST /{id}/publish` and `/{id}/unpublish`, so a tab holding a stale copy of the
+   * course cannot unpublish it by saving a lesson.
+   */
   status?: CourseStatus;
+}
+
+/**
+ * A course's modules in their new order.
+ *
+ * Ids only — the backend derives positions from the array. Sending the ordered ids rather
+ * than positions is what makes a gap, a duplicate or a negative position unrepresentable,
+ * and the list must name every module of the course exactly once, so a reorder built from
+ * a stale module list is refused instead of half-applied.
+ */
+export interface ModuleOrderRequest {
+  moduleIds: number[];
 }
 
 /**
@@ -257,6 +276,17 @@ export interface CourseResponse {
   accessType: CourseAccessType | null;
   structure: CourseStructure | null;
   status: CourseStatus | null;
+  /**
+   * Whether the course has changed in a way its learners should be told about.
+   *
+   * The backend's answer, derived there from the publication baseline and the content
+   * version, so every screen showing an "Updated" badge shows the same thing. Never
+   * recompute it from timestamps here — the rule lives in one place, on the server.
+   *
+   * Optional because a payload from an older backend does not carry it; a missing value
+   * reads as "no updates", which is the safe direction.
+   */
+  hasUpdatesSincePublish?: boolean | null;
   studentsCount: number | null;
   instructorId: number;
   instructorName: string | null;
@@ -295,6 +325,17 @@ export interface InstructorCourseResponse {
   instructorName: string | null;
   structure: CourseStructure | null;
   status: CourseStatus | null;
+  /**
+   * Whether the course has changed in a way its learners should be told about.
+   *
+   * The backend's answer, derived there from the publication baseline and the content
+   * version, so every screen showing an "Updated" badge shows the same thing. Never
+   * recompute it from timestamps here — the rule lives in one place, on the server.
+   *
+   * Optional because a payload from an older backend does not carry it; a missing value
+   * reads as "no updates", which is the safe direction.
+   */
+  hasUpdatesSincePublish?: boolean | null;
   lessons: InstructorLessonResponse[] | null;
   modules: InstructorCourseModuleResponse[] | null;
   finalQuiz: InstructorQuizResponse | null;
@@ -336,6 +377,17 @@ export interface CourseDetailsInfo {
   subscriptionPlans: SubscriptionPlanResponse[] | null;
   studentsCount: number | null;
   createdAt: string | null;
+  /**
+   * Whether the course has changed in a way its learners should be told about.
+   *
+   * The backend's answer, derived there from the publication baseline and the content
+   * version, so every screen showing an "Updated" badge shows the same thing. Never
+   * recompute it from timestamps here — the rule lives in one place, on the server.
+   *
+   * Optional because a payload from an older backend does not carry it; a missing value
+   * reads as "no updates", which is the safe direction.
+   */
+  hasUpdatesSincePublish?: boolean | null;
 }
 
 /**

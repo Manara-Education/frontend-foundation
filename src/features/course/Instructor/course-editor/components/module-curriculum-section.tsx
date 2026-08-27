@@ -311,6 +311,8 @@ interface ModuleCardProps {
   onToggleExpanded: () => void;
   onEditModule: (draft: ModuleDraft) => void;
   onDeleteModule: () => void;
+  /** Fires once, when the module has been dropped in its new place. */
+  onReorderCommit: () => void;
   onSaveLesson: (lessonKey: string | null, draft: LessonDraft) => void;
   onDeleteLesson: (lessonKey: string) => void;
   onReorderLessons: (lessons: CourseLessonEditorState[]) => void;
@@ -325,6 +327,7 @@ function ModuleCard({
   onToggleExpanded,
   onEditModule,
   onDeleteModule,
+  onReorderCommit,
   onSaveLesson,
   onDeleteLesson,
   onReorderLessons,
@@ -624,6 +627,11 @@ function ModuleCard({
       value={module}
       dragControls={dragControls}
       dragListener={false}
+      // The lesson list below has always had this; the module list did not, which is the
+      // whole of why dragging a module looked right and was gone on the next reload.
+      // `onReorder` fires continuously while a module is being dragged past its
+      // neighbours, so it only moves the local list; the drop is what persists.
+      onDragEnd={onReorderCommit}
       style={{ listStyle: "none", marginBottom: t.itemMargin }}
     >
       {variant === "wizard" ? (
@@ -742,6 +750,7 @@ export function ModuleCurriculumSection({
               }
               onEditModule={(draft) => onUpdateModule(module.key, draft)}
               onDeleteModule={() => onDeleteModule(module.key)}
+              onReorderCommit={onReorderModulesCommit}
               onSaveLesson={(lessonKey, draft) => onSaveModuleLesson(module.key, lessonKey, draft)}
               onDeleteLesson={(lessonKey) => onDeleteModuleLesson(module.key, lessonKey)}
               onReorderLessons={(lessons) => onReorderModuleLessons(module.key, lessons)}

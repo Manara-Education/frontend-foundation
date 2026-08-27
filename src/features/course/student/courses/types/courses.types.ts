@@ -13,6 +13,13 @@ export interface CourseViewDto {
   status: Status;
   category: string;
   duration: string;
+  /**
+   * Whether the course changed after this learner could last have seen it.
+   *
+   * The backend's answer. Optional on the DTO because a payload from an older backend
+   * does not carry it; the mapper reads a missing value as "no updates".
+   */
+  hasUpdatesSincePublish?: boolean | null;
 }
 
 export interface CourseView {
@@ -27,6 +34,8 @@ export interface CourseView {
   status: Status;
   category: string;
   duration: string;
+  /** Whether the course changed after this learner could last have seen it. */
+  hasUpdatesSincePublish: boolean;
 }
 
 export interface StatusConfig {

@@ -158,6 +158,28 @@ export function useCourseEditor(mode: CourseEditorMode) {
 
   const lastFailedActionRef = useRef<(() => void) | null>(null);
 
+  /**
+   * The tail of the save chain, and the ticket number of the newest save.
+   *
+   * Every persisting action queues behind the previous one instead of racing it. Two
+   * aggregate `PUT`s in flight at once is not a theoretical problem here: adding a module
+   * and saving a lesson are two clicks apart, and whichever response landed last used to
+   * win — which could be the older one, silently reverting the newer edit on screen.
+   *
+   * The ticket closes the other half of it. A response is only allowed to write into state
+   * if no newer save has been started since it left, so a slow reply that arrives after a
+   * newer one has already been applied is dropped rather than allowed to overwrite it.
+   */
+  const saveChainRef = useRef<Promise<unknown>>(Promise.resolve());
+  const saveTicketRef = useRef(0);
+
+  /**
+   * The reorder in flight, so a newer drag can abandon it, and the ticket of the newest
+   * drag, so one that is still queued behind an earlier save can be skipped outright.
+   */
+  const reorderAbortRef = useRef<AbortController | null>(null);
+  const reorderTicketRef = useRef(0);
+
   const reportError = useCallback((err: unknown, retry?: () => void) => {
     console.error(err);
     lastFailedActionRef.current = retry ?? null;
@@ -207,36 +229,51 @@ export function useCourseEditor(mode: CourseEditorMode) {
    * the payload carries a URL rather than a blob.
    */
   const persist = useCallback(
-    async (next: CourseEditorState): Promise<boolean> => {
-      setIsSaving(true);
-      try {
-        let payload = next;
+    (next: CourseEditorState): Promise<boolean> => {
+      const ticket = ++saveTicketRef.current;
 
-        if (imageFileRef.current) {
-          const url = await courseEditorService.uploadCourseImage(imageFileRef.current);
-          payload = { ...payload, image: url };
-          imageFileRef.current = null;
-          setImageFile(null);
-          setImagePreview(null);
+      const run = async (): Promise<boolean> => {
+        setIsSaving(true);
+        try {
+          let payload = next;
+
+          if (imageFileRef.current) {
+            const url = await courseEditorService.uploadCourseImage(imageFileRef.current);
+            payload = { ...payload, image: url };
+            imageFileRef.current = null;
+            setImageFile(null);
+            setImagePreview(null);
+          }
+
+          // `payload.id` is set once a create has landed, so a second submit from the
+          // wizard updates the course it just made instead of creating another one.
+          const targetId = courseId ?? payload.id;
+          const saved =
+            targetId !== null
+              ? await courseEditorService.updateCourse(targetId, payload)
+              : await courseEditorService.createCourse(payload);
+
+          // A newer save has been started while this one was in flight, and it was built
+          // on top of this state. Its response is the current truth; applying this older
+          // one on top would undo whatever the instructor did in between.
+          if (ticket !== saveTicketRef.current) return true;
+
+          writeState(withEditorKeys(payload, saved));
+          setIsDirty(false);
+          return true;
+        } catch (err) {
+          reportError(err, () => void persist(next));
+          return false;
+        } finally {
+          if (ticket === saveTicketRef.current) setIsSaving(false);
         }
+      };
 
-        // `payload.id` is set once a create has landed, so a second submit from the
-        // wizard updates the course it just made instead of creating another one.
-        const targetId = courseId ?? payload.id;
-        const saved =
-          targetId !== null
-            ? await courseEditorService.updateCourse(targetId, payload)
-            : await courseEditorService.createCourse(payload);
-
-        writeState(withEditorKeys(payload, saved));
-        setIsDirty(false);
-        return true;
-      } catch (err) {
-        reportError(err, () => void persist(next));
-        return false;
-      } finally {
-        setIsSaving(false);
-      }
+      // Queued rather than fired: the whole course travels in each request, so two of them
+      // overlapping means the server applies them in an order nobody chose.
+      const queued = saveChainRef.current.then(run, run);
+      saveChainRef.current = queued.catch(() => undefined);
+      return queued;
     },
     [courseId, reportError, writeState],
   );
@@ -378,7 +415,79 @@ export function useCourseEditor(mode: CourseEditorMode) {
     [mutate],
   );
 
-  const commitModuleOrder = useCallback(() => mutate((prev) => prev, true), [mutate]);
+  /**
+   * Persists the order a drag ended on — the ids, and nothing else.
+   *
+   * <h4>Why not the aggregate save</h4>
+   * Sending the whole course to move one module means a drag also re-submits every title,
+   * lesson and price the tab happens to be holding, so reordering in one tab silently
+   * reverts a rename made in another. This carries the ordered ids and the backend
+   * derives the positions.
+   *
+   * <h4>Rapid drags</h4>
+   * The local order is already applied — that is what the instructor is looking at — so
+   * this is optimistic by construction. A drag that starts while a previous request is
+   * still open aborts it: the older order is not merely stale, it is wrong, and letting it
+   * finish means racing its response against the newer one.
+   *
+   * <h4>When it fails</h4>
+   * A rejected reorder (a stale module list, an id the course no longer has) and a lost
+   * response look identical from here, and guessing wrong in either direction leaves the
+   * screen disagreeing with the database. So neither is guessed at: the course is re-read
+   * from the server, which is the only thing that actually knows whether the write landed.
+   */
+  const commitModuleOrder = useCallback(() => {
+    if (courseId === null) return;
+
+    const moduleIds = stateRef.current.modules.map((module) => module.id);
+
+    // A module the instructor added but has not saved yet has no id, so there is no order
+    // for the server to store. The pending aggregate save writes the whole list in its
+    // array order, which puts this same arrangement in place.
+    if (moduleIds.some((id) => id === null)) return;
+
+    const ticket = ++reorderTicketRef.current;
+    // Anything still open is carrying an order the instructor has already moved on from.
+    reorderAbortRef.current?.abort();
+
+    const run = async () => {
+      // Superseded while it sat in the queue: a newer drag is about to send the order this
+      // one would have been overwritten by anyway.
+      if (ticket !== reorderTicketRef.current) return;
+
+      const controller = new AbortController();
+      reorderAbortRef.current = controller;
+      setIsSaving(true);
+      try {
+        const saved = await courseEditorService.reorderModules(
+          courseId,
+          moduleIds as number[],
+          controller.signal,
+        );
+        if (controller.signal.aborted) return;
+        writeState(withEditorKeys(stateRef.current, saved));
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        // Deliberately not a local rollback. A rejected reorder and a lost response look
+        // identical from here, and guessing wrong in either direction leaves the screen
+        // disagreeing with the database — so the authoritative order is fetched instead.
+        reportError(err, () => void loadCourse());
+        await loadCourse();
+      } finally {
+        if (reorderAbortRef.current === controller) {
+          reorderAbortRef.current = null;
+          setIsSaving(false);
+        }
+      }
+    };
+
+    // On the same queue as the aggregate saves, not beside it. A reorder overlapping a
+    // course save is the one interleaving that actually loses data: the save carries the
+    // module list the tab held before the drag, so whichever finished second decided the
+    // stored order — and half the time that was the pre-drag one.
+    const queued = saveChainRef.current.then(run, run);
+    saveChainRef.current = queued.catch(() => undefined);
+  }, [courseId, loadCourse, reportError, writeState]);
 
   const mapModule = useCallback(
     (
@@ -559,6 +668,53 @@ export function useCourseEditor(mode: CourseEditorMode) {
   // ── Explicit saves ──────────────────────────────────────────────────────────
 
   /**
+   * The course editor's publish / unpublish CTA.
+   *
+   * Its own request, not a course save with a different `status` in it. Two things follow
+   * from that: an ordinary edit can no longer change publication as a side effect, and
+   * this cannot overwrite the course with whatever this tab happens to be holding —
+   * publishing a course does not re-submit its content.
+   *
+   * Queued behind any save already in flight, so publishing straight after an edit
+   * publishes the edited course rather than racing it.
+   */
+  const setStatus = useCallback(
+    (status: CourseStatus): Promise<boolean> => {
+      // Resolved the same way a save resolves it, rather than from the editor's mode: the
+      // wizard has no `courseId` but does have a course as soon as its first submit lands,
+      // and publishing that course is a lifecycle call like any other.
+      const targetId = courseId ?? stateRef.current.id;
+
+      if (targetId === null) {
+        // Nothing to publish separately yet — the create carries the status.
+        return persist({ ...stateRef.current, status });
+      }
+
+      const run = async (): Promise<boolean> => {
+        setIsSaving(true);
+        try {
+          const saved =
+            status === "PUBLISHED"
+              ? await courseEditorService.publishCourse(targetId)
+              : await courseEditorService.unpublishCourse(targetId);
+          writeState(withEditorKeys(stateRef.current, saved));
+          return true;
+        } catch (err) {
+          reportError(err, () => void setStatus(status));
+          return false;
+        } finally {
+          setIsSaving(false);
+        }
+      };
+
+      const queued = saveChainRef.current.then(run, run);
+      saveChainRef.current = queued.catch(() => undefined);
+      return queued;
+    },
+    [courseId, persist, reportError, writeState],
+  );
+
+  /**
    * The wizard's publish / save-as-draft action. A draft only has to be nameable;
    * publishing also has to price the course, matching the reference validation.
    */
@@ -588,13 +744,29 @@ export function useCourseEditor(mode: CourseEditorMode) {
       }
       setErrors({});
 
+      // Both read before the save, because the save changes both: `persist` fills in the id
+      // it comes back with, and it replaces the state with the server's answer.
+      const alreadyCreated = (courseId ?? stateRef.current.id) !== null;
+      const statusBefore = stateRef.current.status;
+
       const saved = await persist({ ...stateRef.current, status });
-      if (saved) setShowSuccess(true);
-      return saved;
+      if (!saved) return false;
+
+      // A create carries the status. An update deliberately does not — so a wizard that
+      // saved a draft first and only then pressed publish has to say so through the
+      // lifecycle call, or the course would quietly stay a draft.
+      if (alreadyCreated && statusBefore !== status && !(await setStatus(status))) {
+        return false;
+      }
+
+      setShowSuccess(true);
+      return true;
     },
     [
+      courseId,
       persist,
       purchasePriceInput,
+      setStatus,
       state.accessType,
       state.description,
       state.subscriptionPlans.length,
@@ -608,11 +780,6 @@ export function useCourseEditor(mode: CourseEditorMode) {
     [persist],
   );
 
-  /** The course editor's publish / unpublish CTA. */
-  const setStatus = useCallback(
-    (status: CourseStatus) => persist({ ...stateRef.current, status }),
-    [persist],
-  );
 
   return {
     // state

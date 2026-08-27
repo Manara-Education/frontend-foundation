@@ -82,6 +82,9 @@ export function mapCourseResponseToCourseCardModel(dto: CourseResponse): CourseC
     // card falls back to the creation date rather than losing the line entirely.
     updatedAt: optional(dto.updatedAt) ?? dto.createdAt,
     subscriptionMinPrice: minSubscriptionPrice(dto.subscriptionPlans),
+    // A backend that predates the field sends nothing, and "nothing" has to read as "no
+    // updates": showing the badge on every course would be worse than showing it on none.
+    hasUpdatesSincePublish: dto.hasUpdatesSincePublish === true,
   };
 }
 
@@ -172,6 +175,7 @@ export function mapInstructorCourseResponseToEditorState(
     purchasePrice: dto.purchasePrice ?? dto.price ?? null,
     subscriptionPlans: (dto.subscriptionPlans ?? []).map(mapSubscriptionPlanResponseToEditorState),
     status: normalizeCourseStatus(dto.status),
+    hasUpdatesSincePublish: dto.hasUpdatesSincePublish === true,
   };
 }
 
@@ -249,8 +253,17 @@ function mapSubscriptionPlanEditorStateToRequest(
  * that carries lessons for a module course or the other way round. Pricing follows the
  * same rule — `purchasePrice` only for `PURCHASE`, plans only for `SUBSCRIPTION` — so a
  * course that switched away from one does not keep submitting the other's fields.
+ *
+ * `duration` is not sent at all. It is the sum of the lessons' running times, which only
+ * the video providers know and only the server computes; echoing the server's own figure
+ * back at it was never useful, and it is what used to make a course unsaveable — the
+ * aggregate came back with `duration: 0` for videos that had not been measured yet, and
+ * the API rejected the very number it had just sent.
  */
-export function mapCourseEditorStateToCourseRequest(state: CourseEditorState): CourseRequest {
+export function mapCourseEditorStateToCourseRequest(
+  state: CourseEditorState,
+  options: { includeStatus?: boolean } = {},
+): CourseRequest {
   const isModules = state.structure === "MODULES";
 
   return {
@@ -258,7 +271,6 @@ export function mapCourseEditorStateToCourseRequest(state: CourseEditorState): C
     subtitle: state.subtitle.trim() || null,
     image: state.image.trim() || null,
     description: state.description.trim(),
-    duration: state.duration,
     structure: state.structure,
     ...(isModules
       ? { modules: state.modules.map(mapModuleEditorStateToRequest) }
@@ -269,7 +281,11 @@ export function mapCourseEditorStateToCourseRequest(state: CourseEditorState): C
     ...(state.accessType === "SUBSCRIPTION"
       ? { subscriptionPlans: state.subscriptionPlans.map(mapSubscriptionPlanEditorStateToRequest) }
       : {}),
-    status: state.status,
+    // Only a create says what the course's publication state should be. On update the
+    // field is left out entirely, which is what tells the backend to leave publication
+    // alone — publishing and unpublishing are their own endpoints, so a save built from a
+    // stale copy of the course can no longer take a live course off the catalogue.
+    ...(options.includeStatus ? { status: state.status } : {}),
   };
 }
 
@@ -290,6 +306,7 @@ export function createEmptyCourseEditorState(): CourseEditorState {
     purchasePrice: null,
     subscriptionPlans: [],
     status: "DRAFT",
+    hasUpdatesSincePublish: false,
   };
 }
 

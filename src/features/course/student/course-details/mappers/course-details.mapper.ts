@@ -162,5 +162,7 @@ export function mapCourseDetailsResponseToStudentCourseModel(
     finalQuiz: dto.finalQuiz ? toQuizView(dto.finalQuiz) : null,
     courseCompleted: dto.courseCompleted ?? false,
     nextLessonId,
+    // A backend that predates the field sends nothing, which reads as "no updates".
+    hasUpdatesSincePublish: course.hasUpdatesSincePublish === true,
   };
 }

@@ -158,6 +158,13 @@ export interface StudentCourseModel {
   courseCompleted: boolean;
   /** The lesson the server says to open next, or `null` when nothing is left. */
   nextLessonId: number | null;
+  /**
+   * Whether the instructor has changed the course since it was last published.
+   *
+   * The backend's answer, carried through untouched — the same field My Courses reads, so
+   * the two screens cannot disagree about the same course.
+   */
+  hasUpdatesSincePublish: boolean;
 }
 
 /** @deprecated Local alias kept while components migrate to `StudentCourseModel`. */

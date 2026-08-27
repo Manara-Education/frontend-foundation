@@ -42,6 +42,7 @@ export type {
   LessonRef,
   LessonRequest,
   LessonResponse,
+  ModuleOrderRequest,
   PaymentMethodRequest,
   SubscriptionPlanRequest,
   SubscriptionPlanResponse,
