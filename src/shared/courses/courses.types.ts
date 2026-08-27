@@ -253,6 +253,23 @@ export interface ModuleOrderRequest {
 }
 
 /**
+ * One lesson scope's lessons, in the order the instructor just arranged them.
+ *
+ * The sibling shape of `ModuleOrderRequest`, and deliberately identical: ids only, with
+ * the backend deriving positions from the array. It serves both lesson scopes a course
+ * has — the root lessons of a `FLAT` course and the lessons inside one module — because
+ * they are the same operation on two different parents, and the parent is named by the
+ * URL rather than the body. So a reorder can only ever arrange siblings; moving a lesson
+ * into another module is a structural edit and still goes through the aggregate save.
+ *
+ * The list must name every lesson of the scope exactly once, so a reorder built from a
+ * lesson list that has since changed is refused instead of half-applied.
+ */
+export interface LessonOrderRequest {
+  lessonIds: number[];
+}
+
+/**
  * Summary shape returned by the course list endpoints (instructor `my-courses`,
  * student browse). The new fields are additive.
  */

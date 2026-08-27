@@ -174,11 +174,32 @@ export function useCourseEditor(mode: CourseEditorMode) {
   const saveTicketRef = useRef(0);
 
   /**
-   * The reorder in flight, so a newer drag can abandon it, and the ticket of the newest
-   * drag, so one that is still queued behind an earlier save can be skipped outright.
+   * The reorder in flight *per ordered scope*, and the ticket of the newest drag in each.
+   *
+   * Keyed rather than single. A course orders three different things — its modules, a flat
+   * course's root lessons, and the lessons inside each module — and one shared controller
+   * meant dragging a lesson in module B aborted an unrelated reorder still in flight for
+   * module A, discarding a drag the instructor had already been shown as applied. The key
+   * is the scope itself (`modules`, `flat-lessons`, `module-lessons:<moduleId>`), so a
+   * newer drag only ever supersedes an older drag of the same siblings.
+   *
+   * Superseding within a scope is still right: an older order of the same list is not
+   * merely stale, it is wrong, and letting it finish means racing its response against the
+   * newer one.
    */
-  const reorderAbortRef = useRef<AbortController | null>(null);
-  const reorderTicketRef = useRef(0);
+  const reorderScopesRef = useRef(
+    new Map<string, { controller: AbortController | null; ticket: number }>(),
+  );
+
+  const reorderScope = useCallback((key: string) => {
+    const scopes = reorderScopesRef.current;
+    let scope = scopes.get(key);
+    if (!scope) {
+      scope = { controller: null, ticket: 0 };
+      scopes.set(key, scope);
+    }
+    return scope;
+  }, []);
 
   const reportError = useCallback((err: unknown, retry?: () => void) => {
     console.error(err);
@@ -366,8 +387,8 @@ export function useCourseEditor(mode: CourseEditorMode) {
     [mutate],
   );
 
-  /** Drag ends: the new order is what gets an `orderIndex` in the next payload. */
-  const commitLessonOrder = useCallback(() => mutate((prev) => prev, true), [mutate]);
+  // The drag itself only moves the local list. Committing it is `commitLessonOrder`,
+  // declared with the other two order commands once `commitOrder` exists.
 
   const setLessonQuiz = useCallback(
     (key: string, quiz: QuizEditorState | null) =>
@@ -418,76 +439,137 @@ export function useCourseEditor(mode: CourseEditorMode) {
   /**
    * Persists the order a drag ended on — the ids, and nothing else.
    *
-   * <h4>Why not the aggregate save</h4>
-   * Sending the whole course to move one module means a drag also re-submits every title,
-   * lesson and price the tab happens to be holding, so reordering in one tab silently
-   * reverts a rename made in another. This carries the ordered ids and the backend
-   * derives the positions.
+   * ### Why not the aggregate save
+   * Sending the whole course to move one lesson means a drag also re-submits every title,
+   * quiz and price the tab happens to be holding, so reordering in one tab silently
+   * reverts a rename made in another. This carries the ordered ids and the backend derives
+   * the positions.
    *
-   * <h4>Rapid drags</h4>
+   * ### One path, three scopes
+   * Modules, root lessons and a module's lessons are the same operation on three different
+   * sibling collections, and they go through this one function on purpose. The bug it
+   * replaces was a nested lesson drag wired to the *module* order commit — a mistake that
+   * is only possible while "commit a reorder" means three separately written things. Here
+   * the caller names its scope and passes a request; it cannot pick the wrong endpoint
+   * without also naming the wrong scope.
+   *
+   * ### Rapid drags
    * The local order is already applied — that is what the instructor is looking at — so
-   * this is optimistic by construction. A drag that starts while a previous request is
-   * still open aborts it: the older order is not merely stale, it is wrong, and letting it
-   * finish means racing its response against the newer one.
+   * this is optimistic by construction. A drag that starts while a previous request for
+   * *the same scope* is still open aborts it. Other scopes are untouched.
    *
-   * <h4>When it fails</h4>
-   * A rejected reorder (a stale module list, an id the course no longer has) and a lost
-   * response look identical from here, and guessing wrong in either direction leaves the
-   * screen disagreeing with the database. So neither is guessed at: the course is re-read
-   * from the server, which is the only thing that actually knows whether the write landed.
+   * ### When it fails
+   * A rejected reorder (a stale list, an id the course no longer has) and a lost response
+   * look identical from here, and guessing wrong in either direction leaves the screen
+   * disagreeing with the database. So neither is guessed at: the course is re-read from
+   * the server, which is the only thing that actually knows whether the write landed.
    */
-  const commitModuleOrder = useCallback(() => {
-    if (courseId === null) return;
+  const commitOrder = useCallback(
+    (
+      scopeKey: string,
+      ids: (number | null)[],
+      send: (courseId: number, ids: number[], signal: AbortSignal) => Promise<CourseEditorState>,
+    ) => {
+      if (courseId === null) return;
 
-    const moduleIds = stateRef.current.modules.map((module) => module.id);
+      // An entity the instructor added but has not saved yet has no id, so there is no
+      // order for the server to store. The pending aggregate save writes the whole list,
+      // which puts this same arrangement in place.
+      if (ids.some((id) => id === null)) return;
 
-    // A module the instructor added but has not saved yet has no id, so there is no order
-    // for the server to store. The pending aggregate save writes the whole list in its
-    // array order, which puts this same arrangement in place.
-    if (moduleIds.some((id) => id === null)) return;
+      const scope = reorderScope(scopeKey);
+      const ticket = ++scope.ticket;
+      // Anything still open for this scope is carrying an order the instructor has already
+      // moved on from.
+      scope.controller?.abort();
 
-    const ticket = ++reorderTicketRef.current;
-    // Anything still open is carrying an order the instructor has already moved on from.
-    reorderAbortRef.current?.abort();
+      const run = async () => {
+        // Superseded while it sat in the queue: a newer drag of these same siblings is
+        // about to send the order this one would have been overwritten by anyway.
+        if (ticket !== scope.ticket) return;
 
-    const run = async () => {
-      // Superseded while it sat in the queue: a newer drag is about to send the order this
-      // one would have been overwritten by anyway.
-      if (ticket !== reorderTicketRef.current) return;
-
-      const controller = new AbortController();
-      reorderAbortRef.current = controller;
-      setIsSaving(true);
-      try {
-        const saved = await courseEditorService.reorderModules(
-          courseId,
-          moduleIds as number[],
-          controller.signal,
-        );
-        if (controller.signal.aborted) return;
-        writeState(withEditorKeys(stateRef.current, saved));
-      } catch (err) {
-        if (controller.signal.aborted) return;
-        // Deliberately not a local rollback. A rejected reorder and a lost response look
-        // identical from here, and guessing wrong in either direction leaves the screen
-        // disagreeing with the database — so the authoritative order is fetched instead.
-        reportError(err, () => void loadCourse());
-        await loadCourse();
-      } finally {
-        if (reorderAbortRef.current === controller) {
-          reorderAbortRef.current = null;
-          setIsSaving(false);
+        const controller = new AbortController();
+        scope.controller = controller;
+        setIsSaving(true);
+        try {
+          const saved = await send(courseId, ids as number[], controller.signal);
+          if (controller.signal.aborted) return;
+          writeState(withEditorKeys(stateRef.current, saved));
+        } catch (err) {
+          if (controller.signal.aborted) return;
+          // Deliberately not a local rollback. A rejected reorder and a lost response look
+          // identical from here, and guessing wrong in either direction leaves the screen
+          // disagreeing with the database — so the authoritative order is fetched instead.
+          reportError(err, () => void loadCourse());
+          await loadCourse();
+        } finally {
+          if (scope.controller === controller) {
+            scope.controller = null;
+            setIsSaving(false);
+          }
         }
-      }
-    };
+      };
 
-    // On the same queue as the aggregate saves, not beside it. A reorder overlapping a
-    // course save is the one interleaving that actually loses data: the save carries the
-    // module list the tab held before the drag, so whichever finished second decided the
-    // stored order — and half the time that was the pre-drag one.
-    const queued = saveChainRef.current.then(run, run);
-    saveChainRef.current = queued.catch(() => undefined);
-  }, [courseId, loadCourse, reportError, writeState]);
+      // On the same queue as the aggregate saves, not beside it. A reorder overlapping a
+      // course save is the one interleaving that actually loses data: the save carries the
+      // list the tab held before the drag, so whichever finished second decided the stored
+      // order — and half the time that was the pre-drag one. Scoping the *abort* per scope
+      // and keeping the *queue* shared is deliberate: two scopes may both have a drag in
+      // flight, but they still reach the server one at a time.
+      const queued = saveChainRef.current.then(run, run);
+      saveChainRef.current = queued.catch(() => undefined);
+    },
+    [courseId, loadCourse, reorderScope, reportError, writeState],
+  );
+
+  /** Persists the module order. Never called for a lesson drag. */
+  const commitModuleOrder = useCallback(
+    () =>
+      commitOrder(
+        "modules",
+        stateRef.current.modules.map((module) => module.id),
+        (id, ids, signal) => courseEditorService.reorderModules(id, ids, signal),
+      ),
+    [commitOrder],
+  );
+
+  /** Persists the root lesson order of a flat course. Never touches module order. */
+  const commitLessonOrder = useCallback(
+    () =>
+      commitOrder(
+        "flat-lessons",
+        stateRef.current.lessons.map((lesson) => lesson.id),
+        (id, ids, signal) => courseEditorService.reorderLessons(id, ids, signal),
+      ),
+    [commitOrder],
+  );
+
+  /**
+   * Persists the lesson order inside one module.
+   *
+   * Takes the module's key because that is the only thing that survives a drag: the module
+   * may be one the instructor just added, and the caller has no id for it. The key is
+   * resolved to an id here, and a module without one yet is left to the pending aggregate
+   * save — the same rule every other scope follows.
+   *
+   * The scope key includes the module id, so dragging in one module cannot abort a reorder
+   * still in flight for another.
+   */
+  const commitModuleLessonOrder = useCallback(
+    (moduleKey: string) => {
+      const module = stateRef.current.modules.find((m) => m.key === moduleKey);
+      if (!module || module.id === null) return;
+      const moduleId = module.id;
+
+      commitOrder(
+        `module-lessons:${moduleId}`,
+        module.lessons.map((lesson) => lesson.id),
+        (id, ids, signal) =>
+          courseEditorService.reorderModuleLessons(id, moduleId, ids, signal),
+      );
+    },
+    [commitOrder],
+  );
 
   const mapModule = useCallback(
     (
@@ -820,6 +902,7 @@ export function useCourseEditor(mode: CourseEditorMode) {
     updateModuleLesson,
     deleteModuleLesson,
     reorderModuleLessons,
+    commitModuleLessonOrder,
     setModuleLessonQuiz,
     setModuleQuiz,
 

@@ -12,6 +12,8 @@ vi.mock("../services/course-editor.service", () => ({
     publishCourse: vi.fn(),
     unpublishCourse: vi.fn(),
     reorderModules: vi.fn(),
+    reorderLessons: vi.fn(),
+    reorderModuleLessons: vi.fn(),
     uploadCourseImage: vi.fn(),
   },
 }));
@@ -76,6 +78,9 @@ describe("committing a module order", () => {
     await waitFor(() => expect(service.reorderModules).toHaveBeenCalledTimes(1));
     expect(service.reorderModules).toHaveBeenCalledWith(7, [3, 1, 2], expect.any(AbortSignal));
     expect(service.updateCourse).not.toHaveBeenCalled();
+    // A module drag is a module drag. Neither lesson scope is involved.
+    expect(service.reorderLessons).not.toHaveBeenCalled();
+    expect(service.reorderModuleLessons).not.toHaveBeenCalled();
   });
 
   it("does not touch the network while the drag is still moving", async () => {
@@ -315,5 +320,116 @@ describe("overlapping saves", () => {
     });
 
     expect(result.current.state.title).toBe("fresh");
+  });
+});
+
+/**
+ * The other half of the course: everything that is not an order.
+ *
+ * Ordering has three commands of its own; every other edit still travels as the whole
+ * aggregate, and this is where that is pinned down. Two things matter for each — that the
+ * save went out at all, and that what came back is what the editor then holds. The second
+ * is the one that quietly breaks: an editor that keeps its optimistic copy after a
+ * successful save shows the instructor values the server never stored, ids included.
+ */
+describe("aggregate edits to a published course", () => {
+  function published(overrides: Partial<CourseEditorState> = {}): CourseEditorState {
+    return { ...courseState([A, B, C]), ...overrides };
+  }
+
+  async function saveAndReadBack(
+    mutate: (editor: ReturnType<typeof useCourseEditor>) => void,
+    serverAnswer: CourseEditorState,
+  ) {
+    const { result } = await loadedEditor();
+    service.updateCourse.mockResolvedValue(serverAnswer);
+
+    await act(async () => {
+      mutate(result.current);
+    });
+    await waitFor(() => expect(service.updateCourse).toHaveBeenCalledTimes(1));
+    return result;
+  }
+
+  it("saves a metadata change through the aggregate, not through an order command", async () => {
+    const result = await saveAndReadBack(
+      (editor) => editor.saveAggregate(),
+      published({ title: "عنوان محفوظ" }),
+    );
+
+    expect(service.updateCourse).toHaveBeenCalledWith(7, expect.objectContaining({ id: 7 }));
+    expect(service.reorderModules).not.toHaveBeenCalled();
+    expect(service.reorderLessons).not.toHaveBeenCalled();
+    expect(service.reorderModuleLessons).not.toHaveBeenCalled();
+  });
+
+  it("adopts the server's course after a save rather than keeping its own copy", async () => {
+    // The server normalises: it trims the title, settles the price, and — the part that
+    // matters most — assigns real ids to anything that was created.
+    const result = await saveAndReadBack(
+      (editor) => {
+        editor.setTitle("  عنوان غير مشذب  ");
+        editor.saveAggregate();
+      },
+      published({
+        title: "عنوان مشذب",
+        accessType: "PURCHASE",
+        purchasePrice: 199.99,
+        hasUpdatesSincePublish: true,
+      }),
+    );
+
+    await waitFor(() => expect(result.current.state.title).toBe("عنوان مشذب"));
+    expect(result.current.state.purchasePrice).toBe(199.99);
+    expect(result.current.state.accessType).toBe("PURCHASE");
+  });
+
+  it("keeps the course published, and adopts the update flag the server derived", async () => {
+    const result = await saveAndReadBack(
+      (editor) => editor.saveAggregate(),
+      published({ hasUpdatesSincePublish: true }),
+    );
+
+    await waitFor(() => expect(result.current.state.hasUpdatesSincePublish).toBe(true));
+    expect(result.current.state.status).toBe("PUBLISHED");
+    // The flag is the server's to decide; the editor never computes one of its own.
+    expect(service.publishCourse).not.toHaveBeenCalled();
+  });
+
+  it("marks the editor clean once the save lands", async () => {
+    const { result } = await loadedEditor();
+    service.updateCourse.mockResolvedValue(published());
+
+    act(() => result.current.setTitle("عنوان جديد"));
+    expect(result.current.isDirty).toBe(true);
+
+    await act(async () => {
+      result.current.saveAggregate();
+    });
+
+    await waitFor(() => expect(result.current.isDirty).toBe(false));
+  });
+
+  it("leaves the editor dirty when the save fails, rather than looking saved", async () => {
+    const { result } = await loadedEditor();
+    service.updateCourse.mockRejectedValue(new Error("rejected"));
+
+    act(() => result.current.setTitle("عنوان جديد"));
+    await act(async () => {
+      result.current.saveAggregate();
+    });
+
+    await waitFor(() => expect(result.current.errorMessage).not.toBeNull());
+    expect(result.current.isDirty).toBe(true);
+  });
+
+  it("does not persist a keystroke", async () => {
+    const { result } = await loadedEditor();
+
+    act(() => result.current.setTitle("ع"));
+    act(() => result.current.setTitle("عن"));
+
+    expect(service.updateCourse).not.toHaveBeenCalled();
+    expect(result.current.isDirty).toBe(true);
   });
 });

@@ -60,8 +60,25 @@ vi.mock("motion/react", async () => {
   };
 });
 
-function moduleState(id: number, title: string): CourseModuleEditorState {
-  return { key: `m${id}`, id, title, description: "", lessons: [], quiz: null };
+function lessonState(id: number, title: string) {
+  return {
+    key: `l${id}`,
+    id,
+    title,
+    summary: "",
+    description: "",
+    videoUrl: "https://youtu.be/x",
+    videoThumbnailUrl: null,
+    quiz: null,
+  };
+}
+
+function moduleState(
+  id: number,
+  title: string,
+  lessons: ReturnType<typeof lessonState>[] = [],
+): CourseModuleEditorState {
+  return { key: `m${id}`, id, title, description: "", lessons, quiz: null };
 }
 
 const MODULES = [moduleState(1, "مقدمة"), moduleState(2, "أساسيات"), moduleState(3, "متقدم")];
@@ -163,5 +180,71 @@ describe("editing modules of a published course", () => {
     expect(props.onAddModule).toHaveBeenCalledWith(
       expect.objectContaining({ title: "وحدة جديدة" }),
     );
+  });
+});
+
+/**
+ * The seam the whole defect lived in.
+ *
+ * Dragging a lesson inside a module used to reach `onReorderModuleLessonsCommit`, which
+ * every consumer wired to the editor's *module*-order commit — so the lesson order was
+ * never persisted, and where the module count differed from the lesson count the drag
+ * failed outright. The callback carries the module's key now — but TypeScript will not
+ * catch the old mistake for us, because a `() => void` is assignable wherever a
+ * `(moduleKey: string) => void` is wanted. These tests are the guard, and the reason they
+ * assert the argument rather than merely the call count.
+ */
+describe("dragging a lesson inside a module", () => {
+  const WITH_LESSONS = [
+    moduleState(1, "مقدمة", [lessonState(11, "الدرس الأول"), lessonState(12, "الدرس الثاني")]),
+    moduleState(2, "أساسيات", [lessonState(21, "درس آخر")]),
+  ];
+
+  async function renderExpanded(moduleIndex: number) {
+    const user = userEvent.setup();
+    const props = renderSection({ variant: "tabs", modules: WITH_LESSONS });
+
+    const toggles = screen.getAllByRole("button", { name: "عرض دروس الوحدة" });
+    await user.click(toggles[moduleIndex]);
+    return props;
+  }
+
+  it("commits the lesson order for the module the lesson belongs to", async () => {
+    const props = await renderExpanded(0);
+
+    const lessonRows = items.filter((item) =>
+      WITH_LESSONS[0].lessons.includes(item.value as (typeof WITH_LESSONS)[0]["lessons"][number]),
+    );
+    expect(lessonRows).toHaveLength(2);
+
+    lessonRows[0].onDragEnd?.();
+
+    expect(props.onReorderModuleLessonsCommit).toHaveBeenCalledTimes(1);
+    expect(props.onReorderModuleLessonsCommit).toHaveBeenCalledWith("m1");
+  });
+
+  it("names the second module when the drag happened there", async () => {
+    const props = await renderExpanded(1);
+
+    const lessonRows = items.filter((item) =>
+      WITH_LESSONS[1].lessons.includes(item.value as (typeof WITH_LESSONS)[1]["lessons"][number]),
+    );
+    expect(lessonRows).toHaveLength(1);
+
+    lessonRows[0].onDragEnd?.();
+
+    expect(props.onReorderModuleLessonsCommit).toHaveBeenCalledWith("m2");
+  });
+
+  it("never reaches the module-order commit", async () => {
+    const props = await renderExpanded(0);
+
+    const lessonRows = items.filter((item) =>
+      WITH_LESSONS[0].lessons.includes(item.value as (typeof WITH_LESSONS)[0]["lessons"][number]),
+    );
+    lessonRows[0].onDragEnd?.();
+
+    // The regression, stated directly: a lesson drag must not persist a module order.
+    expect(props.onReorderModulesCommit).not.toHaveBeenCalled();
   });
 });

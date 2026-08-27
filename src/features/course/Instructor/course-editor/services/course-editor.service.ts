@@ -75,6 +75,44 @@ export const courseEditorService = {
     return mapInstructorCourseResponseToEditorState(unwrap(response));
   },
 
+  /**
+   * Persist the root lesson order of a flat course, and nothing else.
+   *
+   * The lesson-scope twin of `reorderModules`, and separate from it for the same reason
+   * the endpoints are separate: these are two different sibling collections, and a drag in
+   * one must never be able to rewrite the other.
+   */
+  async reorderLessons(
+    courseId: number,
+    lessonIds: number[],
+    signal?: AbortSignal,
+  ): Promise<CourseEditorState> {
+    const response = await api.reorderCourseLessonsRequest(courseId, { lessonIds }, signal);
+    return mapInstructorCourseResponseToEditorState(unwrap(response));
+  },
+
+  /**
+   * Persist the lesson order inside one module, and nothing else.
+   *
+   * `moduleId` is required rather than optional: a nested reorder that has lost track of
+   * which module it belongs to has nothing sensible to fall back on, and the wiring bug
+   * this replaces is what falling back looked like.
+   */
+  async reorderModuleLessons(
+    courseId: number,
+    moduleId: number,
+    lessonIds: number[],
+    signal?: AbortSignal,
+  ): Promise<CourseEditorState> {
+    const response = await api.reorderModuleLessonsRequest(
+      courseId,
+      moduleId,
+      { lessonIds },
+      signal,
+    );
+    return mapInstructorCourseResponseToEditorState(unwrap(response));
+  },
+
   async uploadCourseImage(file: File): Promise<string> {
     return unwrap(await api.uploadFileRequest(file)).url;
   },

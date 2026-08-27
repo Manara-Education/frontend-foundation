@@ -218,7 +218,7 @@ export function CourseEditorWizard({
                       onSaveModuleLesson={saveModuleLesson}
                       onDeleteModuleLesson={editor.deleteModuleLesson}
                       onReorderModuleLessons={editor.reorderModuleLessons}
-                      onReorderModuleLessonsCommit={editor.commitModuleOrder}
+                      onReorderModuleLessonsCommit={editor.commitModuleLessonOrder}
                     />
                   </motion.div>
                 )}
