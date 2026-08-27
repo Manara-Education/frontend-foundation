@@ -13,8 +13,9 @@ export function toCourseView(dto: CourseViewDto): CourseView {
     status: dto.status,
     category: dto.category,
     duration: dto.duration,
-    // A backend that predates the field sends nothing, and "nothing" must read as "no
-    // updates" — a badge on every course would be worse than a badge on none.
-    hasUpdatesSincePublish: dto.hasUpdatesSincePublish === true,
+    // Per enrolment, from the server. A backend that predates the field sends nothing, and
+    // "nothing" must read as "no updates" — a badge on every course would be worse than a
+    // badge on none.
+    hasUpdatesSinceEnrollment: dto.hasUpdatesSinceEnrollment === true,
   };
 }

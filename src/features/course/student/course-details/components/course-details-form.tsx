@@ -99,6 +99,8 @@ export function CourseDetailsForm({
             modules={courseData.modules}
             structure={courseData.structure}
             finalQuiz={courseData.finalQuiz}
+            finalQuizChange={courseData.finalQuizChange}
+            removedContent={courseData.removedContent}
             onLessonClick={onLessonClick}
             onProgressionChanged={onProgressionChanged}
           />

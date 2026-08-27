@@ -25,6 +25,9 @@ export type {
 export type {
   CheckoutRequest,
   CheckoutResponse,
+  ContentChangeResponse,
+  ContentChangeState,
+  ContentEntityType,
   CourseAccessResponse,
   CourseDetailsInfo,
   CourseDetailsInstructorInfo,
@@ -45,6 +48,7 @@ export type {
   LessonOrderRequest,
   ModuleOrderRequest,
   PaymentMethodRequest,
+  RemovedContentResponse,
   SubscriptionPlanRequest,
   SubscriptionPlanResponse,
 } from "./courses.types";

@@ -2,7 +2,10 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { BookOpen, ChevronDown, Layers } from "lucide-react";
 import { FONT, PRIMARY, SUCCESS } from "../formatters/course-details.formatter";
-import type { CurriculumModule, Lesson } from "../types/course-details.types";
+import type { ContentChange, CurriculumModule, Lesson } from "../types/course-details.types";
+import { UNCHANGED } from "../types/course-details.types";
+import type { RemovedContentResponse } from "@/shared/courses";
+import { RemovedContentNotice } from "./removed-content-notice";
 import type { QuizView } from "@/features/quiz/student/quiz-player";
 import { ExamItem } from "./exam-item";
 import { ExamPanel } from "./exam-panel";
@@ -15,6 +18,10 @@ interface CurriculumSectionProps {
   modules: CurriculumModule[];
   structure: "FLAT" | "MODULES";
   finalQuiz: QuizView | null;
+  /** Whether the final exam is new or updated since the reader enrolled. */
+  finalQuizChange?: ContentChange;
+  /** Content that was in the course when the reader enrolled and is not in it now. */
+  removedContent?: RemovedContentResponse[];
   onLessonClick?: (id: number) => void;
   onProgressionChanged: () => void;
 }
@@ -25,6 +32,8 @@ export function CurriculumSection({
   modules,
   structure,
   finalQuiz,
+  finalQuizChange = UNCHANGED,
+  removedContent = [],
   onLessonClick,
   onProgressionChanged,
 }: CurriculumSectionProps) {
@@ -97,6 +106,9 @@ export function CurriculumSection({
         </div>
       </div>
 
+      {/* Losses first, before the list they are missing from. */}
+      <RemovedContentNotice items={removedContent} />
+
       {isModules ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {modules.map((mod, i) => (
@@ -168,6 +180,7 @@ export function CurriculumSection({
         <div style={{ display: "flex", flexDirection: "column", marginTop: 10 }}>
           <ExamItem
             quiz={finalQuiz}
+            change={finalQuizChange}
             index={0}
             isOpen={openExamQuizId === finalQuiz.id}
             onToggle={() => toggleExam(finalQuiz.id)}
