@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronDown, Layers, Lock } from "lucide-react";
+import { CourseUpdatedBadge } from "@/features/course/components/course-updated-badge";
 import { FONT, PRIMARY, SUCCESS } from "../formatters/course-details.formatter";
 import type { CurriculumModule } from "../types/course-details.types";
 import { ExamItem } from "./exam-item";
@@ -92,15 +93,30 @@ export function ModuleGroupCard({
           >
             {module.title}
           </div>
-          <div style={{ fontFamily: FONT, fontSize: 11, color: "#9BA3C4", marginTop: 2 }}>
-            {completed}/{total} درس ·{" "}
-            {module.locked
-              ? "مقفلة"
-              : completed === total
-              ? "مكتملة"
-              : hasCurrent
-              ? "جارية"
-              : "لم تبدأ"}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginTop: 2,
+              flexWrap: "wrap",
+            }}
+          >
+            <span style={{ fontFamily: FONT, fontSize: 11, color: "#9BA3C4" }}>
+              {completed}/{total} درس ·{" "}
+              {module.locked
+                ? "مقفلة"
+                : completed === total
+                ? "مكتملة"
+                : hasCurrent
+                ? "جارية"
+                : "لم تبدأ"}
+            </span>
+            {/* The module's own verdict only — its title and description. A module whose
+                third lesson changed is not itself changed, and lighting the parent as well
+                is how a curriculum ends up with every row badged and none of them meaning
+                anything. The lesson says it, on its own row, when the section is opened. */}
+            <CourseUpdatedBadge state={module.change.state} summary={module.change.summary} />
           </div>
         </div>
 
@@ -152,6 +168,7 @@ export function ModuleGroupCard({
                 <>
                   <ExamItem
                     quiz={module.quiz}
+                    change={module.quizChange}
                     index={module.lessons.length}
                     isOpen={openExamQuizId === module.quiz.id}
                     onToggle={() => onToggleExam(module.quiz!.id)}

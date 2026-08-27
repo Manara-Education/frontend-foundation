@@ -1,3 +1,4 @@
+import type { ContentChange } from "../types/course-details.types";
 import {
   CheckCircle2, ClipboardList, Play, PlayCircle, Lock,
 } from "lucide-react";
@@ -117,4 +118,22 @@ export function formatAccessEndDate(iso: string | null): string {
 export function isCheckoutValid(state: { name: string }, isFree: boolean): boolean {
   if (isFree) return true;
   return state.name.trim().length > 0;
+}
+
+/**
+ * The louder of two verdicts about one curriculum row.
+ *
+ * A lesson and the quiz hanging off it each carry their own state, and a row that showed
+ * both would be two badges wide in a list that is already dense. So the row shows one, and
+ * this decides which: `NEW` outranks `UPDATED`, and a tie keeps the first — which is the
+ * lesson's own, because "this lesson changed" is the more useful thing to read when both
+ * did.
+ *
+ * The summary travels with the verdict that won, so a row lit by its quiz explains itself
+ * as "تم تحديث الاختبار القصير" rather than claiming the video moved.
+ */
+export function louderChange(first: ContentChange, second: ContentChange): ContentChange {
+  const rank = (change: ContentChange) =>
+    change.state === "NEW" ? 2 : change.state === "UPDATED" ? 1 : 0;
+  return rank(second) > rank(first) ? second : first;
 }

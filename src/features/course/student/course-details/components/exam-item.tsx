@@ -2,6 +2,9 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { ChevronDown } from "lucide-react";
 import type { QuizView } from "@/features/quiz/student/quiz-player";
+import { CourseUpdatedBadge } from "@/features/course/components/course-updated-badge";
+import type { ContentChange } from "../types/course-details.types";
+import { UNCHANGED } from "../types/course-details.types";
 import {
   EXAM_ICON,
   FONT,
@@ -17,6 +20,8 @@ interface ExamItemProps {
   index: number;
   isOpen: boolean;
   onToggle: () => void;
+  /** Whether this exam is new or updated since the reader enrolled. */
+  change?: ContentChange;
 }
 
 /**
@@ -26,7 +31,7 @@ interface ExamItemProps {
  * so rather than invent a card for them this reuses `LessonItem`'s exact layout, spacing
  * and status palette — an exam reads as one more row of the same list.
  */
-export function ExamItem({ quiz, index, isOpen, onToggle }: ExamItemProps) {
+export function ExamItem({ quiz, index, isOpen, onToggle, change = UNCHANGED }: ExamItemProps) {
   const [hovered, setHovered] = useState(false);
   const status = toExamStatus(quiz);
   const cfg = LESSON_STATUS_CONFIG[status];
@@ -91,7 +96,9 @@ export function ExamItem({ quiz, index, isOpen, onToggle }: ExamItemProps) {
         >
           {quiz.title}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
+        <div
+          style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2, flexWrap: "wrap" }}
+        >
           <span
             style={{
               fontFamily: FONT,
@@ -104,6 +111,9 @@ export function ExamItem({ quiz, index, isOpen, onToggle }: ExamItemProps) {
           >
             {formatExamStatusLabel(quiz)}
           </span>
+          {/* An exam a learner has already sat and passed can still have had its questions
+              rewritten under them, which is exactly when they need telling. */}
+          <CourseUpdatedBadge state={change.state} summary={change.summary} />
         </div>
       </div>
 

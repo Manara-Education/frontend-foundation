@@ -112,7 +112,7 @@ export function CourseCard({ course, index, onCourseClick }: CourseCardProps) {
             </span>
           </div>
 
-          {course.hasUpdatesSincePublish && <CourseUpdatedBadge tone="solid" />}
+          {course.hasUpdatesSinceEnrollment && <CourseUpdatedBadge tone="solid" />}
         </div>
 
         {/* Completed checkmark overlay */}

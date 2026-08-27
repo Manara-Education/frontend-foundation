@@ -40,7 +40,10 @@ export function HeroSection({ course }: { course: CourseDetailData }) {
             padding: "24px 24px 20px",
           }}
         >
-          {course.hasUpdatesSincePublish && (
+          {/* The reader's own answer, not the instructor's. Somebody who enrolled after
+              the last edit bought the version that already contained it, and is shown no
+              badge at all. */}
+          {course.hasUpdatesSinceEnrollment && (
             <div style={{ marginBottom: 10 }}>
               <CourseUpdatedBadge tone="solid" />
             </div>
