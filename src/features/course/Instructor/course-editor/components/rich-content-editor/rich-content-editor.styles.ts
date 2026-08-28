@@ -116,7 +116,13 @@ export const RICH_EDITOR_STYLES = `
     max-height: 520px;
     overflow-y: auto;
     font-family: 'Cairo', sans-serif;
-    font-size: 15px;
+    /*
+      The reading sizes, matching TEXT_SIZE_VALUES.NORMAL and the student stylesheet. This surface
+      is what an author writes into and the only preview most of them will look at, so a size that
+      drifts from the student renderer's turns the editor into a rough approximation of the lesson
+      rather than a view of it.
+    */
+    font-size: 17px;
     line-height: 1.9;
     color: #1F2937;
   }
@@ -136,9 +142,10 @@ export const RICH_EDITOR_STYLES = `
     margin-bottom: 0;
   }
 
-  .mrce-surface h1 { font-size: 24px; font-weight: 700; line-height: 1.5; color: #1E2340; }
-  .mrce-surface h2 { font-size: 20px; font-weight: 700; line-height: 1.5; color: #1E2340; }
-  .mrce-surface h3 { font-size: 17px; font-weight: 700; line-height: 1.5; color: #1E2340; }
+  /* The three levels of HEADING_SIZE_VALUES, for the same reason as the body size above. */
+  .mrce-surface h1 { font-size: 30px; font-weight: 700; line-height: 1.4; color: #1E2340; }
+  .mrce-surface h2 { font-size: 24px; font-weight: 700; line-height: 1.4; color: #1E2340; }
+  .mrce-surface h3 { font-size: 20px; font-weight: 700; line-height: 1.4; color: #1E2340; }
 
   .mrce-surface ul,
   .mrce-surface ol {
@@ -146,7 +153,7 @@ export const RICH_EDITOR_STYLES = `
   }
 
   .mrce-surface blockquote {
-    border-inline-start: 3px solid rgba(78,91,146,0.35);
+    border-inline-start: 4px solid rgba(78,91,146,0.4);
     padding-inline-start: 14px;
     color: #4B5563;
   }

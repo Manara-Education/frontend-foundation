@@ -29,6 +29,11 @@ describe("a legacy video survives a round trip through the editor", () => {
       title: "درس",
       summary: null,
       description: null,
+      // A legacy lesson is a video lesson. Both fields became required on the response when a
+      // lesson gained the option of being an article, and a fixture that omits them describes a
+      // shape the server can no longer send.
+      contentType: "VIDEO",
+      richContent: null,
       videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
       videoProvider: "YOUTUBE",
       externalVideoId: "dQw4w9WgXcQ",

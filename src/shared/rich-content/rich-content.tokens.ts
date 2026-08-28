@@ -45,11 +45,18 @@ export const TEXT_COLOR_VALUES: Record<RichTextColor, string> = {
   DANGER: "#B91C1C",
 };
 
-/** Body text sizes, in px. Headings size themselves from their level instead. */
+/**
+ * Body text sizes, in px. Headings size themselves from their level instead.
+ *
+ * `NORMAL` is a lesson's reading size, and it is sized for reading rather than for a form field:
+ * an article set at interface size is legible and still tiring, which is a different failure from
+ * being too small to read. Paired with the measure the lesson page holds the body to, 17px lands
+ * at roughly the line length a reader can track without losing their place.
+ */
 export const TEXT_SIZE_VALUES: Record<RichTextSize, number> = {
-  SMALL: 13,
-  NORMAL: 15,
-  LARGE: 17,
+  SMALL: 14,
+  NORMAL: 17,
+  LARGE: 19,
 };
 
 /** Line spacing, unitless so it scales with the text it is applied to. */
@@ -74,11 +81,19 @@ export const SPACING_VALUES: Record<RichSpacing, number> = {
   ROOMY: 28,
 };
 
-/** Heading sizes, in px, by level. */
+/**
+ * Heading sizes, in px, by level.
+ *
+ * The steps between them, and between level 3 and body text, are what make a lesson skimmable.
+ * A heading only one or two px above the paragraph under it is a heading a reader has to stop and
+ * work out, so each level is a clear jump: 30 / 24 / 20 over a 17px body. Level 3 stays closest to
+ * the body and leans on its weight and darker colour to separate, which is the most a third-level
+ * heading should need to do.
+ */
 export const HEADING_SIZE_VALUES: Record<1 | 2 | 3, number> = {
-  1: 24,
-  2: 20,
-  3: 17,
+  1: 30,
+  2: 24,
+  3: 20,
 };
 
 /**
