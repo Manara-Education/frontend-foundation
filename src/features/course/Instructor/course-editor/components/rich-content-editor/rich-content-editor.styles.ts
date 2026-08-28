@@ -7,6 +7,8 @@
  * renderer uses, applied by the schema's `renderHTML`, so what an instructor sees while typing
  * matches what is published.
  */
+import { richListStyles } from "@/shared/rich-content/components/rich-list.styles";
+
 export const RICH_EDITOR_STYLES = `
   .mrce {
     border-radius: 13px;
@@ -147,10 +149,15 @@ export const RICH_EDITOR_STYLES = `
   .mrce-surface h2 { font-size: 24px; font-weight: 700; line-height: 1.4; color: #1E2340; }
   .mrce-surface h3 { font-size: 20px; font-weight: 700; line-height: 1.4; color: #1E2340; }
 
-  .mrce-surface ul,
-  .mrce-surface ol {
-    padding-inline-start: 24px;
-  }
+  /*
+    Lists, from the same layer the student renderer uses.
+
+    Shared rather than restated because these two surfaces disagreeing is the bug this file's fix
+    is for: the app's CSS reset removes list markers everywhere, and a sheet that forgot to put
+    them back turned an authored bullet list into indented plain text. One definition, both
+    surfaces, so a marker cannot come back on one of them alone.
+  */
+  ${richListStyles(".mrce-surface")}
 
   .mrce-surface blockquote {
     border-inline-start: 4px solid rgba(78,91,146,0.4);

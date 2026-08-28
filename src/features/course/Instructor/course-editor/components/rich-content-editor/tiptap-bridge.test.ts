@@ -63,6 +63,52 @@ describe("toRichDocument", () => {
     });
   });
 
+  it("keeps the text of a nested list item, as a sibling", () => {
+    // TipTap binds Tab to "sink list item", so an instructor can indent while writing, and Manara's
+    // stored document has no nested list to put the result in. Losing the indentation is the price
+    // of a schema that never offered it; losing the words would be losing their work.
+    const result = toRichDocument({
+      type: "doc",
+      content: [
+        {
+          type: "bulletList",
+          content: [
+            {
+              type: "listItem",
+              content: [
+                { type: "paragraph", content: [{ type: "text", text: "رئيسي" }] },
+                {
+                  type: "bulletList",
+                  content: [
+                    {
+                      type: "listItem",
+                      content: [{ type: "paragraph", content: [{ type: "text", text: "متداخل" }] }],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              type: "listItem",
+              content: [{ type: "paragraph", content: [{ type: "text", text: "تالٍ" }] }],
+            },
+          ],
+        },
+      ],
+    });
+
+    const block = result.blocks[0];
+    expect(block.type).toBe("bulletList");
+    if (block.type === "bulletList") {
+      // Reading order: an item's children follow it rather than collecting at the end.
+      expect(block.items.map((item) => (item.content[0] as { text: string }).text)).toEqual([
+        "رئيسي",
+        "متداخل",
+        "تالٍ",
+      ]);
+    }
+  });
+
   it("drops anything TipTap can express that Manara's schema cannot", () => {
     const result = toRichDocument({
       type: "doc",
