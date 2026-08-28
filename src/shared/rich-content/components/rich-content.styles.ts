@@ -41,8 +41,36 @@ export const RICH_CONTENT_STYLES = `
   .mrc-h {
     margin: 0;
     font-weight: 700;
-    line-height: 1.5;
+    line-height: 1.4;
     color: #1E2340;
+    /* A long Arabic heading breaks between words rather than mid-word, however narrow it gets. */
+    overflow-wrap: break-word;
+  }
+
+  /*
+    Space above a heading, which is the half of heading spacing an author has no way to ask for.
+
+    The authored vocabulary is a bottom margin and nothing else, deliberately — a block can push
+    the next one down and can do nothing else. That leaves the gap *above* a heading unowned, and
+    unowned it comes out as whatever the previous paragraph's bottom margin happened to be, which
+    is how a section title ends up sitting on the paragraph it follows. These rules give a heading
+    room to start a section, scaled to how big a break the level implies, and they never fight the
+    author: only the first block's own margin-bottom is theirs, and this touches margin-top.
+
+    Scoped to a heading with something before it, so a lesson never opens with a blank band.
+  */
+  .mrc > * + .mrc-h1 { margin-block-start: 40px; }
+  .mrc > * + .mrc-h2 { margin-block-start: 32px; }
+  .mrc > * + .mrc-h3 { margin-block-start: 24px; }
+
+  /*
+    Emphasis worth seeing. Cairo is loaded across its full weight range, so bold is set explicitly
+    rather than left to the browser's synthetic bold, and it darkens a shade — at 17px against
+    body grey, weight alone is a weaker signal than it looks in a specimen.
+  */
+  .mrc strong {
+    font-weight: 700;
+    color: #111827;
   }
 
   .mrc-list {
@@ -51,33 +79,46 @@ export const RICH_CONTENT_STYLES = `
       Logical padding, so the markers sit on the reading side: the right in Arabic, the left in
       English. padding-left would put Arabic bullets on the wrong side of their text.
     */
-    padding-inline-start: 24px;
-    font-size: 15px;
-    line-height: 1.95;
+    padding-inline-start: 26px;
+    /* Tracks the body size: a list is the lesson's prose, not a caption under it. */
+    font-size: 17px;
+    line-height: 1.9;
   }
 
   .mrc-li {
-    margin-bottom: 6px;
+    /* Enough that the items read as separate points rather than as one wrapped sentence. */
+    margin-bottom: 10px;
+    padding-inline-start: 4px;
   }
 
   .mrc-li:last-child {
     margin-bottom: 0;
   }
 
+  /*
+    A quote, drawn as a callout.
+
+    Every edge here is logical rather than left/right, which is what makes the accent land on the
+    reading side in both directions: on the right of Arabic, on the left of English. A "border-left"
+    would put the rule on the far side of an Arabic quote, where it reads as a stray line rather
+    than as an accent.
+  */
   .mrc-quote {
     margin: 0;
-    /* Logical again: the rule is on the reading side in both directions. */
-    border-inline-start: 3px solid rgba(78,91,146,0.35);
-    padding-inline-start: 14px;
-    font-size: 15px;
-    line-height: 1.95;
+    border-inline-start: 4px solid rgba(78,91,146,0.4);
+    border-start-end-radius: 12px;
+    border-end-end-radius: 12px;
+    background: rgba(78,91,146,0.045);
+    padding: 16px 20px;
+    font-size: 17px;
+    line-height: 1.9;
     color: #4B5563;
   }
 
   .mrc-divider {
     border: none;
     border-top: 1px solid #ECECEC;
-    margin: 20px 0;
+    margin: 28px 0;
   }
 
   .mrc-link {
@@ -134,6 +175,20 @@ export const RICH_CONTENT_STYLES = `
   }
 
   @media (max-width: 640px) {
+    /*
+      Tighter vertical rhythm on a phone, where a 40px band above a heading is a meaningful
+      fraction of the screen rather than a pause in it. Type sizes are left alone: 17px is the
+      size a lesson should be read at on any screen, and shrinking body text on the smallest
+      screen is how a phone ends up harder to read than a laptop.
+    */
+    .mrc > * + .mrc-h1 { margin-block-start: 30px; }
+    .mrc > * + .mrc-h2 { margin-block-start: 24px; }
+    .mrc > * + .mrc-h3 { margin-block-start: 20px; }
+
+    .mrc-quote {
+      padding: 14px 16px;
+    }
+
     .mrc-cta-row {
       /* A button is easier to hit at full width on a phone than aligned to one side. */
       justify-content: stretch !important;

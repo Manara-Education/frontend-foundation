@@ -18,21 +18,25 @@ interface LessonRichContentSectionProps {
  *
  * The card matches `LessonContentSection`, its neighbour on the same page, so a rich-content lesson
  * reads as part of Manara rather than as a document pasted into it.
+ *
+ * <h2>Two widths, not one</h2>
+ * The card fills the reading surface it is placed in — up to `LP_SURFACE_MAX` — and the article
+ * inside it stops at `LP_READING_MAX`. That is the difference between a document and a page of
+ * text: the surface is wide enough for a callout or a button to have presence, the measure is
+ * short enough that the eye finds the start of the next line. Both are caps rather than fits, so
+ * a one-line lesson and a ten-screen lesson draw the same card.
  */
 export function LessonRichContentSection({ document }: LessonRichContentSectionProps) {
   return (
     <motion.article
+      className="lp-reading-card"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.05 }}
       style={{
-        borderRadius: 20,
         background: "#FFFFFF",
         border: "1.5px solid #ECECEC",
-        // Generous horizontal padding, and a measure the eye can follow: a lesson is read, and full
-        // browser width is not a readable line length.
-        padding: "26px 26px 28px",
-        marginBottom: 16,
+        marginBottom: 20,
         boxShadow: "0 2px 12px rgba(78,91,146,0.04)",
         // Both together are what keep a long word or a pasted URL from widening the page rather
         // than wrapping inside the card.
@@ -41,9 +45,10 @@ export function LessonRichContentSection({ document }: LessonRichContentSectionP
       }}
     >
       {document.blocks.length > 0 ? (
-        <div style={{ maxWidth: "72ch", marginInline: "auto" }}>
-          <RichContentView document={document} dir="rtl" />
-        </div>
+        // The measure travels as a class rather than an inline width, so it stays next to the
+        // surface and page widths it is proportioned against instead of being a lone number
+        // buried in a component.
+        <RichContentView document={document} dir="rtl" className="lp-reading-column" />
       ) : (
         // Reachable only for a lesson whose document could not be read — the server refuses to
         // store an empty one. Saying so beats an empty card that looks like a failed render.

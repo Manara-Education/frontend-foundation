@@ -86,7 +86,10 @@ function RichBlockView({ block }: { block: RichBlock }) {
       const Tag = `h${block.level}` as keyof JSX.IntrinsicElements;
       return (
         <Tag
-          className="mrc-h"
+          // The level travels as a class as well as an element, so the stylesheet can give a
+          // heading the space above it that the authored token vocabulary — bottom margin only —
+          // has no way to express, scaled to the level.
+          className={`mrc-h mrc-h${block.level}`}
           style={{
             textAlign: alignmentToCss(block.align),
             fontSize: HEADING_SIZE_VALUES[block.level],
