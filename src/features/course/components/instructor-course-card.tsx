@@ -7,7 +7,7 @@
  */
 import { useState } from "react";
 import { motion } from "motion/react";
-import { BookOpen, Calendar, CreditCard, RefreshCw, Users } from "lucide-react";
+import { BookOpen, Calendar, CreditCard, Lock, RefreshCw, Users } from "lucide-react";
 import { ImageWithFallback } from "@/shared/components/ImageWithFallback";
 import type { CourseCardModel } from "@/shared/courses";
 import { formatPrice, formatUpdatedAt } from "../formatters/instructor-course-card.formatter";
@@ -34,6 +34,24 @@ const PRICED_BADGE = {
 const FREE_BADGE = {
   background: "rgba(78,91,146,0.06)",
   border: "1px solid rgba(78,91,146,0.12)",
+} as const;
+
+/**
+ * A private course's marker: neutral slate, deliberately not the green of منشورة or the
+ * amber of مسودة.
+ *
+ * Those two are one segment — a course is exactly one of them, and the list's filter pills
+ * narrow by it. Visibility is a second, independent fact, so it must not borrow either
+ * colour: a card reading "منشورة" and "خاصة" side by side is describing a published course
+ * that is off the catalogue, which is precisely the state this feature exists to make
+ * possible, and an instructor has to be able to read both at once.
+ *
+ * Only "خاصة" is drawn. "عامة" is the default every course has and every course had before
+ * this existed; badging it would add a chip to every row on the platform to say nothing.
+ */
+const PRIVATE_BADGE = {
+  background: "rgba(100,116,139,0.09)",
+  border: "1px solid rgba(100,116,139,0.2)",
 } as const;
 
 interface InstructorCourseCardProps {
@@ -149,6 +167,22 @@ export function InstructorCourseCard({ course, delay = 0, onNavigate }: Instruct
                 {isPublished ? "منشورة" : "مسودة"}
               </span>
             </div>
+
+            {/*
+              Visibility, beside publication rather than instead of it. See PRIVATE_BADGE.
+            */}
+            {course.visibility === "PRIVATE" && (
+              <div
+                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1"
+                style={PRIVATE_BADGE}
+                title="لا تظهر في الاستكشاف أو البحث — الطلاب المشتركون فيها يحتفظون بوصولهم"
+              >
+                <Lock size={10} strokeWidth={2.2} style={{ color: "#475569", flexShrink: 0 }} />
+                <span style={{ fontFamily: FONT, fontSize: 11, fontWeight: 600, color: "#475569" }}>
+                  خاصة
+                </span>
+              </div>
+            )}
 
             {/*
               How the course is sold. The three types are mutually exclusive, and each

@@ -40,6 +40,7 @@ function courseState(modules: CourseModuleEditorState[]): CourseEditorState {
     purchasePrice: null,
     subscriptionPlans: [],
     status: "PUBLISHED",
+    visibility: "PUBLIC",
     hasUpdatesSincePublish: false,
     revision: 4,
   };
@@ -208,6 +209,7 @@ describe("the create wizard", () => {
       title: "دورة كاملة الاسم",
       description: "وصف طويل بما يكفي ليتجاوز الحد الأدنى المطلوب",
       status: "PUBLISHED",
+    visibility: "PUBLIC",
     }));
 
     const { result } = renderHook(() => useCourseEditor({ type: "CREATE" }));

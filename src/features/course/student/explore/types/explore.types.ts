@@ -27,7 +27,11 @@ export interface CourseExploreView {
   accessType: CourseAccessType;
   /** Shape of the course's content tree, as the backend reports it. */
   structure: CourseStructure;
-  /** Publication state. The browse endpoint only lists `PUBLISHED` courses. */
+  /**
+   * Publication state. The browse endpoint only lists courses that are `PUBLISHED` *and*
+   * public, so nothing here is ever a draft or a private course — that is decided by the
+   * query behind the endpoint, not by any filtering done on this side.
+   */
   status: CourseStatus;
   studentsCount: number;
   instructorId: number;

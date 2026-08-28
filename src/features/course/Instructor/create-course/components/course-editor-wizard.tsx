@@ -7,6 +7,7 @@ import {
   DollarSign,
   FileText,
   Layers,
+  Lock,
   Sparkles,
 } from "lucide-react";
 import { ErrorOverlay } from "@/shared/components/ErrorOverlay/ErrorOverlay";
@@ -20,6 +21,7 @@ import { ImageUpload } from "@/features/course/Instructor/course-editor/componen
 import { ModuleCurriculumSection } from "@/features/course/Instructor/course-editor/components/module-curriculum-section";
 import { SectionCard } from "@/features/course/Instructor/course-editor/components/section-card";
 import { StructureSection } from "@/features/course/Instructor/course-editor/components/structure-section";
+import { VisibilitySection } from "@/features/course/Instructor/course-editor/components/visibility-section";
 import {
   PurchasePricing,
   SubscriptionPlansSection,
@@ -158,6 +160,24 @@ export function CourseEditorWizard({
           >
             <SectionCard icon={Layers} title="تنظيم المحتوى" subtitle="كيف تريد تنظيم محتوى دورتك؟">
               <StructureSection value={state.structure} onChange={editor.setStructure} />
+            </SectionCard>
+
+            {/*
+              Visibility, offered here at creation and editable afterwards from the course
+              editor's overview tab. One setting, two entry points to the same field — not
+              two controls that could disagree.
+
+              It starts on "عامة", which is the backend's default too: a course an author
+              says nothing about is a course on offer to everyone, exactly as every course
+              on the platform was before this existed.
+            */}
+            <SectionCard
+              icon={Lock}
+              title="ظهور الدورة"
+              subtitle="من يمكنه اكتشاف هذه الدورة؟"
+              delay={0.06}
+            >
+              <VisibilitySection value={state.visibility} onChange={editor.setVisibility} />
             </SectionCard>
           </motion.div>
         )}
