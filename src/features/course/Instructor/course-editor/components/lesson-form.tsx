@@ -1,18 +1,53 @@
-import { useState, useEffect, useRef } from "react";
+import { Suspense, lazy, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { PlayCircle, Link2, AlignLeft, BookOpen, CheckCircle, X } from "lucide-react";
-import type { CourseLessonEditorState, QuizEditorState } from "@/shared/courses";
+import { PlayCircle, Link2, AlignLeft, BookOpen, CheckCircle, FileText, X } from "lucide-react";
+import type {
+  CourseLessonEditorState,
+  LessonContentType,
+  QuizEditorState,
+} from "@/shared/courses";
 import { resolveVideoUrl, type VideoSource } from "@/shared/video";
 import { formatVideoUrlError } from "../formatters/course-editor.formatter";
 import type { LessonDraft } from "../types/course-editor.types";
+import { isRichDocumentEmpty, parseRichDocument } from "@/shared/rich-content";
 import { QuizBuilder } from "./quiz-builder";
 import { VideoPreview } from "./video-preview";
 import { FONT, PRIMARY } from "./editor-theme";
 
+/**
+ * The rich-content editor, fetched only when an instructor actually opens one.
+ *
+ * TipTap and ProseMirror are the largest dependency in the application and they are useful to
+ * exactly one screen in one of its two modes. Loaded eagerly they would be in the bundle of every
+ * instructor who only ever adds video lessons, and — because this form is imported across the
+ * course editor — in a good deal else besides. Students never reach this module at all: the lesson
+ * renderer they use has no dependencies.
+ *
+ * The emptiness check is deliberately *not* imported from here. It is needed on every save,
+ * including a video lesson's, and importing it from the editor's module would pull the editor in
+ * eagerly and undo the split — so it comes from the shared schema, which is where the rule lives
+ * anyway.
+ */
+const RichContentEditor = lazy(() =>
+  import("./rich-content-editor").then((module) => ({ default: module.RichContentEditor })),
+);
+
+/** Whether a stored document has anything a learner could read. */
+function isRichContentEmpty(json: string | null): boolean {
+  return isRichDocumentEmpty(parseRichDocument(json));
+}
+
 interface LessonFormErrors {
   title?: string;
   url?: string;
+  richContent?: string;
 }
+
+/** The two kinds of lesson, as the instructor picks between them. */
+const CONTENT_TYPES: { value: LessonContentType; label: string; hint: string; Icon: typeof PlayCircle }[] = [
+  { value: "VIDEO", label: "فيديو", hint: "درس بمقطع فيديو من يوتيوب أو فيميو", Icon: PlayCircle },
+  { value: "RICH_CONTENT", label: "محتوى", hint: "درس مكتوب بعناوين وقوائم وروابط وأزرار", Icon: FileText },
+];
 
 interface LessonFormProps {
   initial?: CourseLessonEditorState;
@@ -45,6 +80,48 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
   const [errors, setErrors] = useState<LessonFormErrors>({});
   const titleRef = useRef<HTMLInputElement>(null);
 
+  /*
+    The lesson's kind, and the two content branches held side by side.
+
+    Both are kept in state whatever the type is, mirroring what the server does with the two
+    columns: switching to content and back must return the instructor to the video they had, and
+    switching to video and back must return them to the article. Nothing is discarded by a change of
+    type — which is why the confirmation below asks about what will be *shown*, not about what will
+    be lost.
+  */
+  const [contentType, setContentType] = useState<LessonContentType>(initial?.contentType ?? "VIDEO");
+  const [richContent, setRichContent] = useState<string | null>(initial?.richContent ?? null);
+  const [pendingType, setPendingType] = useState<LessonContentType | null>(null);
+
+  const isVideo = contentType === "VIDEO";
+
+  /**
+   * Whether switching away from the current type would leave authored work behind.
+   *
+   * Retained rather than deleted, so this decides whether to *ask*, not whether to keep. An
+   * instructor who has written half an article and clicks "Video" by accident should be stopped;
+   * one who has typed nothing should not be interrupted.
+   */
+  function hasContentFor(type: LessonContentType): boolean {
+    return type === "VIDEO" ? videoUrl.trim() !== "" : !isRichContentEmpty(richContent);
+  }
+
+  function requestTypeChange(next: LessonContentType) {
+    if (next === contentType) return;
+    if (hasContentFor(contentType)) {
+      setPendingType(next);
+      return;
+    }
+    applyTypeChange(next);
+  }
+
+  function applyTypeChange(next: LessonContentType) {
+    setContentType(next);
+    setPendingType(null);
+    // The other branch's error is about a field that is no longer being asked for.
+    setErrors((prev) => ({ ...prev, url: undefined, richContent: undefined }));
+  }
+
   useEffect(() => {
     titleRef.current?.focus();
   }, []);
@@ -55,6 +132,11 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
     answer comes from the same resolver the student player will use on it later.
   */
   useEffect(() => {
+    // A rich-content lesson is not asked for a video, so its retained URL is neither resolved nor
+    // complained about. Without this the form would show a video error for a field it is not
+    // showing.
+    if (!isVideo) return;
+
     const timer = setTimeout(() => {
       const resolution = resolveVideoUrl(videoUrl);
 
@@ -79,16 +161,25 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
       }));
     }, 400);
     return () => clearTimeout(timer);
-  }, [videoUrl, initial?.videoUrl, initial?.videoThumbnailUrl]);
+  }, [videoUrl, isVideo, initial?.videoUrl, initial?.videoThumbnailUrl]);
 
   const handleSave = () => {
     const e: LessonFormErrors = {};
     if (!lessonTitle.trim()) e.title = "يرجى إدخال عنوان الدرس";
 
-    // Re-resolved rather than trusting the debounced state: saving before the timer has fired
-    // would otherwise let an unresolved URL through.
-    const resolution = resolveVideoUrl(videoUrl);
-    if (!resolution.ok) e.url = formatVideoUrlError(resolution.error);
+    // Only the branch this lesson uses is checked. Asking a content lesson for a video URL is the
+    // assumption this whole feature exists to remove, and it would make the retained URL of a
+    // switched lesson block its own save.
+    if (isVideo) {
+      // Re-resolved rather than trusting the debounced state: saving before the timer has fired
+      // would otherwise let an unresolved URL through.
+      const resolution = resolveVideoUrl(videoUrl);
+      if (!resolution.ok) e.url = formatVideoUrlError(resolution.error);
+    } else if (isRichContentEmpty(richContent)) {
+      // The same judgement the server makes, so an empty lesson is refused here rather than after a
+      // round trip. Formatting with no text in it is empty however much of it there is.
+      e.richContent = "يرجى إضافة محتوى للدرس";
+    }
 
     if (Object.keys(e).length > 0) {
       setErrors(e);
@@ -98,8 +189,11 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
     onSave({
       title: lessonTitle.trim(),
       description: description.trim(),
-      // The URL as typed. The server derives the platform from it — the client never sends one.
+      contentType,
+      // Both branches travel; the mapper sends only the one matching the type, and the server keeps
+      // whatever it already had in the other.
       videoUrl: videoUrl.trim(),
+      richContent,
       quiz,
     });
   };
@@ -145,7 +239,7 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
             {initial ? "تعديل الدرس" : "درس جديد"}
           </div>
           <div style={{ fontSize: 12, color: "#9BA3C4", fontFamily: FONT }}>
-            أدخل تفاصيل الدرس وأضف رابط الفيديو
+            {isVideo ? "أدخل تفاصيل الدرس وأضف رابط الفيديو" : "أدخل تفاصيل الدرس واكتب محتواه"}
           </div>
         </div>
         <button
@@ -250,7 +344,125 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
           />
         </div>
 
-        {/* Video URL — any supported platform */}
+
+        {/*
+          Lesson type. An explicit choice, made before the content is authored, because it is what
+          decides which editor is shown — and, on the student's side, whether there is a player at
+          all. Nothing about it is inferred from whether a video URL happens to be filled in.
+        */}
+        <div className="flex flex-col gap-1.5">
+          <label
+            style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: "#1E2340", display: "flex", alignItems: "center", gap: 4 }}
+          >
+            نوع الدرس
+            <span style={{ color: "#D4183D" }}>*</span>
+          </label>
+          <div
+            role="radiogroup"
+            aria-label="نوع الدرس"
+            className="flex gap-2 flex-wrap"
+          >
+            {CONTENT_TYPES.map(({ value, label, hint, Icon }) => {
+              const selected = contentType === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  title={hint}
+                  onClick={() => requestTypeChange(value)}
+                  style={{
+                    flex: "1 1 180px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 9,
+                    minHeight: 52,
+                    padding: "10px 14px",
+                    borderRadius: 13,
+                    cursor: "pointer",
+                    textAlign: "start",
+                    fontFamily: FONT,
+                    background: selected ? "rgba(78,91,146,0.07)" : "#FAFBFD",
+                    border: `1.5px solid ${selected ? PRIMARY : "rgba(78,91,146,0.16)"}`,
+                    boxShadow: selected ? "0 0 0 3px rgba(78,91,146,0.08)" : "none",
+                    transition: "border-color 0.18s, background 0.18s, box-shadow 0.18s",
+                  }}
+                >
+                  <Icon size={17} style={{ color: selected ? PRIMARY : "#9BA3C4", flexShrink: 0 }} />
+                  <span style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                    <span style={{ fontWeight: 700, fontSize: 13.5, color: selected ? PRIMARY : "#1E2340" }}>
+                      {label}
+                    </span>
+                    <span style={{ fontSize: 11, color: "#9BA3C4", lineHeight: 1.5 }}>{hint}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/*
+            Asked before the switch, not after. The content is retained either way — switching back
+            restores it — so this is about not surprising someone who clicked the wrong card, which
+            is why it says the content will be hidden rather than deleted.
+          */}
+          <AnimatePresence>
+            {pendingType && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.15 }}
+                role="alertdialog"
+                aria-label="تأكيد تغيير نوع الدرس"
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "12px 14px",
+                  borderRadius: 13,
+                  background: "rgba(245,158,11,0.07)",
+                  border: "1.5px solid rgba(245,158,11,0.3)",
+                }}
+              >
+                <span style={{ fontFamily: FONT, fontSize: 12.5, color: "#92400E", flex: "1 1 220px", lineHeight: 1.7 }}>
+                  {pendingType === "RICH_CONTENT"
+                    ? "سيتم إخفاء فيديو الدرس واستبداله بالمحتوى المكتوب. يمكنك الرجوع لنوع الفيديو لاحقًا ولن يُفقد الرابط."
+                    : "سيتم إخفاء المحتوى المكتوب واستبداله بالفيديو. يمكنك الرجوع لنوع المحتوى لاحقًا ولن يُفقد ما كتبته."}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => applyTypeChange(pendingType)}
+                  style={{
+                    height: 36, padding: "0 16px", borderRadius: 10, border: "none", cursor: "pointer",
+                    background: PRIMARY, color: "#fff", fontFamily: FONT, fontWeight: 700, fontSize: 12.5,
+                  }}
+                >
+                  متابعة
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPendingType(null)}
+                  style={{
+                    height: 36, padding: "0 16px", borderRadius: 10, cursor: "pointer",
+                    background: "transparent", color: "#717182",
+                    border: "1.5px solid rgba(78,91,146,0.16)", fontFamily: FONT, fontWeight: 600, fontSize: 12.5,
+                  }}
+                >
+                  إلغاء
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/*
+          Exactly one content editor is mounted, chosen by the lesson's type. A branch, not a
+          hidden section: the editor that is not in use is not rendered at all, so there is no
+          disabled video field on a content lesson and no empty editor on a video one.
+        */}
+        {isVideo ? (
         <div className="flex flex-col gap-1.5">
           <label
             style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: "#1E2340", display: "flex", alignItems: "center", gap: 4 }}
@@ -329,6 +541,59 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
           </AnimatePresence>
           <AnimatePresence>{video && !errors.url && <VideoPreview source={video} />}</AnimatePresence>
         </div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <label
+              style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: "#1E2340", display: "flex", alignItems: "center", gap: 4 }}
+            >
+              <FileText size={13} style={{ color: PRIMARY }} />
+              محتوى الدرس
+              <span style={{ color: "#D4183D" }}>*</span>
+            </label>
+            <Suspense
+              fallback={
+                <div
+                  style={{
+                    minHeight: 260,
+                    borderRadius: 13,
+                    border: "1.5px solid rgba(78,91,146,0.16)",
+                    background: "#FAFBFD",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontFamily: FONT,
+                    fontSize: 13,
+                    color: "#9BA3C4",
+                  }}
+                >
+                  جارٍ تحميل المحرر…
+                </div>
+              }
+            >
+              <RichContentEditor
+                value={richContent}
+                invalid={!!errors.richContent}
+                onChange={(json) => {
+                  setRichContent(json);
+                  setErrors((p) => ({ ...p, richContent: undefined }));
+                }}
+              />
+            </Suspense>
+            <AnimatePresence>
+              {errors.richContent && (
+                <motion.p
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.15 }}
+                  style={{ fontFamily: FONT, fontSize: 12, color: "#D4183D" }}
+                >
+                  {errors.richContent}
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
 
       {/* Quiz */}

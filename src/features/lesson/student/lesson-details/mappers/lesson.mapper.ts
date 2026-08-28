@@ -1,4 +1,5 @@
 import { toQuizView } from "@/features/quiz/student/quiz-player";
+import { parseRichDocument } from "@/shared/rich-content";
 import { videoSourceFromResponse } from "@/shared/video";
 import { toLessonStatus } from "../formatters/lesson.formatter";
 import type {
@@ -19,14 +20,21 @@ export function toLessonView(details: LessonDetailsResponse): LessonView {
     title: lesson.title,
     duration: lesson.duration ?? "",
     status: toLessonStatus(lesson),
+    // The server's own answer, defaulted for a response written before the field existed — which
+    // described a video lesson, because at the time every lesson was one.
+    contentType: lesson.contentType ?? "VIDEO",
     // Resolved from the response the server sent: its URL first, with the provider fields as the
     // fallback. A lesson saved before those fields existed resolves from its URL exactly as before.
     video: videoSourceFromResponse(lesson),
+    // Parsed once here so no screen parses JSON of its own, and so an unreadable document costs a
+    // lesson its body rather than costing the learner the page.
+    richContent: parseRichDocument(lesson.richContent),
     description: lesson.description ?? "",
     locked: lesson.locked ?? false,
     quiz: lesson.quiz ? toQuizView(lesson.quiz) : null,
     previousLesson: previous ?? null,
     nextLesson: next ?? null,
+    change: lesson.change ?? null,
   };
 }
 

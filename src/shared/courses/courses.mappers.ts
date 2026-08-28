@@ -9,6 +9,7 @@ import {
   normalizeCourseAccessType,
   normalizeCourseStatus,
   normalizeCourseStructure,
+  normalizeCourseVisibility,
 } from "./courses.enums";
 import type {
   CourseEditorState,
@@ -74,6 +75,7 @@ export function mapCourseResponseToCourseCardModel(dto: CourseResponse): CourseC
     accessType: normalizeCourseAccessType(dto.accessType),
     structure: normalizeCourseStructure(dto.structure),
     status: normalizeCourseStatus(dto.status),
+    visibility: normalizeCourseVisibility(dto.visibility),
     studentsCount: optionalNumber(dto.studentsCount),
     instructorId: dto.instructorId,
     instructorName: optional(dto.instructorName),
@@ -82,6 +84,9 @@ export function mapCourseResponseToCourseCardModel(dto: CourseResponse): CourseC
     // card falls back to the creation date rather than losing the line entirely.
     updatedAt: optional(dto.updatedAt) ?? dto.createdAt,
     subscriptionMinPrice: minSubscriptionPrice(dto.subscriptionPlans),
+    // A backend that predates the field sends nothing, and "nothing" has to read as "no
+    // updates": showing the badge on every course would be worse than showing it on none.
+    hasUpdatesSincePublish: dto.hasUpdatesSincePublish === true,
   };
 }
 
@@ -120,7 +125,11 @@ function mapInstructorLessonResponseToEditorState(
     title: dto.title ?? "",
     summary: dto.summary ?? "",
     description: dto.description ?? "",
+    // A response from before this field existed has no type; that lesson is a video lesson, which
+    // is the same answer the database's own default gives.
+    contentType: dto.contentType ?? "VIDEO",
     videoUrl: dto.videoUrl ?? "",
+    richContent: dto.richContent ?? null,
     videoThumbnailUrl: dto.videoThumbnailUrl ?? null,
     quiz: mapInstructorQuizResponseToEditorState(dto.quiz),
   };
@@ -172,6 +181,9 @@ export function mapInstructorCourseResponseToEditorState(
     purchasePrice: dto.purchasePrice ?? dto.price ?? null,
     subscriptionPlans: (dto.subscriptionPlans ?? []).map(mapSubscriptionPlanResponseToEditorState),
     status: normalizeCourseStatus(dto.status),
+    visibility: normalizeCourseVisibility(dto.visibility),
+    hasUpdatesSincePublish: dto.hasUpdatesSincePublish === true,
+    revision: dto.revision ?? null,
   };
 }
 
@@ -210,7 +222,13 @@ function mapLessonEditorStateToRequest(
     title: state.title,
     summary: state.summary,
     description: state.description,
-    videoUrl: state.videoUrl,
+    contentType: state.contentType,
+    // Only the branch this lesson actually uses is sent. The server ignores the other one and keeps
+    // whatever it already had there, so a round trip cannot overwrite the retained content with a
+    // stale copy the editor happened to be holding.
+    ...(state.contentType === "RICH_CONTENT"
+      ? { richContent: state.richContent }
+      : { videoUrl: state.videoUrl }),
     orderIndex: index,
     quiz: mapQuizEditorStateToRequest(state.quiz),
   };
@@ -249,8 +267,17 @@ function mapSubscriptionPlanEditorStateToRequest(
  * that carries lessons for a module course or the other way round. Pricing follows the
  * same rule — `purchasePrice` only for `PURCHASE`, plans only for `SUBSCRIPTION` — so a
  * course that switched away from one does not keep submitting the other's fields.
+ *
+ * `duration` is not sent at all. It is the sum of the lessons' running times, which only
+ * the video providers know and only the server computes; echoing the server's own figure
+ * back at it was never useful, and it is what used to make a course unsaveable — the
+ * aggregate came back with `duration: 0` for videos that had not been measured yet, and
+ * the API rejected the very number it had just sent.
  */
-export function mapCourseEditorStateToCourseRequest(state: CourseEditorState): CourseRequest {
+export function mapCourseEditorStateToCourseRequest(
+  state: CourseEditorState,
+  options: { includeStatus?: boolean } = {},
+): CourseRequest {
   const isModules = state.structure === "MODULES";
 
   return {
@@ -258,7 +285,9 @@ export function mapCourseEditorStateToCourseRequest(state: CourseEditorState): C
     subtitle: state.subtitle.trim() || null,
     image: state.image.trim() || null,
     description: state.description.trim(),
-    duration: state.duration,
+    // What the server checks this save against. Omitted on create, where there is no revision
+    // to be behind — `CourseService` only requires it on update.
+    ...(state.revision !== null ? { expectedRevision: state.revision } : {}),
     structure: state.structure,
     ...(isModules
       ? { modules: state.modules.map(mapModuleEditorStateToRequest) }
@@ -269,7 +298,20 @@ export function mapCourseEditorStateToCourseRequest(state: CourseEditorState): C
     ...(state.accessType === "SUBSCRIPTION"
       ? { subscriptionPlans: state.subscriptionPlans.map(mapSubscriptionPlanEditorStateToRequest) }
       : {}),
-    status: state.status,
+    // Only a create says what the course's publication state should be. On update the
+    // field is left out entirely, which is what tells the backend to leave publication
+    // alone — publishing and unpublishing are their own endpoints, so a save built from a
+    // stale copy of the course can no longer take a live course off the catalogue.
+    ...(options.includeStatus ? { status: state.status } : {}),
+    // Visibility, unlike publication, *is* sent on every save. It is an ordinary course
+    // setting the instructor edits on the same screen as the title, and it has no endpoint
+    // of its own — so the save is how it is persisted, and always stating it is what makes
+    // "I turned this off" reach the server rather than silently meaning "unchanged".
+    //
+    // Safe against the staleness that keeps `status` out: `expectedRevision` travels with
+    // this payload, so a tab holding a copy from before somebody else changed the setting
+    // is refused outright rather than putting the old value back.
+    visibility: state.visibility,
   };
 }
 
@@ -290,6 +332,11 @@ export function createEmptyCourseEditorState(): CourseEditorState {
     purchasePrice: null,
     subscriptionPlans: [],
     status: "DRAFT",
+    // A new course is on offer to everyone unless its author says otherwise — the same
+    // default the backend applies, stated here so the wizard's control starts on it.
+    visibility: "PUBLIC",
+    hasUpdatesSincePublish: false,
+    revision: null,
   };
 }
 

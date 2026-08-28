@@ -11,6 +11,7 @@ import type {
   CourseAccessType,
   CourseStatus,
   CourseStructure,
+  CourseVisibility,
   EntitlementSource,
   SubscriptionUnit,
 } from "./courses.enums";
@@ -21,6 +22,64 @@ import type {
 } from "./quiz.types";
 // The video domain is owned by the shared video module, not by the course contracts.
 import type { VideoProvider } from "@/shared/video";
+
+// ── Change tracking ───────────────────────────────────────────────────────────
+
+/**
+ * What one piece of a course is, relative to the learner reading it.
+ *
+ * Relative is the whole of it. The same lesson is `NEW` to somebody who enrolled last
+ * month and `UNCHANGED` to somebody who enrolled this morning, because they bought
+ * different versions of the same course. There is no global "this lesson is new".
+ */
+export type ContentChangeState = "NEW" | "UPDATED" | "UNCHANGED";
+
+/**
+ * What a lesson teaches with. Mirrors the backend enum of the same name.
+ *
+ * The discriminator, and the only thing that decides which content a lesson shows. Never inferred
+ * from whether `videoUrl` is null: both content fields survive a change of type, so a rich-content
+ * lesson can still be holding the video it used to be.
+ */
+export type LessonContentType = "VIDEO" | "RICH_CONTENT";
+
+export type ContentEntityType = "COURSE" | "MODULE" | "LESSON" | "QUIZ" | "EXAM";
+
+/**
+ * The server's answer about one curriculum row, for the learner who asked.
+ *
+ * A decision, not a pair of timestamps. The rule — "changed after you enrolled" — lives on
+ * the server, and nothing here recomputes it: an enrolment date shipped to the browser and
+ * compared in React is the same rule implemented twice, and the two would drift.
+ *
+ * Optional throughout, because a payload from an older backend does not carry it and a
+ * missing value has to read as "nothing to say" rather than as an error.
+ */
+export interface ContentChangeResponse {
+  state: ContentChangeState;
+  /**
+   * A sentence for the learner, already localised server-side from `Accept-Language` —
+   * "New lesson added", "Lesson moved from Module 1 to Module 2".
+   *
+   * `null` when the state is `UNCHANGED`, and `null` for a change that predates the
+   * server's change log, in which case `state` is still correct and the row falls back to
+   * a bare badge.
+   */
+  summary: string | null;
+  /** When it changed, or when it was created if the state is `NEW`. */
+  at: string | null;
+}
+
+/**
+ * Something that was part of the course when this learner enrolled and is not part of it
+ * now. It cannot be a row in the curriculum, because there is nothing left to open.
+ */
+export interface RemovedContentResponse {
+  entityType: ContentEntityType;
+  title: string;
+  summary: string | null;
+  at: string | null;
+}
 
 // ── Subscription plans ────────────────────────────────────────────────────────
 
@@ -50,7 +109,22 @@ export interface LessonRequest {
   title: string;
   summary?: string | null;
   description?: string | null;
-  videoUrl: string;
+  /**
+   * Which kind of lesson this is, and therefore which of the two content fields is read.
+   *
+   * Optional on the wire and defaults to `VIDEO` on the server, which is what keeps a client
+   * written before this field existed creating video lessons.
+   */
+  contentType?: LessonContentType;
+  /** Required for a `VIDEO` lesson; ignored for a `RICH_CONTENT` one. */
+  videoUrl?: string | null;
+  /**
+   * The authored document for a `RICH_CONTENT` lesson, as JSON.
+   *
+   * Never stored as sent — the server rebuilds it from an allowlist and refuses unsafe URLs, so
+   * what comes back on the next read is the sanitized form rather than this.
+   */
+  richContent?: string | null;
   orderIndex: number;
   /**
    * Required by the standalone lesson endpoints when the course uses modules. Inside a
@@ -76,6 +150,16 @@ export interface LessonResponse {
   title: string;
   summary: string | null;
   description: string | null;
+  /**
+   * Which kind of lesson this is. Always present, including on a locked row, so a client dispatches
+   * on a stated fact rather than guessing from whether `videoUrl` came back null.
+   */
+  contentType: LessonContentType;
+  /**
+   * The authored document, as JSON, for a `RICH_CONTENT` lesson. Null for a video lesson and for a
+   * locked one — it is lesson content, withheld by the same rule that withholds the video.
+   */
+  richContent: string | null;
   videoUrl: string | null;
   /**
    * Which platform hosts `videoUrl`. Derived by the server from the URL, so it is authoritative
@@ -100,6 +184,12 @@ export interface LessonResponse {
   /** True when the viewer may see this lesson listed but not open it. */
   locked: boolean | null;
   quiz: LearnerQuizResponse | null;
+  /**
+   * Whether this lesson is new or updated to the learner reading it. Present on the
+   * enrolled course-details tree; absent for a visitor browsing the catalogue, and on the
+   * endpoints that serve one lesson rather than a curriculum.
+   */
+  change?: ContentChangeResponse | null;
   createdAt: string | null;
 }
 
@@ -112,6 +202,14 @@ export interface InstructorLessonResponse {
   title: string;
   summary: string | null;
   description: string | null;
+  contentType: LessonContentType;
+  /**
+   * The authored document as the server stored it.
+   *
+   * Carried whatever the lesson's type is, so reopening the editor on a lesson that was switched to
+   * video still shows the article that is being kept for it.
+   */
+  richContent: string | null;
   videoUrl: string | null;
   /**
    * Which platform hosts `videoUrl`. Derived by the server from the URL, so it is authoritative
@@ -185,6 +283,12 @@ export interface LearnerCourseModuleResponse {
   quiz: LearnerQuizResponse | null;
   /** True while an earlier module is unfinished, which is what keeps this one shut. */
   locked: boolean | null;
+  /**
+   * Whether the module itself is new or updated — its title and description, not its
+   * contents. A module whose third lesson changed is not itself updated; that lesson is,
+   * and says so on its own row.
+   */
+  change?: ContentChangeResponse | null;
 }
 
 // ── Courses ───────────────────────────────────────────────────────────────────
@@ -205,6 +309,18 @@ export interface CourseRequest {
   subtitle?: string | null;
   image?: string | null;
   description: string;
+  /**
+   * The course revision this payload was built from, as the server last reported it.
+   *
+   * Required on update, absent on create. The aggregate `PUT` is a full replacement, so a
+   * payload assembled from a copy of the course loaded an hour ago *is* an hour-old course:
+   * applying it puts every field back the way that copy remembers them. Quoting the revision
+   * is what lets the server refuse a save built on something it has since moved past, rather
+   * than silently reverting whoever saved in between.
+   *
+   * Server-generated and echoed back unchanged. Never computed here.
+   */
+  expectedRevision?: number | null;
   /** Estimated total duration in minutes. */
   duration?: number | null;
   /** Defaults to `FLAT` when omitted. */
@@ -229,8 +345,57 @@ export interface CourseRequest {
    */
   price?: number | null;
   subscriptionPlans?: SubscriptionPlanRequest[];
-  /** Defaults to `DRAFT` on create and to the course's current status on update. */
+  /**
+   * Publication state — for **create only**.
+   *
+   * On update the backend still honours it, for clients written against the previous
+   * contract, but the editor deliberately never sends it: publication is changed through
+   * `POST /{id}/publish` and `/{id}/unpublish`, so a tab holding a stale copy of the
+   * course cannot unpublish it by saving a lesson.
+   */
   status?: CourseStatus;
+  /**
+   * Who the course is offered to. Sent on create **and** update, unlike `status`.
+   *
+   * The difference is deliberate on both sides. Publication has dedicated endpoints because
+   * a stale full-replacement save must not be able to take a live course off the catalogue
+   * in passing. Visibility is an ordinary course setting the instructor edits beside the
+   * title, and `expectedRevision` already refuses a save built on a copy that predates
+   * somebody else's change to it.
+   *
+   * Omitting it means "leave it as it is" on update and "public" on create — so no payload
+   * can hide a course by saying nothing.
+   */
+  visibility?: CourseVisibility;
+}
+
+/**
+ * A course's modules in their new order.
+ *
+ * Ids only — the backend derives positions from the array. Sending the ordered ids rather
+ * than positions is what makes a gap, a duplicate or a negative position unrepresentable,
+ * and the list must name every module of the course exactly once, so a reorder built from
+ * a stale module list is refused instead of half-applied.
+ */
+export interface ModuleOrderRequest {
+  moduleIds: number[];
+}
+
+/**
+ * One lesson scope's lessons, in the order the instructor just arranged them.
+ *
+ * The sibling shape of `ModuleOrderRequest`, and deliberately identical: ids only, with
+ * the backend deriving positions from the array. It serves both lesson scopes a course
+ * has — the root lessons of a `FLAT` course and the lessons inside one module — because
+ * they are the same operation on two different parents, and the parent is named by the
+ * URL rather than the body. So a reorder can only ever arrange siblings; moving a lesson
+ * into another module is a structural edit and still goes through the aggregate save.
+ *
+ * The list must name every lesson of the scope exactly once, so a reorder built from a
+ * lesson list that has since changed is refused instead of half-applied.
+ */
+export interface LessonOrderRequest {
+  lessonIds: number[];
 }
 
 /**
@@ -257,6 +422,24 @@ export interface CourseResponse {
   accessType: CourseAccessType | null;
   structure: CourseStructure | null;
   status: CourseStatus | null;
+  /**
+   * Who the course is offered to, beside `status` and never folded into it.
+   *
+   * Optional because a payload from an older backend does not carry it; a missing value
+   * reads as `PUBLIC`, which is what such a backend's courses all are.
+   */
+  visibility?: CourseVisibility | null;
+  /**
+   * Whether the course has changed in a way its learners should be told about.
+   *
+   * The backend's answer, derived there from the publication baseline and the content
+   * version, so every screen showing an "Updated" badge shows the same thing. Never
+   * recompute it from timestamps here — the rule lives in one place, on the server.
+   *
+   * Optional because a payload from an older backend does not carry it; a missing value
+   * reads as "no updates", which is the safe direction.
+   */
+  hasUpdatesSincePublish?: boolean | null;
   studentsCount: number | null;
   instructorId: number;
   instructorName: string | null;
@@ -295,6 +478,35 @@ export interface InstructorCourseResponse {
   instructorName: string | null;
   structure: CourseStructure | null;
   status: CourseStatus | null;
+  /**
+   * Who the course is offered to. What the editor's visibility control reads, and what the
+   * instructor's course card renders its "private" marker from.
+   *
+   * Optional for the same reason as on `CourseResponse`: an older backend does not send it,
+   * and its courses are all public.
+   */
+  visibility?: CourseVisibility | null;
+  /**
+   * Whether the course has changed in a way its learners should be told about.
+   *
+   * The backend's answer, derived there from the publication baseline and the content
+   * version, so every screen showing an "Updated" badge shows the same thing. Never
+   * recompute it from timestamps here — the rule lives in one place, on the server.
+   *
+   * Optional because a payload from an older backend does not carry it; a missing value
+   * reads as "no updates", which is the safe direction.
+   */
+  hasUpdatesSincePublish?: boolean | null;
+  /**
+   * The revision this editor model was read at, to be sent back as `expectedRevision`.
+   *
+   * Every read *and* every accepted write answers with the current one — including the three
+   * reorder commands, which move it like any other accepted change. An editor that keeps
+   * adopting the value it was last given therefore never conflicts with itself.
+   *
+   * Optional because a payload from an older backend does not carry it.
+   */
+  revision?: number | null;
   lessons: InstructorLessonResponse[] | null;
   modules: InstructorCourseModuleResponse[] | null;
   finalQuiz: InstructorQuizResponse | null;
@@ -336,6 +548,30 @@ export interface CourseDetailsInfo {
   subscriptionPlans: SubscriptionPlanResponse[] | null;
   studentsCount: number | null;
   createdAt: string | null;
+  /**
+   * Whether the instructor has edited this course since they last published it.
+   *
+   * A statement about the instructor's workflow: the same value for every viewer, cleared
+   * for everybody at once when they republish. Not what a learner's badge should read —
+   * see `hasUpdatesSinceEnrollment`.
+   */
+  hasUpdatesSincePublish?: boolean | null;
+  /**
+   * Whether this course has changed since **the reader** enrolled.
+   *
+   * The learner-facing badge. Per enrolment, so two students of one course get different
+   * answers — somebody who joined this morning bought the version that already contained
+   * everything. `false` for a viewer who is not enrolled.
+   *
+   * Optional because a payload from an older backend does not carry it; a missing value
+   * reads as "no updates", which is the safe direction.
+   */
+  hasUpdatesSinceEnrollment?: boolean | null;
+  /**
+   * When the course's content last changed, for display only — never to compare against
+   * anything here. The comparison is `hasUpdatesSinceEnrollment`, already made.
+   */
+  latestContentUpdateAt?: string | null;
 }
 
 /**
@@ -387,6 +623,12 @@ export interface CourseDetailsResponse {
   courseCompleted: boolean | null;
   /** The lesson to open next, or `null` when nothing is left to open. */
   nextLessonId: number | null;
+  /**
+   * Content that was in the course when the reader enrolled and is not in it now. Listed
+   * at course level because there is no curriculum row left to hang it on. Empty for a
+   * viewer who is not enrolled.
+   */
+  removedContent?: RemovedContentResponse[] | null;
 }
 
 // ── Lesson completion ─────────────────────────────────────────────────────────

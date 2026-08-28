@@ -4,6 +4,7 @@ import {
   formatAccessSummary,
   formatStructureLabel,
   formatSubscriptionUnitLabel,
+  formatVisibilitySummary,
 } from "@/features/course/Instructor/course-editor/formatters/course-editor.formatter";
 import { FONT, PRIMARY } from "@/features/course/Instructor/course-editor/components/editor-theme";
 import type { StepId } from "./step-indicator";
@@ -107,6 +108,18 @@ export function ReviewSection({ state, purchasePrice, hasCoverImage, onGoToStep 
         {!isFlat && <ReviewRow label="الوحدات" value={`${state.modules.length} وحدة`} />}
         <ReviewRow label="الدروس" value={`${totalLessons} درس`} />
         {totalExams > 0 && <ReviewRow label="الاختبارات" value={`${totalExams} اختبار`} />}
+      </ReviewCard>
+
+      {/*
+        Visibility, on its own card and its own line.
+
+        It is the one setting on this screen whose consequence is not obvious from its name,
+        and the review step is the last moment before the course goes live — so it says what
+        the choice does rather than only what it is called. Edits go back to step 2, where
+        the control actually lives.
+      */}
+      <ReviewCard label="ظهور الدورة" onEdit={() => onGoToStep(2)}>
+        <ReviewRow label="من يراها" value={formatVisibilitySummary(state.visibility)} />
       </ReviewCard>
 
       <ReviewCard label="طريقة الوصول" onEdit={() => onGoToStep(5)}>

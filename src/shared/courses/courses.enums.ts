@@ -8,8 +8,26 @@
 /** Shape of a course's content tree. `FLAT` owns lessons directly, `MODULES` owns modules. */
 export type CourseStructure = "FLAT" | "MODULES";
 
-/** Publication state. Only `PUBLISHED` courses are visible to learners. */
+/**
+ * Publication state — is the course finished?
+ *
+ * Deliberately still two values. Visibility is a *second* axis, not a third status: see
+ * `CourseVisibility`.
+ */
 export type CourseStatus = "DRAFT" | "PUBLISHED";
+
+/**
+ * Who a course is offered to — and if it is finished, by whom can it be found?
+ *
+ * The other axis, independent of `CourseStatus`. All four combinations exist and mean
+ * different things; `PUBLISHED` + `PRIVATE` is a finished course that is deliberately off
+ * the catalogue, still fully alive for the learners already enrolled in it.
+ *
+ * Never render this as one badge with the status. A course can be published *and* private
+ * at the same time, and collapsing them into a single chip describes something the domain
+ * does not have.
+ */
+export type CourseVisibility = "PUBLIC" | "PRIVATE";
 
 /** How a learner gains access to a course. */
 export type CourseAccessType = "FREE" | "PURCHASE" | "SUBSCRIPTION";
@@ -37,6 +55,7 @@ export type AccessStatus = "NONE" | "ACTIVE" | "EXPIRING_SOON" | "EXPIRED";
 
 export const COURSE_STRUCTURES: readonly CourseStructure[] = ["FLAT", "MODULES"];
 export const COURSE_STATUSES: readonly CourseStatus[] = ["DRAFT", "PUBLISHED"];
+export const COURSE_VISIBILITIES: readonly CourseVisibility[] = ["PUBLIC", "PRIVATE"];
 export const COURSE_ACCESS_TYPES: readonly CourseAccessType[] = ["FREE", "PURCHASE", "SUBSCRIPTION"];
 export const SUBSCRIPTION_UNITS: readonly SubscriptionUnit[] = ["DAY", "WEEK", "MONTH"];
 export const ENTITLEMENT_SOURCES: readonly EntitlementSource[] = ["FREE", "PURCHASE", "SUBSCRIPTION"];
@@ -52,6 +71,21 @@ export function normalizeCourseStructure(value: CourseStructure | null | undefin
 
 export function normalizeCourseStatus(value: CourseStatus | null | undefined): CourseStatus {
   return value != null && COURSE_STATUSES.includes(value) ? value : "DRAFT";
+}
+
+/**
+ * Falls back to `PUBLIC`, which is the backend's own default and the only safe direction.
+ *
+ * A response from a backend that predates the field carries nothing, and a course whose
+ * visibility is unknown must read as public: showing an unearned "private" badge misleads an
+ * instructor about who can see their course, while the reverse — a genuinely private course
+ * rendered without its badge — is a display gap, not a leak. What a stranger can actually
+ * reach is decided on the server, and no value chosen here changes it.
+ */
+export function normalizeCourseVisibility(
+  value: CourseVisibility | null | undefined,
+): CourseVisibility {
+  return value != null && COURSE_VISIBILITIES.includes(value) ? value : "PUBLIC";
 }
 
 export function normalizeCourseAccessType(

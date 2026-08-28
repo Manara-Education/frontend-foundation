@@ -6,18 +6,21 @@ export {
   COURSE_ACCESS_TYPES,
   COURSE_STATUSES,
   COURSE_STRUCTURES,
+  COURSE_VISIBILITIES,
   ENTITLEMENT_SOURCES,
   SUBSCRIPTION_UNITS,
   normalizeAccessStatus,
   normalizeCourseAccessType,
   normalizeCourseStatus,
   normalizeCourseStructure,
+  normalizeCourseVisibility,
 } from "./courses.enums";
 export type {
   AccessStatus,
   CourseAccessType,
   CourseStatus,
   CourseStructure,
+  CourseVisibility,
   EntitlementSource,
   SubscriptionUnit,
 } from "./courses.enums";
@@ -25,6 +28,10 @@ export type {
 export type {
   CheckoutRequest,
   CheckoutResponse,
+  ContentChangeResponse,
+  ContentChangeState,
+  LessonContentType,
+  ContentEntityType,
   CourseAccessResponse,
   CourseDetailsInfo,
   CourseDetailsInstructorInfo,
@@ -42,7 +49,10 @@ export type {
   LessonRef,
   LessonRequest,
   LessonResponse,
+  LessonOrderRequest,
+  ModuleOrderRequest,
   PaymentMethodRequest,
+  RemovedContentResponse,
   SubscriptionPlanRequest,
   SubscriptionPlanResponse,
 } from "./courses.types";

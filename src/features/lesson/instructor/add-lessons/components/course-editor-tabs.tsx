@@ -22,6 +22,7 @@ import {
 import { ModuleCurriculumSection } from "@/features/course/Instructor/course-editor/components/module-curriculum-section";
 import { ModalSection } from "@/features/course/Instructor/course-editor/components/section-card";
 import { StructureRadioRow } from "@/features/course/Instructor/course-editor/components/structure-section";
+import { VisibilityRadioRow } from "@/features/course/Instructor/course-editor/components/visibility-section";
 import { SubscriptionPlansSection } from "@/features/course/Instructor/course-editor/components/subscription-plans-section";
 import {
   FONT,
@@ -467,6 +468,28 @@ export function CourseEditorTabs({
                 <StructureRadioRow value={state.structure} onChange={editor.setStructure} />
               </div>
 
+              {/*
+                Visibility — a separate control from publishing, deliberately.
+
+                It sits here rather than beside the publish button because it is a course
+                setting, not a lifecycle action: a course can be منشورة and خاصة at once,
+                and one control that mixed the two would make that state unreachable. Saved
+                on the spot rather than with the tab's "حفظ التعديلات" button — see
+                `setVisibility` — so an instructor who turns a course private and navigates
+                away has actually turned it private.
+              */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <label style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: "#1E2340" }}>
+                  ظهور الدورة
+                </label>
+                <VisibilityRadioRow value={state.visibility} onChange={editor.setVisibility} />
+                <div style={{ fontFamily: FONT, fontSize: 11.5, color: "#9BA3C4", lineHeight: 1.7 }}>
+                  {state.visibility === "PRIVATE"
+                    ? "الدورة غير ظاهرة في الاستكشاف أو البحث. الطلاب المشتركون فيها يحتفظون بوصولهم وتقدمهم كاملاً."
+                    : "الدورة متاحة للاكتشاف من كل الطلاب حسب حالة نشرها."}
+                </div>
+              </div>
+
               {/* Save button */}
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <motion.button
@@ -588,7 +611,7 @@ export function CourseEditorTabs({
                     onSaveModuleLesson={saveModuleLesson}
                     onDeleteModuleLesson={editor.deleteModuleLesson}
                     onReorderModuleLessons={editor.reorderModuleLessons}
-                    onReorderModuleLessonsCommit={editor.commitModuleOrder}
+                    onReorderModuleLessonsCommit={editor.commitModuleLessonOrder}
                   />
                 </motion.div>
               )}
@@ -795,9 +818,21 @@ export function CourseEditorTabs({
       </AnimatePresence>
 
       {/* ── ERROR OVERLAY ────────────────────────────────────────────────── */}
+      {/*
+        A version conflict wears the same overlay and says something different with it. The
+        instructor did nothing wrong and trying again would not help: their save was refused
+        because the course changed after this tab loaded it, so the action reloads the latest
+        version instead of re-sending a payload the server has already declined.
+      */}
       <AnimatePresence>
         {editor.errorMessage !== null && (
-          <ErrorOverlay message={editor.errorMessage} onRetry={editor.retryError} onClose={editor.dismissError} />
+          <ErrorOverlay
+            message={editor.errorMessage}
+            onRetry={editor.retryError}
+            onClose={editor.dismissError}
+            title={editor.errorKind === "VERSION_CONFLICT" ? "الدورة تغيّرت في مكان آخر" : undefined}
+            retryLabel={editor.errorKind === "VERSION_CONFLICT" ? "إعادة تحميل أحدث نسخة" : undefined}
+          />
         )}
       </AnimatePresence>
     </div>

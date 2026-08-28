@@ -6,7 +6,13 @@
  * have to know that. Mappers in `courses.mappers.ts` are the only place allowed to turn
  * one into the other.
  */
-import type { CourseAccessType, CourseStatus, CourseStructure } from "./courses.enums";
+import type {
+  CourseAccessType,
+  CourseStatus,
+  CourseStructure,
+  CourseVisibility,
+} from "./courses.enums";
+import type { LessonContentType } from "./courses.types";
 import type { SubscriptionUnit } from "./courses.enums";
 
 // ── Course card ───────────────────────────────────────────────────────────────
@@ -39,6 +45,11 @@ export interface CourseCardModel {
   accessType: CourseAccessType;
   structure: CourseStructure;
   status: CourseStatus;
+  /**
+   * Who the course is offered to. Rendered as its own marker beside the publication badge,
+   * because a course can be published *and* private at once.
+   */
+  visibility: CourseVisibility;
   studentsCount?: number;
   instructorId?: number;
   instructorName?: string;
@@ -54,6 +65,12 @@ export interface CourseCardModel {
    * price rather than inventing one.
    */
   subscriptionMinPrice?: number;
+  /**
+   * Whether learners should be told the course changed since it was last published.
+   *
+   * The backend's answer, carried through unchanged. No screen recomputes it.
+   */
+  hasUpdatesSincePublish: boolean;
 }
 
 // ── Course editor ─────────────────────────────────────────────────────────────
@@ -98,8 +115,18 @@ export interface CourseLessonEditorState {
   title: string;
   summary: string;
   description: string;
+  /**
+   * Which kind of lesson the instructor chose.
+   *
+   * Both content fields below are kept whatever this says, exactly as the server keeps both
+   * columns: switching a lesson's type in the editor must not throw away what the other branch
+   * already had, so switching back restores it. Only the branch matching this is sent as content.
+   */
+  contentType: LessonContentType;
   /** The address the instructor typed, on any supported platform. The only video field sent back. */
   videoUrl: string;
+  /** The authored document for a `RICH_CONTENT` lesson, as JSON, or `null` if never authored. */
+  richContent: string | null;
   /**
    * The still the server resolved for this video, carried so the editor's lesson cards can show a
    * Vimeo thumbnail — which, unlike YouTube's, has no address derivable from the URL.
@@ -153,4 +180,26 @@ export interface CourseEditorState {
   purchasePrice: number | null;
   subscriptionPlans: SubscriptionPlanEditorState[];
   status: CourseStatus;
+  /**
+   * Who the course is offered to, as the instructor has it set in the editor.
+   *
+   * Held beside `status`, not inside it: the editor shows and saves both, and changing one
+   * never implies anything about the other. Sent with every save — an omitted field means
+   * "unchanged" to the backend, so the editor states what it is holding.
+   */
+  visibility: CourseVisibility;
+  /**
+   * Whether the course this state was loaded from has changes its learners have not been told about.
+   *
+   * The backend's answer, carried through unchanged. No screen recomputes it.
+   */
+  hasUpdatesSincePublish: boolean;
+  /**
+   * The server revision this state was built from. `null` before the course exists.
+   *
+   * Sent back with every save and replaced by whatever the server answers with, so the editor
+   * always holds the newest accepted revision — after an aggregate save, after a reorder, and
+   * after publishing. Holding a stale one would make the next save conflict with nobody.
+   */
+  revision: number | null;
 }
