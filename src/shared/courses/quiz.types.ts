@@ -105,6 +105,14 @@ export interface LearnerQuizResponse {
    * how earlier attempts went. `null` when the viewer is not a learner of the course.
    */
   state: LearnerQuizStateResponse | null;
+  /**
+   * Whether this quiz or exam is new or updated to the learner reading it. Present on the
+   * enrolled course-details tree only.
+   *
+   * Typed loosely here to keep the quiz contracts from importing the course ones; the
+   * shape is `ContentChangeResponse` in `courses.types`.
+   */
+  change?: import("./courses.types").ContentChangeResponse | null;
 }
 
 // ── Learner progression state ─────────────────────────────────────────────────

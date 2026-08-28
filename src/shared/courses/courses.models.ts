@@ -54,6 +54,12 @@ export interface CourseCardModel {
    * price rather than inventing one.
    */
   subscriptionMinPrice?: number;
+  /**
+   * Whether learners should be told the course changed since it was last published.
+   *
+   * The backend's answer, carried through unchanged. No screen recomputes it.
+   */
+  hasUpdatesSincePublish: boolean;
 }
 
 // ── Course editor ─────────────────────────────────────────────────────────────
@@ -153,4 +159,18 @@ export interface CourseEditorState {
   purchasePrice: number | null;
   subscriptionPlans: SubscriptionPlanEditorState[];
   status: CourseStatus;
+  /**
+   * Whether the course this state was loaded from has changes its learners have not been told about.
+   *
+   * The backend's answer, carried through unchanged. No screen recomputes it.
+   */
+  hasUpdatesSincePublish: boolean;
+  /**
+   * The server revision this state was built from. `null` before the course exists.
+   *
+   * Sent back with every save and replaced by whatever the server answers with, so the editor
+   * always holds the newest accepted revision — after an aggregate save, after a reorder, and
+   * after publishing. Holding a stale one would make the next save conflict with nobody.
+   */
+  revision: number | null;
 }

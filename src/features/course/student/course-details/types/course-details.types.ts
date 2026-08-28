@@ -16,9 +16,11 @@ export type {
 
 import type {
   AccessStatus,
+  ContentChangeState,
   CourseAccessType,
   CourseStructure,
   EntitlementSource,
+  RemovedContentResponse,
 } from "@/shared/courses";
 import type { QuizView } from "@/features/quiz/student/quiz-player";
 
@@ -73,6 +75,22 @@ export interface CourseAccess {
   planId: number | null;
 }
 
+/**
+ * What to say about one curriculum row, for the learner reading it.
+ *
+ * The server's decision, carried through untouched. Nothing on this screen knows when the
+ * learner enrolled, and nothing needs to: shipping an enrolment date to the browser to
+ * compare it here would be the server's rule implemented a second time.
+ */
+export interface ContentChange {
+  state: ContentChangeState;
+  /** Already localised server-side — "تم تحديث محتوى الدرس". `null` when there is no wording. */
+  summary: string | null;
+}
+
+/** Nothing to say about this row. Shared so every mapper spells "unchanged" the same way. */
+export const UNCHANGED: ContentChange = { state: "UNCHANGED", summary: null };
+
 export interface Lesson {
   id: number;
   number: number;
@@ -81,6 +99,10 @@ export interface Lesson {
   status: LessonStatus;
   /** The lesson's own quiz, when the learner may see it. */
   quiz: QuizView | null;
+  /** Whether this lesson is new or updated since the reader enrolled. */
+  change: ContentChange;
+  /** The lesson quiz's own state, kept apart: a changed quiz is not a changed lesson. */
+  quizChange: ContentChange;
 }
 
 /**
@@ -98,6 +120,10 @@ export interface CurriculumModule {
   lessons: Lesson[];
   /** The module exam, when the module has one. */
   quiz: QuizView | null;
+  /** The module's own state — its title and description, not its contents. */
+  change: ContentChange;
+  /** The module exam's own state. */
+  quizChange: ContentChange;
 }
 
 /**
@@ -158,6 +184,24 @@ export interface StudentCourseModel {
   courseCompleted: boolean;
   /** The lesson the server says to open next, or `null` when nothing is left. */
   nextLessonId: number | null;
+  /**
+   * Whether the course has changed since **the reader** enrolled.
+   *
+   * The backend's answer, carried through untouched — the same field My Courses reads, so
+   * the two screens cannot disagree about the same course. False for a visitor browsing
+   * the catalogue, who has no enrolment to measure against.
+   */
+  hasUpdatesSinceEnrollment: boolean;
+  /** The final exam's own state. */
+  finalQuizChange: ContentChange;
+  /**
+   * Content that was in the course when the reader enrolled and is not in it now.
+   *
+   * Kept at course level because there is no curriculum row left to hang it on. Without
+   * it a learner's course simply loses a lesson between two visits, with the progress bar
+   * moving for no visible reason.
+   */
+  removedContent: RemovedContentResponse[];
 }
 
 /** @deprecated Local alias kept while components migrate to `StudentCourseModel`. */

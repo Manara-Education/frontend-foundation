@@ -2,6 +2,7 @@ import {
   normalizeAccessStatus,
   normalizeCourseAccessType,
   normalizeCourseStructure,
+  type ContentChangeResponse,
   type CourseAccessResponse,
   type SubscriptionPlanResponse,
 } from "@/shared/courses";
@@ -13,6 +14,7 @@ import {
   toLessonStatus,
 } from "../formatters/course-details.formatter";
 import type {
+  ContentChange,
   CourseAccess,
   CourseDetailsApiResponse,
   CourseModuleApi,
@@ -22,6 +24,20 @@ import type {
   StudentCourseModel,
   SubscriptionPlanOption,
 } from "../types/course-details.types";
+import { UNCHANGED } from "../types/course-details.types";
+
+/**
+ * The server's verdict on one row, or "nothing to say".
+ *
+ * The fallback covers three cases that must all render the same way: a viewer with no
+ * enrolment, a backend that predates the field, and a row the server explicitly called
+ * unchanged. None of them gets a badge, and the mapper never decides which is which — a
+ * missing verdict is not a reason to invent one.
+ */
+function toChange(dto: ContentChangeResponse | null | undefined): ContentChange {
+  if (!dto || dto.state === "UNCHANGED") return UNCHANGED;
+  return { state: dto.state, summary: dto.summary ?? null };
+}
 
 function byOrderIndex<T extends { orderIndex: number }>(items: readonly T[]): T[] {
   return [...items].sort((a, b) => a.orderIndex - b.orderIndex);
@@ -40,6 +56,11 @@ function toLesson(dto: LessonApi, number: number, nextLessonId: number | null): 
     duration: dto.duration ?? "",
     status: toLessonStatus(dto, nextLessonId),
     quiz: dto.quiz ? toQuizView(dto.quiz) : null,
+    change: toChange(dto.change),
+    // The lesson's quiz carries its own verdict. Folding it into the lesson's would mark a
+    // row whose video has not moved, and send the learner looking for a change that is not
+    // where the badge points.
+    quizChange: toChange(dto.quiz?.change),
   };
 }
 
@@ -59,6 +80,8 @@ function toModule(
       toLesson(lesson, numberOfFirstLesson + i, nextLessonId),
     ),
     quiz: dto.quiz ? toQuizView(dto.quiz) : null,
+    change: toChange(dto.change),
+    quizChange: toChange(dto.quiz?.change),
   };
 }
 
@@ -162,5 +185,9 @@ export function mapCourseDetailsResponseToStudentCourseModel(
     finalQuiz: dto.finalQuiz ? toQuizView(dto.finalQuiz) : null,
     courseCompleted: dto.courseCompleted ?? false,
     nextLessonId,
+    // A backend that predates the field sends nothing, which reads as "no updates".
+    hasUpdatesSinceEnrollment: course.hasUpdatesSinceEnrollment === true,
+    finalQuizChange: toChange(dto.finalQuiz?.change),
+    removedContent: dto.removedContent ?? [],
   };
 }

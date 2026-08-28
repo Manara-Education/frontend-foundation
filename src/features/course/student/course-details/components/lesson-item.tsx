@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { Clock } from "lucide-react";
-import { FONT, LESSON_STATUS_CONFIG, PRIMARY } from "../formatters/course-details.formatter";
+import { CourseUpdatedBadge } from "@/features/course/components/course-updated-badge";
+import { FONT, LESSON_STATUS_CONFIG, PRIMARY, louderChange } from "../formatters/course-details.formatter";
 import type { Lesson } from "../types/course-details.types";
 
 interface LessonItemProps {
@@ -16,6 +17,10 @@ export function LessonItem({ lesson, index, onLessonClick }: LessonItemProps) {
   const Icon = cfg.icon;
   const isLocked = lesson.status === "locked";
   const isCurrent = lesson.status === "current";
+  // One badge per row, not two. A lesson and its quiz each carry a verdict, and a dense
+  // list is not the place to print both — the louder one wins and brings its own wording,
+  // so a row lit by its quiz says so rather than claiming the video moved.
+  const change = louderChange(lesson.change, lesson.quizChange);
 
   return (
     <motion.div
@@ -79,7 +84,17 @@ export function LessonItem({ lesson, index, onLessonClick }: LessonItemProps) {
         >
           {lesson.title}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginTop: 2,
+            // Wraps rather than pushing the duration off the row: on a narrow screen the
+            // status pill and the change badge do not both fit on one line.
+            flexWrap: "wrap",
+          }}
+        >
           <span
             style={{
               fontFamily: FONT,
@@ -92,6 +107,10 @@ export function LessonItem({ lesson, index, onLessonClick }: LessonItemProps) {
           >
             {cfg.label}
           </span>
+          {/* Shown on locked rows too. "This lesson is new since you enrolled" is a fact
+              about the listing, not about the content behind it, and hiding it would
+              withhold the very thing the badge exists to point at. */}
+          <CourseUpdatedBadge state={change.state} summary={change.summary} />
         </div>
       </div>
 

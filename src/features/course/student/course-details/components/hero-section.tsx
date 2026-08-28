@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import { Clock, BookOpen, Users, Trophy, BarChart3 } from "lucide-react";
 import { ImageWithFallback } from "@/shared/components/ImageWithFallback";
+import { CourseUpdatedBadge } from "@/features/course/components/course-updated-badge";
 import { FONT, PRIMARY, SUCCESS, formatStudentsCount } from "../formatters/course-details.formatter";
 import type { CourseDetailData } from "../types/course-details.types";
 
@@ -39,6 +40,14 @@ export function HeroSection({ course }: { course: CourseDetailData }) {
             padding: "24px 24px 20px",
           }}
         >
+          {/* The reader's own answer, not the instructor's. Somebody who enrolled after
+              the last edit bought the version that already contained it, and is shown no
+              badge at all. */}
+          {course.hasUpdatesSinceEnrollment && (
+            <div style={{ marginBottom: 10 }}>
+              <CourseUpdatedBadge tone="solid" />
+            </div>
+          )}
           <h1
             style={{
               fontFamily: FONT,
@@ -46,6 +55,8 @@ export function HeroSection({ course }: { course: CourseDetailData }) {
               color: "#FFFFFF",
               lineHeight: 1.45,
               margin: "0 0 10px",
+              // A long title wraps rather than pushing the badge above it off the hero.
+              overflowWrap: "anywhere",
             }}
           >
             {course.title}

@@ -311,6 +311,8 @@ interface ModuleCardProps {
   onToggleExpanded: () => void;
   onEditModule: (draft: ModuleDraft) => void;
   onDeleteModule: () => void;
+  /** Fires once, when the module has been dropped in its new place. */
+  onReorderCommit: () => void;
   onSaveLesson: (lessonKey: string | null, draft: LessonDraft) => void;
   onDeleteLesson: (lessonKey: string) => void;
   onReorderLessons: (lessons: CourseLessonEditorState[]) => void;
@@ -325,6 +327,7 @@ function ModuleCard({
   onToggleExpanded,
   onEditModule,
   onDeleteModule,
+  onReorderCommit,
   onSaveLesson,
   onDeleteLesson,
   onReorderLessons,
@@ -443,6 +446,10 @@ function ModuleCard({
         {/* Expand toggle */}
         <button
           onClick={onToggleExpanded}
+          // The control had no accessible name at all, which for a button that shows and
+          // hides a module's lessons leaves a screen reader with nothing to announce.
+          aria-label={expanded ? "طي دروس الوحدة" : "عرض دروس الوحدة"}
+          aria-expanded={expanded}
           style={{
             width: 30,
             height: 30,
@@ -624,6 +631,11 @@ function ModuleCard({
       value={module}
       dragControls={dragControls}
       dragListener={false}
+      // The lesson list below has always had this; the module list did not, which is the
+      // whole of why dragging a module looked right and was gone on the next reload.
+      // `onReorder` fires continuously while a module is being dragged past its
+      // neighbours, so it only moves the local list; the drop is what persists.
+      onDragEnd={onReorderCommit}
       style={{ listStyle: "none", marginBottom: t.itemMargin }}
     >
       {variant === "wizard" ? (
@@ -650,7 +662,12 @@ interface ModuleCurriculumSectionProps {
   onSaveModuleLesson: (moduleKey: string, lessonKey: string | null, draft: LessonDraft) => void;
   onDeleteModuleLesson: (moduleKey: string, lessonKey: string) => void;
   onReorderModuleLessons: (moduleKey: string, lessons: CourseLessonEditorState[]) => void;
-  onReorderModuleLessonsCommit: () => void;
+  /**
+   * Takes the module whose lessons were dragged. It used to take nothing, which is exactly
+   * how a nested lesson reorder ended up committing the *module* order: with no module to
+   * name, the only commit callback that fit the signature was the wrong one.
+   */
+  onReorderModuleLessonsCommit: (moduleKey: string) => void;
 }
 
 /** The `MODULES` content branch: draggable modules, each with its own lesson list. */
@@ -742,10 +759,11 @@ export function ModuleCurriculumSection({
               }
               onEditModule={(draft) => onUpdateModule(module.key, draft)}
               onDeleteModule={() => onDeleteModule(module.key)}
+              onReorderCommit={onReorderModulesCommit}
               onSaveLesson={(lessonKey, draft) => onSaveModuleLesson(module.key, lessonKey, draft)}
               onDeleteLesson={(lessonKey) => onDeleteModuleLesson(module.key, lessonKey)}
               onReorderLessons={(lessons) => onReorderModuleLessons(module.key, lessons)}
-              onReorderLessonsCommit={onReorderModuleLessonsCommit}
+              onReorderLessonsCommit={() => onReorderModuleLessonsCommit(module.key)}
             />
           ))}
         </AnimatePresence>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { CheckCircle2, Play, Trophy, User } from "lucide-react";
 import { ImageWithFallback } from "@/shared/components/ImageWithFallback";
+import { CourseUpdatedBadge } from "@/features/course/components/course-updated-badge";
 import {
   FONT,
   PRIMARY,
@@ -73,26 +74,45 @@ export function CourseCard({ course, index, onCourseClick }: CourseCardProps) {
           }}
         />
 
-        {/* Status badge */}
+        {/*
+          Progress state, and — when the instructor has changed the course since it was
+          last published — the update notice beside it. `flex-wrap` and the `left` bound
+          keep the pair inside the thumbnail on a narrow card instead of overflowing it.
+        */}
         <div
           style={{
             position: "absolute",
             top: 12,
             right: 12,
+            left: 12,
             display: "flex",
-            alignItems: "center",
-            gap: 5,
-            padding: "4px 10px 4px 8px",
-            borderRadius: 99,
-            background: "rgba(255,255,255,0.92)",
-            backdropFilter: "blur(8px)",
-            border: "1px solid rgba(255,255,255,0.6)",
+            flexWrap: "wrap",
+            justifyContent: "flex-end",
+            alignItems: "flex-start",
+            gap: 6,
           }}
+          dir="rtl"
         >
-          <div style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.dot, flexShrink: 0 }} />
-          <span style={{ fontFamily: FONT, fontSize: 10, fontWeight: 600, color: cfg.text, whiteSpace: "nowrap" }}>
-            {cfg.label}
-          </span>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              padding: "4px 10px 4px 8px",
+              borderRadius: 99,
+              background: "rgba(255,255,255,0.92)",
+              backdropFilter: "blur(8px)",
+              border: "1px solid rgba(255,255,255,0.6)",
+              flexShrink: 0,
+            }}
+          >
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.dot, flexShrink: 0 }} />
+            <span style={{ fontFamily: FONT, fontSize: 10, fontWeight: 600, color: cfg.text, whiteSpace: "nowrap" }}>
+              {cfg.label}
+            </span>
+          </div>
+
+          {course.hasUpdatesSinceEnrollment && <CourseUpdatedBadge tone="solid" />}
         </div>
 
         {/* Completed checkmark overlay */}
