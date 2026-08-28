@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError } from "@/shared/api";
+import { ApiError, ApiErrorCode } from "@/shared/api";
 import {
   createEditorKey,
   createEmptyCourseEditorState,
@@ -150,11 +150,35 @@ export function useCourseEditor(mode: CourseEditorMode) {
   const [isDirty, setIsDirty] = useState(false);
   const [errors, setErrors] = useState<CourseEditorErrors>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  /**
+   * Which kind of failure is on screen, when one is.
+   *
+   * `VERSION_CONFLICT` is not an ordinary error and must not be offered an ordinary retry.
+   * The save was refused because this tab is holding a copy of the course that somebody else
+   * has since edited, so re-sending it is the one thing that must not happen — it is exactly
+   * the stale write the server just declined. The recovery is to reload, and the overlay says
+   * so instead of saying "try again".
+   */
+  const [errorKind, setErrorKind] = useState<"ERROR" | "VERSION_CONFLICT" | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const imageFileRef = useRef<File | null>(null);
+
+  /**
+   * The URL a picked cover has already been uploaded to, if it has.
+   *
+   * Uploading and attaching are two requests, and the second one can fail — a conflict, a
+   * dropped connection, a validation error further down the payload. The upload is kept here
+   * rather than thrown away between the two, for two reasons: a retry attaches the file that
+   * is already on the server instead of uploading a second copy of it, and the cover the
+   * instructor picked is not silently dropped from the payload the retry sends.
+   *
+   * Cleared only once a save carrying it has been accepted, or when the instructor picks a
+   * different file or clears the cover.
+   */
+  const uploadedImageUrlRef = useRef<string | null>(null);
 
   const lastFailedActionRef = useRef<(() => void) | null>(null);
 
@@ -204,17 +228,36 @@ export function useCourseEditor(mode: CourseEditorMode) {
   const reportError = useCallback((err: unknown, retry?: () => void) => {
     console.error(err);
     lastFailedActionRef.current = retry ?? null;
+    setErrorKind("ERROR");
+    setErrorMessage(extractErrorMessage(err));
+  }, []);
+
+  /**
+   * Reports a refused save without offering to send it again.
+   *
+   * The recovery action is a reload, deliberately. Nothing here retries the payload, merges it
+   * into the newer server state, or guesses which of the two versions of a nested quiz the
+   * instructor meant — a course tree is not something to auto-merge, and the wrong guess is
+   * silent data loss. The unsaved edits stay on screen until the instructor chooses to reload,
+   * so nothing is taken away from them without their say-so.
+   */
+  const reportConflict = useCallback((err: unknown, reload: () => void) => {
+    console.error(err);
+    lastFailedActionRef.current = reload;
+    setErrorKind("VERSION_CONFLICT");
     setErrorMessage(extractErrorMessage(err));
   }, []);
 
   const dismissError = useCallback(() => {
     lastFailedActionRef.current = null;
+    setErrorKind(null);
     setErrorMessage(null);
   }, []);
 
   const retryError = useCallback(() => {
     const action = lastFailedActionRef.current;
     lastFailedActionRef.current = null;
+    setErrorKind(null);
     setErrorMessage(null);
     action?.();
   }, []);
@@ -258,12 +301,24 @@ export function useCourseEditor(mode: CourseEditorMode) {
         try {
           let payload = next;
 
-          if (imageFileRef.current) {
-            const url = await courseEditorService.uploadCourseImage(imageFileRef.current);
-            payload = { ...payload, image: url };
-            imageFileRef.current = null;
-            setImageFile(null);
-            setImagePreview(null);
+          // Uploaded once, attached however many times it takes. A save that fails leaves the
+          // file on the server, so a retry reuses it rather than uploading another copy — and,
+          // more importantly, still carries the cover the instructor picked.
+          if (imageFileRef.current !== null && uploadedImageUrlRef.current === null) {
+            uploadedImageUrlRef.current = await courseEditorService.uploadCourseImage(
+              imageFileRef.current,
+            );
+          }
+          if (uploadedImageUrlRef.current !== null) {
+            payload = { ...payload, image: uploadedImageUrlRef.current };
+          }
+
+          // The revision the server last gave this editor. It is read here rather than from
+          // `next` because a reorder may have landed since this save was queued behind it, and
+          // that reorder's response carries a newer revision this payload has to quote.
+          const expectedRevision = stateRef.current.revision;
+          if (expectedRevision !== null) {
+            payload = { ...payload, revision: expectedRevision };
           }
 
           // `payload.id` is set once a create has landed, so a second submit from the
@@ -274,6 +329,12 @@ export function useCourseEditor(mode: CourseEditorMode) {
               ? await courseEditorService.updateCourse(targetId, payload)
               : await courseEditorService.createCourse(payload);
 
+          // Accepted, so the pending cover is now the stored one.
+          imageFileRef.current = null;
+          uploadedImageUrlRef.current = null;
+          setImageFile(null);
+          setImagePreview(null);
+
           // A newer save has been started while this one was in flight, and it was built
           // on top of this state. Its response is the current truth; applying this older
           // one on top would undo whatever the instructor did in between.
@@ -283,7 +344,13 @@ export function useCourseEditor(mode: CourseEditorMode) {
           setIsDirty(false);
           return true;
         } catch (err) {
-          reportError(err, () => void persist(next));
+          if (err instanceof ApiError && err.is(ApiErrorCode.COURSE_VERSION_CONFLICT)) {
+            // Somebody else saved this course after this tab loaded it. Re-sending would be
+            // the stale write the server has just refused, so the offer is a reload.
+            reportConflict(err, () => void loadCourse());
+          } else {
+            reportError(err, () => void persist(next));
+          }
           return false;
         } finally {
           if (ticket === saveTicketRef.current) setIsSaving(false);
@@ -296,7 +363,7 @@ export function useCourseEditor(mode: CourseEditorMode) {
       saveChainRef.current = queued.catch(() => undefined);
       return queued;
     },
-    [courseId, reportError, writeState],
+    [courseId, loadCourse, reportConflict, reportError, writeState],
   );
 
   /**
@@ -337,6 +404,9 @@ export function useCourseEditor(mode: CourseEditorMode) {
   /** A picked file is previewed straight away and uploaded on the next aggregate save. */
   const setImage = useCallback((file: File | null, preview: string | null) => {
     imageFileRef.current = file;
+    // A different file, so whatever was uploaded for the previous one no longer describes the
+    // cover being saved.
+    uploadedImageUrlRef.current = null;
     setImageFile(file);
     setImagePreview(preview);
     setIsDirty(true);
@@ -344,8 +414,11 @@ export function useCourseEditor(mode: CourseEditorMode) {
 
   const clearImage = useCallback(() => {
     imageFileRef.current = null;
+    uploadedImageUrlRef.current = null;
     setImageFile(null);
     setImagePreview(null);
+    // An explicit empty string, which the request mapper sends as `null` — the payload has to
+    // say "clear it" rather than say nothing, or the server correctly leaves the cover alone.
     mutate((prev) => ({ ...prev, image: "" }));
   }, [mutate]);
 
@@ -872,6 +945,7 @@ export function useCourseEditor(mode: CourseEditorMode) {
     isDirty,
     errors,
     errorMessage,
+    errorKind,
     showSuccess,
     imageFile,
     imagePreview,

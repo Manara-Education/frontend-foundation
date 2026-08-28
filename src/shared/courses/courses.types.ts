@@ -266,6 +266,18 @@ export interface CourseRequest {
   subtitle?: string | null;
   image?: string | null;
   description: string;
+  /**
+   * The course revision this payload was built from, as the server last reported it.
+   *
+   * Required on update, absent on create. The aggregate `PUT` is a full replacement, so a
+   * payload assembled from a copy of the course loaded an hour ago *is* an hour-old course:
+   * applying it puts every field back the way that copy remembers them. Quoting the revision
+   * is what lets the server refuse a save built on something it has since moved past, rather
+   * than silently reverting whoever saved in between.
+   *
+   * Server-generated and echoed back unchanged. Never computed here.
+   */
+  expectedRevision?: number | null;
   /** Estimated total duration in minutes. */
   duration?: number | null;
   /** Defaults to `FLAT` when omitted. */
@@ -414,6 +426,16 @@ export interface InstructorCourseResponse {
    * reads as "no updates", which is the safe direction.
    */
   hasUpdatesSincePublish?: boolean | null;
+  /**
+   * The revision this editor model was read at, to be sent back as `expectedRevision`.
+   *
+   * Every read *and* every accepted write answers with the current one — including the three
+   * reorder commands, which move it like any other accepted change. An editor that keeps
+   * adopting the value it was last given therefore never conflicts with itself.
+   *
+   * Optional because a payload from an older backend does not carry it.
+   */
+  revision?: number | null;
   lessons: InstructorLessonResponse[] | null;
   modules: InstructorCourseModuleResponse[] | null;
   finalQuiz: InstructorQuizResponse | null;

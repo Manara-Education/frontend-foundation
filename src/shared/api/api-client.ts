@@ -37,7 +37,7 @@ async function handleResponseError(error: AxiosError<ApiErrorPayload>) {
       await csrfBootstrap();
       return apiClient.request(config);
     } catch {
-      throw new ApiError(status, data?.errors ?? [error.message]);
+      throw new ApiError(status, data?.errors ?? [error.message], data?.code);
     }
   }
 
@@ -45,7 +45,7 @@ async function handleResponseError(error: AxiosError<ApiErrorPayload>) {
     onUnauthenticated?.();
   }
 
-  throw new ApiError(status, data?.errors ?? [error.message]);
+  throw new ApiError(status, data?.errors ?? [error.message], data?.code);
 }
 
 apiClient.interceptors.response.use((r) => r, handleResponseError);
