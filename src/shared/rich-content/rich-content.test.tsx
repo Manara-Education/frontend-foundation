@@ -202,6 +202,46 @@ describe("RichContentView", () => {
     expect(container.querySelector("hr")).toBeInTheDocument();
   });
 
+  it("gives a bullet list and a numbered list the markers the CSS reset removes", () => {
+    // The defect this covers: the renderer's markup was always right and the app's reset —
+    // Tailwind's preflight, which sets `list-style: none` on every ul and ol — took the markers
+    // away, so a lesson's bullet list published as indented plain text. The stylesheet has to put
+    // them back inside the content container, and only there.
+    const { container } = render(
+      <RichContentView
+        document={doc([
+          {
+            type: "bulletList",
+            align: "START",
+            spacing: "NORMAL",
+            items: [{ content: [{ type: "text", text: "عنصر" }] }],
+          },
+          {
+            type: "orderedList",
+            align: "START",
+            spacing: "NORMAL",
+            items: [{ content: [{ type: "text", text: "خطوة" }] }],
+          },
+        ])}
+      />,
+    );
+
+    // Semantic elements, so a screen reader announces "list, 1 item" and copy/paste keeps the
+    // structure — neither of which a div with a bullet character in it would do.
+    expect(container.querySelector("ul.mrc-list")).not.toBeNull();
+    expect(container.querySelector("ol.mrc-list")).not.toBeNull();
+
+    // jsdom does not lay out list markers, so what is asserted is the rule that produces them:
+    // scoped to the content container, and stated for both list types.
+    const sheet = container.querySelector("style")?.textContent ?? "";
+    expect(sheet).toContain(".mrc ul { list-style-type: disc; }");
+    expect(sheet).toContain(".mrc ol { list-style-type: decimal; }");
+    // Logical, so an Arabic list's markers sit on the right and an English list's on the left.
+    expect(sheet).toContain("padding-inline-start: 26px;");
+    // Outside, so a wrapped line aligns under the item's text rather than under its marker.
+    expect(sheet).toContain("list-style-position: outside;");
+  });
+
   it("renders emphasis with semantic elements rather than styled spans", () => {
     const { container } = render(
       <RichContentView

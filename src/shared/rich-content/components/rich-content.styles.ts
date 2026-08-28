@@ -11,6 +11,8 @@
  * already ships the lesson page's own sheet, rather than introducing a second styling mechanism
  * for one feature.
  */
+import { richListStyles } from "./rich-list.styles";
+
 export const RICH_CONTENT_STYLES = `
   .mrc {
     font-family: 'Cairo', sans-serif;
@@ -73,26 +75,19 @@ export const RICH_CONTENT_STYLES = `
     color: #111827;
   }
 
+  /*
+    Markers, indent and item spacing come from the layer the editing surface also uses, so a list
+    cannot look like one thing while it is being written and another once it is published. See
+    rich-list.styles.ts for why restating list-style-type is necessary at all.
+  */
+  ${richListStyles(".mrc")}
+
   .mrc-list {
+    /* The block's own bottom margin is the author's, applied inline from their spacing token. */
     margin: 0;
-    /*
-      Logical padding, so the markers sit on the reading side: the right in Arabic, the left in
-      English. padding-left would put Arabic bullets on the wrong side of their text.
-    */
-    padding-inline-start: 26px;
     /* Tracks the body size: a list is the lesson's prose, not a caption under it. */
     font-size: 17px;
     line-height: 1.9;
-  }
-
-  .mrc-li {
-    /* Enough that the items read as separate points rather than as one wrapped sentence. */
-    margin-bottom: 10px;
-    padding-inline-start: 4px;
-  }
-
-  .mrc-li:last-child {
-    margin-bottom: 0;
   }
 
   /*

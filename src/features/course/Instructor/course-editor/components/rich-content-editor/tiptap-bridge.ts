@@ -86,19 +86,40 @@ function toInlines(content: JSONContent[] | undefined): RichInline[] {
 }
 
 /**
- * A list item's text.
+ * A list item, and any items nested under it, as a flat run of Manara items.
+ *
+ * Two levels of flattening happen here, for different reasons.
  *
  * ProseMirror wraps every list item's content in a paragraph, which Manara's schema does not have —
- * an item is a run of inline content and nothing more. Flattening it here is what keeps the stored
+ * an item is a run of inline content and nothing more. Dropping that wrapper keeps the stored
  * document from carrying a level of nesting that exists only because of how the editor models
  * lists.
+ *
+ * The second is a genuine loss and is the lesser of two. TipTap binds Tab to "sink list item", so
+ * an instructor can indent one item under another while writing, and Manara's stored document has
+ * no nested list to put the result in. Appending a nested item to the same list as a sibling loses
+ * its indentation and keeps every word of it; the alternative — walking only the paragraphs and
+ * ignoring the nested list, which is what this did — quietly deleted the text on save. An
+ * instructor who indents a line and finds it un-indented after reloading has lost a level of
+ * structure the product never offered. One who finds the line gone has lost their work.
+ *
+ * Items are appended in reading order, so an item's children follow it rather than collecting at
+ * the end of the list.
  */
-function toListItem(node: JSONContent): RichListItem | null {
+function collectListItems(node: JSONContent, into: RichListItem[]): void {
   const inlines: RichInline[] = [];
+  const nested: RichListItem[] = [];
+
   for (const child of node.content ?? []) {
+    if (child.type === "bulletList" || child.type === "orderedList") {
+      for (const item of child.content ?? []) collectListItems(item, nested);
+      continue;
+    }
     inlines.push(...toInlines(child.content));
   }
-  return inlines.length > 0 ? { content: inlines } : null;
+
+  if (inlines.length > 0) into.push({ content: inlines });
+  into.push(...nested);
 }
 
 function toBlock(node: JSONContent): RichBlock | null {
@@ -127,9 +148,8 @@ function toBlock(node: JSONContent): RichBlock | null {
     }
     case "bulletList":
     case "orderedList": {
-      const items = (node.content ?? [])
-        .map(toListItem)
-        .filter((item): item is RichListItem => item !== null);
+      const items: RichListItem[] = [];
+      for (const item of node.content ?? []) collectListItems(item, items);
       if (items.length === 0) return null;
       return { type: node.type, align, spacing, items };
     }
