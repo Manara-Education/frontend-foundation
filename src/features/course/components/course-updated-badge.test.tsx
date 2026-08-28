@@ -89,6 +89,7 @@ function lesson(change: ContentChange, overrides: Partial<Lesson> = {}): Lesson 
     number: 1,
     title: "الدرس الأول",
     duration: "10m",
+    contentType: "VIDEO",
     status: "not-started",
     quiz: null,
     change,

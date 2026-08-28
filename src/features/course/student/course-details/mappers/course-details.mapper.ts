@@ -54,6 +54,8 @@ function toLesson(dto: LessonApi, number: number, nextLessonId: number | null): 
     number,
     title: dto.title,
     duration: dto.duration ?? "",
+    // Defaulted for a response written before the field existed, which described a video lesson.
+    contentType: dto.contentType ?? "VIDEO",
     status: toLessonStatus(dto, nextLessonId),
     quiz: dto.quiz ? toQuizView(dto.quiz) : null,
     change: toChange(dto.change),

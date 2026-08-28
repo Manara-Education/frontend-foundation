@@ -35,7 +35,9 @@ function emptyLesson(draft: LessonDraft): CourseLessonEditorState {
     // existing lesson keeps whatever the backend already has (see `applyLessonDraft`).
     summary: "",
     description: draft.description,
+    contentType: draft.contentType,
     videoUrl: draft.videoUrl,
+    richContent: draft.richContent,
     // A lesson that has never been saved has no server-resolved still yet. YouTube's is
     // derivable from the URL anyway; Vimeo's arrives with the next response.
     videoThumbnailUrl: null,
@@ -51,7 +53,9 @@ function applyLessonDraft(
     ...lesson,
     title: draft.title,
     description: draft.description,
+    contentType: draft.contentType,
     videoUrl: draft.videoUrl,
+    richContent: draft.richContent,
     // Pointing a lesson at a different video invalidates the still the server resolved for
     // the previous one; the next save re-resolves it.
     videoThumbnailUrl: draft.videoUrl === lesson.videoUrl ? lesson.videoThumbnailUrl : null,

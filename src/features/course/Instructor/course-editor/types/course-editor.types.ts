@@ -44,7 +44,14 @@ export interface CourseEditorErrors {
 export interface LessonDraft {
   title: string;
   description: string;
+  /** Which kind of lesson the instructor chose in the form. */
+  contentType: import("@/shared/courses").LessonContentType;
+  /**
+   * Both branches travel back from the form whatever the type is, because the form holds both and
+   * the editor keeps both. Which one is sent to the server is decided at the mapper, by the type.
+   */
   videoUrl: string;
+  richContent: string | null;
   quiz: import("@/shared/courses").QuizEditorState | null;
 }
 

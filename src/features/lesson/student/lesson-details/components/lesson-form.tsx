@@ -1,13 +1,17 @@
 import { motion } from "motion/react";
+import type { LessonContentType } from "@/shared/courses";
+import type { RichDocument } from "@/shared/rich-content";
 import type { VideoSource } from "@/shared/video";
 import { QuizPlayer } from "@/features/quiz/student/quiz-player";
 import type { LessonCourseSummary, LessonRef, LessonView } from "../types/lesson.types";
 import { CompletionErrorNotice } from "./completion-error-notice";
+import { LessonCompleteButton } from "./lesson-complete-button";
 import { LessonCompletionBanner } from "./lesson-completion-banner";
 import { LessonContentSection } from "./lesson-content-section";
 import { LessonHeaderCard } from "./lesson-header-card";
 import { LessonLockedCard } from "./lesson-locked-card";
 import { LessonNavigation } from "./lesson-navigation";
+import { LessonRichContentSection } from "./lesson-rich-content-section";
 import { LPBreadcrumb } from "./lp-breadcrumb";
 import { QuizRequiredNotice } from "./quiz-required-notice";
 import { VideoPlayer } from "./video-player";
@@ -24,7 +28,12 @@ interface LessonFormProps {
   isQuizRequired: boolean;
   completionError: string | null;
   description: string;
+  contentType: LessonContentType;
   video: VideoSource | null;
+  richContent: RichDocument;
+  isCompleting: boolean;
+  canMarkComplete: boolean;
+  onMarkComplete: () => void;
   onBackToCourseDetails: () => void;
   onBackToCourses: () => void;
   onBackToHome: () => void;
@@ -45,7 +54,12 @@ export function LessonForm({
   isQuizRequired,
   completionError,
   description,
+  contentType,
   video,
+  richContent,
+  isCompleting,
+  canMarkComplete,
+  onMarkComplete,
   onBackToCourseDetails,
   onBackToCourses,
   onBackToHome,
@@ -53,6 +67,7 @@ export function LessonForm({
   onVideoEnd,
   onQuizPassed,
 }: LessonFormProps) {
+  const isRichContent = contentType === "RICH_CONTENT";
   return (
     <motion.div
       key={`lesson-${currentLesson.id}`}
@@ -88,13 +103,23 @@ export function LessonForm({
         <LessonLockedCard />
       ) : (
         <>
-          <VideoPlayer
-            source={video}
-            lessonTitle={currentLesson.title}
-            onVideoEnd={onVideoEnd}
-            isMarked={isMarkedComplete}
-            quizRequired={isQuizRequired}
-          />
+          {/*
+            The content-type branch, and the whole reason it is a branch rather than a conditional
+            inside the player: a rich-content lesson does not render a player in any state. Not an
+            empty one, not a placeholder, not a disabled one — the component is simply not here, so
+            there is nothing on the page for a learner to mistake for a video that failed to load.
+          */}
+          {isRichContent ? (
+            <LessonRichContentSection document={richContent} />
+          ) : (
+            <VideoPlayer
+              source={video}
+              lessonTitle={currentLesson.title}
+              onVideoEnd={onVideoEnd}
+              isMarked={isMarkedComplete}
+              quizRequired={isQuizRequired}
+            />
+          )}
 
           {isQuizRequired && <QuizRequiredNotice />}
           {completionError && <CompletionErrorNotice message={completionError} />}
@@ -106,7 +131,29 @@ export function LessonForm({
           */}
           <div className="lp-two-col">
             <div className="lp-main-col">
-              <LessonContentSection description={description} />
+              {/*
+                The short blurb beside the lesson, which is a different thing from the lesson body
+                and stays a different thing. A rich-content lesson whose author wrote no summary
+                would otherwise show an empty card under the article they did write.
+              */}
+              {(!isRichContent || description.trim() !== "") && (
+                <LessonContentSection description={description} />
+              )}
+
+              {/*
+                Manara's completion control, for the lesson type that has no playback to end. A
+                video lesson does not get one: its video completes it, and offering both would be
+                two ways to record the same thing.
+              */}
+              {isRichContent && (
+                <LessonCompleteButton
+                  isCompleted={isMarkedComplete}
+                  isCompleting={isCompleting}
+                  canComplete={canMarkComplete}
+                  isQuizRequired={isQuizRequired}
+                  onComplete={onMarkComplete}
+                />
+              )}
 
               {currentLesson.quiz && (
                 <motion.div

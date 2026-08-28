@@ -7,6 +7,9 @@ import type {
   LessonRef,
   LessonView,
 } from "../types/lesson.types";
+import type { LessonContentType } from "@/shared/courses";
+import type { RichDocument } from "@/shared/rich-content";
+import { emptyRichDocument } from "@/shared/rich-content";
 import type { VideoSource } from "@/shared/video";
 
 export interface UseLessonArgs {
@@ -33,8 +36,20 @@ export interface UseLessonResult {
   completionError: string | null;
   completion: LessonCompletion | null;
   description: string;
+  /** What this lesson teaches with. The screen renders one of two things from it. */
+  contentType: LessonContentType;
   /** The lesson's video, already resolved. Null when there is nothing playable to show. */
   video: VideoSource | null;
+  /** The authored document. Empty unless this is a rich-content lesson the viewer may open. */
+  richContent: RichDocument;
+  /**
+   * Whether a rich-content lesson may be completed right now.
+   *
+   * False while a claim is in flight, while the lesson is already complete, while it is locked, and
+   * while its quiz is unpassed — the same conditions the server enforces, so the button is not
+   * offered for something that would be refused.
+   */
+  canMarkComplete: boolean;
   navigateToLesson: (id: number) => void;
   markComplete: () => void;
   /** Called when the lesson's video reports that it reached its end. */
@@ -119,6 +134,9 @@ export function useLesson({
 
   const isMarkedComplete = currentLesson?.status === "completed";
   const isLocked = currentLesson?.locked ?? false;
+  // Defaulted for the moment before the lesson has loaded, and for a response written before the
+  // field existed — both of which described a video lesson.
+  const contentType: LessonContentType = currentLesson?.contentType ?? "VIDEO";
   const nextLesson = currentLesson?.nextLesson ?? null;
 
   /**
@@ -177,15 +195,21 @@ export function useLesson({
   }, [courseId, lessonId, isMarkedComplete, isCompleting, isLocked]);
 
   /**
-   * The video reaching its end is what completes a lesson now, in place of a button.
+   * The video reaching its end completes a video lesson, in place of a button.
+   *
+   * Deliberately still only a video lesson's trigger. Completion itself is generic — the endpoint
+   * and the progress it feeds know nothing about videos — and this is one of the two ways a learner
+   * can reach it, not the definition of it. A rich-content lesson has no playback to end and is
+   * completed by the button instead.
    *
    * The quiz stays the backend's rule rather than the video's: a gated lesson is left
    * watched-but-incomplete here, and the quiz's own pass is what completes it.
    */
   const handleVideoEnd = useCallback(() => {
+    if (contentType !== "VIDEO") return;
     if (isMarkedComplete || isLocked || isQuizRequired) return;
     markComplete();
-  }, [isMarkedComplete, isLocked, isQuizRequired, markComplete]);
+  }, [contentType, isMarkedComplete, isLocked, isQuizRequired, markComplete]);
 
   return {
     isLoading,
@@ -202,7 +226,10 @@ export function useLesson({
     completionError,
     completion,
     description: currentLesson?.description ?? "",
+    contentType,
     video: currentLesson?.video ?? null,
+    richContent: currentLesson?.richContent ?? emptyRichDocument(),
+    canMarkComplete: !isMarkedComplete && !isLocked && !isQuizRequired && !isCompleting,
     navigateToLesson,
     markComplete,
     handleVideoEnd,

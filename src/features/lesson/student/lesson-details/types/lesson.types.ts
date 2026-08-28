@@ -12,7 +12,8 @@ export type {
 } from "@/shared/courses";
 
 // ── Domain / view shape ───────────────────────────────────────────────────────
-import type { LessonRef } from "@/shared/courses";
+import type { ContentChangeResponse, LessonContentType, LessonRef } from "@/shared/courses";
+import type { RichDocument } from "@/shared/rich-content";
 import type { QuizView } from "@/features/quiz/student/quiz-player";
 import type { VideoSource } from "@/shared/video";
 
@@ -25,12 +26,25 @@ export interface LessonView {
   duration: string;
   status: LessonStatus;
   /**
+   * What this lesson teaches with, and the only thing the player branches on.
+   *
+   * Taken from the server's own field rather than inferred from whether `video` came back null. The
+   * difference matters: a video lesson whose URL Manara cannot parse also has a null `video`, and
+   * it must show "this video is unavailable" rather than an empty article.
+   */
+  contentType: LessonContentType;
+  /**
    * The lesson's video, resolved once here so no screen or player parses a URL of its own.
    *
-   * Null for a locked lesson — the backend withholds the video entirely — and for a link Manara
-   * cannot place, which the player renders as its unavailable state rather than an empty frame.
+   * Null for a locked lesson — the backend withholds the video entirely — for a rich-content
+   * lesson, which has none, and for a link Manara cannot place, which the player renders as its
+   * unavailable state rather than an empty frame.
    */
   video: VideoSource | null;
+  /**
+   * The authored document, parsed. Empty for a video lesson and for a locked one.
+   */
+  richContent: RichDocument;
   description: string;
   /**
    * True when the curriculum has not opened this lesson. The request still succeeds —
@@ -42,6 +56,13 @@ export interface LessonView {
   quiz: QuizView | null;
   previousLesson: LessonRef | null;
   nextLesson: LessonRef | null;
+  /**
+   * Whether this lesson is new or updated relative to when this learner enrolled, and what to say
+   * about it — the server's decision, not a comparison made here.
+   *
+   * Null for a viewer with no enrollment to measure against.
+   */
+  change: ContentChangeResponse | null;
 }
 
 /**

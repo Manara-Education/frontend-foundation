@@ -7,6 +7,7 @@
  * one into the other.
  */
 import type { CourseAccessType, CourseStatus, CourseStructure } from "./courses.enums";
+import type { LessonContentType } from "./courses.types";
 import type { SubscriptionUnit } from "./courses.enums";
 
 // ── Course card ───────────────────────────────────────────────────────────────
@@ -104,8 +105,18 @@ export interface CourseLessonEditorState {
   title: string;
   summary: string;
   description: string;
+  /**
+   * Which kind of lesson the instructor chose.
+   *
+   * Both content fields below are kept whatever this says, exactly as the server keeps both
+   * columns: switching a lesson's type in the editor must not throw away what the other branch
+   * already had, so switching back restores it. Only the branch matching this is sent as content.
+   */
+  contentType: LessonContentType;
   /** The address the instructor typed, on any supported platform. The only video field sent back. */
   videoUrl: string;
+  /** The authored document for a `RICH_CONTENT` lesson, as JSON, or `null` if never authored. */
+  richContent: string | null;
   /**
    * The still the server resolved for this video, carried so the editor's lesson cards can show a
    * Vimeo thumbnail — which, unlike YouTube's, has no address derivable from the URL.

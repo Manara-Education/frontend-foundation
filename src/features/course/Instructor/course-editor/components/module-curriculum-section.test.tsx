@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { CourseModuleEditorState } from "@/shared/courses";
+import type { CourseLessonEditorState, CourseModuleEditorState } from "@/shared/courses";
 import { ModuleCurriculumSection } from "./module-curriculum-section";
 
 /**
@@ -60,14 +60,16 @@ vi.mock("motion/react", async () => {
   };
 });
 
-function lessonState(id: number, title: string) {
+function lessonState(id: number, title: string): CourseLessonEditorState {
   return {
     key: `l${id}`,
     id,
     title,
     summary: "",
     description: "",
+    contentType: "VIDEO",
     videoUrl: "https://youtu.be/x",
+    richContent: null,
     videoThumbnailUrl: null,
     quiz: null,
   };

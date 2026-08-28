@@ -31,7 +31,9 @@ function lessonState(id: number, title: string): CourseLessonEditorState {
     title,
     summary: "",
     description: "",
+    contentType: "VIDEO",
     videoUrl: "https://youtu.be/x",
+    richContent: null,
     videoThumbnailUrl: null,
     quiz: null,
   };

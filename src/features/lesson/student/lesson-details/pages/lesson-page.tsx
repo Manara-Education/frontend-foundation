@@ -33,7 +33,11 @@ export function LessonPage({
     isQuizRequired,
     completionError,
     description,
+    contentType,
     video,
+    richContent,
+    isCompleting,
+    canMarkComplete,
     navigateToLesson,
     markComplete,
     handleVideoEnd,
@@ -72,7 +76,12 @@ export function LessonPage({
             isQuizRequired={isQuizRequired}
             completionError={completionError}
             description={description}
+            contentType={contentType}
             video={video}
+            richContent={richContent}
+            isCompleting={isCompleting}
+            canMarkComplete={canMarkComplete}
+            onMarkComplete={markComplete}
             onBackToCourseDetails={onBackToCourseDetails}
             onBackToCourses={onBackToCourses}
             onBackToHome={onBackToHome}

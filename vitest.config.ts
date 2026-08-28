@@ -17,6 +17,17 @@ export default mergeConfig(
       globals: true,
       setupFiles: ["./src/test/setup.ts"],
       include: ["src/**/*.test.{ts,tsx}"],
+      /*
+        Raised from the 5s default.
+
+        A handful of tests type a URL into the lesson form a character at a time and then wait out
+        the editor's 400ms debounce. Each takes about half a second on its own, and the suite runs
+        its files in parallel — so under load they drift past a 5s budget and fail for want of a
+        scheduler slot rather than for anything about the code. Since these are the tests that cover
+        the YouTube/Vimeo regression path, a flaky timeout there is a failure everyone learns to
+        ignore, which is worse than a slower ceiling.
+      */
+      testTimeout: 20_000,
     },
   }),
 );

@@ -3,6 +3,26 @@ export const FONT = "'Cairo', sans-serif";
 export const SUCCESS = "#22C55E";
 
 export const LP_SHIMMER = `
+  @keyframes lp-spin {
+    to { transform: rotate(360deg); }
+  }
+  .lp-spin {
+    animation: lp-spin 0.9s linear infinite;
+  }
+  /*
+    The completion control sits under the lesson body. Full width on a phone, where a button
+    aligned to one side is harder to reach than one that spans the column.
+  */
+  @media (max-width: 640px) {
+    .lp-complete-row {
+      align-items: stretch !important;
+    }
+    .lp-complete-row > button,
+    .lp-complete-row > span[role="status"] {
+      width: 100%;
+      justify-content: center;
+    }
+  }
   @keyframes lp-shimmer {
     0%   { background-position: -800px 0; }
     100% { background-position:  800px 0; }
