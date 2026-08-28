@@ -795,9 +795,21 @@ export function CourseEditorTabs({
       </AnimatePresence>
 
       {/* ── ERROR OVERLAY ────────────────────────────────────────────────── */}
+      {/*
+        A version conflict wears the same overlay and says something different with it. The
+        instructor did nothing wrong and trying again would not help: their save was refused
+        because the course changed after this tab loaded it, so the action reloads the latest
+        version instead of re-sending a payload the server has already declined.
+      */}
       <AnimatePresence>
         {editor.errorMessage !== null && (
-          <ErrorOverlay message={editor.errorMessage} onRetry={editor.retryError} onClose={editor.dismissError} />
+          <ErrorOverlay
+            message={editor.errorMessage}
+            onRetry={editor.retryError}
+            onClose={editor.dismissError}
+            title={editor.errorKind === "VERSION_CONFLICT" ? "الدورة تغيّرت في مكان آخر" : undefined}
+            retryLabel={editor.errorKind === "VERSION_CONFLICT" ? "إعادة تحميل أحدث نسخة" : undefined}
+          />
         )}
       </AnimatePresence>
     </div>

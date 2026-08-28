@@ -41,6 +41,7 @@ function courseState(modules: CourseModuleEditorState[]): CourseEditorState {
     subscriptionPlans: [],
     status: "PUBLISHED",
     hasUpdatesSincePublish: false,
+    revision: 4,
   };
 }
 

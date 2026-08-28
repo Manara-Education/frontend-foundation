@@ -13,7 +13,7 @@ export function unwrap<T>(response: AxiosResponse<ApiResponse<T>>): T {
   const body = response.data;
 
   if (body?.status === "error" || body?.data === undefined || body?.data === null) {
-    throw new ApiError(response.status, body?.errors ?? ["Unexpected empty response"]);
+    throw new ApiError(response.status, body?.errors ?? ["Unexpected empty response"], body?.code);
   }
 
   return body.data;
@@ -27,7 +27,7 @@ export function unwrapList<T>(response: AxiosResponse<ApiResponse<T[]>>): T[] {
   const body = response.data;
 
   if (body?.status === "error") {
-    throw new ApiError(response.status, body.errors ?? ["Unexpected error response"]);
+    throw new ApiError(response.status, body.errors ?? ["Unexpected error response"], body.code);
   }
 
   return body?.data ?? [];

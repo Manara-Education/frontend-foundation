@@ -7,9 +7,19 @@ interface ErrorOverlayProps {
   message: string;
   onRetry: () => void;
   onClose: () => void;
+  /**
+   * What the overlay is about, when it is not simply "something went wrong".
+   *
+   * A version conflict is not a failure the instructor caused and not one that trying again
+   * would fix — their save was refused because somebody else edited the course after this tab
+   * loaded it. The heading and the action label say that, and the action reloads rather than
+   * re-sending, so the button cannot be the thing that overwrites the newer version.
+   */
+  title?: string;
+  retryLabel?: string;
 }
 
-export function ErrorOverlay({ message, onRetry, onClose }: ErrorOverlayProps) {
+export function ErrorOverlay({ message, onRetry, onClose, title, retryLabel }: ErrorOverlayProps) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
@@ -41,7 +51,7 @@ export function ErrorOverlay({ message, onRetry, onClose }: ErrorOverlayProps) {
           <XCircle size={36} />
         </motion.div>
         <div className="text-center flex flex-col gap-1.5">
-          <h2 style={{ fontWeight: 700, fontSize: 20, color: "#1E2340" }}>حدث خطأ ما!</h2>
+          <h2 style={{ fontWeight: 700, fontSize: 20, color: "#1E2340" }}>{title ?? "حدث خطأ ما!"}</h2>
           <p style={{ fontSize: 14, color: "#717182", lineHeight: 1.7 }}>{message}</p>
         </div>
         <button
@@ -67,7 +77,7 @@ export function ErrorOverlay({ message, onRetry, onClose }: ErrorOverlayProps) {
           }}
         >
           <RefreshCw size={16} />
-          حاول مرة أخرى
+          {retryLabel ?? "حاول مرة أخرى"}
         </button>
         <button
           onClick={onClose}

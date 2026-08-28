@@ -113,6 +113,35 @@ describe("editor state → course request", () => {
   });
 });
 
+/**
+ * The revision the payload was built from, which the server checks the save against.
+ *
+ * A full-replacement `PUT` built from an hour-old copy of the course is an hour-old course, so
+ * it has to say which revision it came from or the server has no way to tell. The value is
+ * carried through untouched in both directions — never computed here, and never invented.
+ */
+describe("the course revision, in both directions", () => {
+  it("is read off the aggregate response onto the editor state", () => {
+    expect(mapInstructorCourseResponseToEditorState(instructorResponse({ revision: 12 })).revision)
+      .toBe(12);
+  });
+
+  it("reads as absent from a payload that does not carry it", () => {
+    expect(mapInstructorCourseResponseToEditorState(instructorResponse()).revision).toBeNull();
+  });
+
+  it("is sent back as `expectedRevision` on an update", () => {
+    expect(mapCourseEditorStateToCourseRequest(editorState({ revision: 12 })).expectedRevision)
+      .toBe(12);
+  });
+
+  it("is left out entirely when there is no revision to be behind", () => {
+    // A create has no revision yet, and the server only requires one on update.
+    expect(mapCourseEditorStateToCourseRequest(editorState({ revision: null })))
+      .not.toHaveProperty("expectedRevision");
+  });
+});
+
 describe("the update signal is carried, never computed", () => {
   it("reads the backend's answer onto the course card", () => {
     expect(

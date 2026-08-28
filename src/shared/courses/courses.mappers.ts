@@ -176,6 +176,7 @@ export function mapInstructorCourseResponseToEditorState(
     subscriptionPlans: (dto.subscriptionPlans ?? []).map(mapSubscriptionPlanResponseToEditorState),
     status: normalizeCourseStatus(dto.status),
     hasUpdatesSincePublish: dto.hasUpdatesSincePublish === true,
+    revision: dto.revision ?? null,
   };
 }
 
@@ -271,6 +272,9 @@ export function mapCourseEditorStateToCourseRequest(
     subtitle: state.subtitle.trim() || null,
     image: state.image.trim() || null,
     description: state.description.trim(),
+    // What the server checks this save against. Omitted on create, where there is no revision
+    // to be behind — `CourseService` only requires it on update.
+    ...(state.revision !== null ? { expectedRevision: state.revision } : {}),
     structure: state.structure,
     ...(isModules
       ? { modules: state.modules.map(mapModuleEditorStateToRequest) }
@@ -307,6 +311,7 @@ export function createEmptyCourseEditorState(): CourseEditorState {
     subscriptionPlans: [],
     status: "DRAFT",
     hasUpdatesSincePublish: false,
+    revision: null,
   };
 }
 

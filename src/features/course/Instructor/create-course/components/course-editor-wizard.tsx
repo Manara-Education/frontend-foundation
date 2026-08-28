@@ -486,6 +486,8 @@ export function CourseEditorWizard({
             message={editor.errorMessage}
             onRetry={editor.retryError}
             onClose={editor.dismissError}
+            title={editor.errorKind === "VERSION_CONFLICT" ? "الدورة تغيّرت في مكان آخر" : undefined}
+            retryLabel={editor.errorKind === "VERSION_CONFLICT" ? "إعادة تحميل أحدث نسخة" : undefined}
           />
         )}
       </AnimatePresence>

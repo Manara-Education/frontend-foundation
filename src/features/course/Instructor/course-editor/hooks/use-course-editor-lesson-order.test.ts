@@ -66,6 +66,7 @@ function courseState(
     subscriptionPlans: [],
     status: "PUBLISHED",
     hasUpdatesSincePublish: false,
+    revision: 4,
   };
 }
 
