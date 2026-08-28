@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Clock } from "lucide-react";
+import { Clock, FileText } from "lucide-react";
 import { CourseUpdatedBadge } from "@/features/course/components/course-updated-badge";
 import { FONT, LESSON_STATUS_CONFIG, PRIMARY, louderChange } from "../formatters/course-details.formatter";
 import type { Lesson } from "../types/course-details.types";
@@ -114,10 +114,24 @@ export function LessonItem({ lesson, index, onLessonClick }: LessonItemProps) {
         </div>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 4, color: "#C4C9DE", flexShrink: 0 }}>
-        <Clock size={11} strokeWidth={1.5} />
-        <span style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4" }}>{lesson.duration}</span>
-      </div>
+      {/*
+        A running time, for the lessons that have one.
+
+        A rich-content lesson is read rather than played, so it has no duration and gets a reading
+        marker instead of "0s". Printing a zero would be a video assumption surviving in the
+        curriculum — the row would claim the lesson is empty when it is an article.
+      */}
+      {lesson.contentType === "RICH_CONTENT" ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 4, color: "#C4C9DE", flexShrink: 0 }}>
+          <FileText size={11} strokeWidth={1.5} />
+          <span style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4" }}>مقروء</span>
+        </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: 4, color: "#C4C9DE", flexShrink: 0 }}>
+          <Clock size={11} strokeWidth={1.5} />
+          <span style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4" }}>{lesson.duration}</span>
+        </div>
+      )}
 
       {isCurrent && (
         <div

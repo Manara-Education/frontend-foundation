@@ -1,5 +1,6 @@
 import { BookOpen, CheckCircle2, Clock, PlayCircle } from "lucide-react";
 import { motion } from "motion/react";
+import { CourseUpdatedBadge } from "@/features/course/components/course-updated-badge";
 import type { LessonCourseSummary, LessonView } from "../types/lesson.types";
 import { FONT, PRIMARY, SUCCESS } from "./lesson.constants";
 
@@ -94,13 +95,30 @@ export function LessonHeaderCard({ lesson, course, isMarkedComplete }: LessonHea
           )}
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <Clock size={12} strokeWidth={1.5} color="#9BA3C4" />
-            <span style={{ fontFamily: FONT, fontSize: 12, color: "#9BA3C4" }}>
-              {lesson.duration}
-            </span>
-          </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          {/*
+            "Updated" and "Completed" sit side by side, and that pairing is the point rather than an
+            accident of layout. They answer different questions — one is the learner's progress, the
+            other is whether the material moved under them since they enrolled — and a lesson can
+            truthfully be both. Merging them, or letting an update clear the tick, would lose the
+            fact that they have finished this lesson and the fact that there is something new in it.
+          */}
+          {lesson.change && (
+            <CourseUpdatedBadge state={lesson.change.state} summary={lesson.change.summary} />
+          )}
+
+          {/*
+            A read has no running time. Printing "0s" beside an article is a video assumption
+            surviving in the layout, so the chip is simply absent for a rich-content lesson.
+          */}
+          {lesson.contentType === "VIDEO" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <Clock size={12} strokeWidth={1.5} color="#9BA3C4" />
+              <span style={{ fontFamily: FONT, fontSize: 12, color: "#9BA3C4" }}>
+                {lesson.duration}
+              </span>
+            </div>
+          )}
 
           {isMarkedComplete ? (
             <div
@@ -129,8 +147,15 @@ export function LessonHeaderCard({ lesson, course, isMarkedComplete }: LessonHea
                 border: "1px solid rgba(78,91,146,0.14)",
               }}
             >
-              <PlayCircle size={12} color={PRIMARY} strokeWidth={2} />
-              <span style={{ fontFamily: FONT, fontSize: 11, color: PRIMARY }}>قيد المشاهدة</span>
+              {lesson.contentType === "VIDEO" ? (
+                <PlayCircle size={12} color={PRIMARY} strokeWidth={2} />
+              ) : (
+                <BookOpen size={12} color={PRIMARY} strokeWidth={2} />
+              )}
+              <span style={{ fontFamily: FONT, fontSize: 11, color: PRIMARY }}>
+                {/* "Watching" is a video's word. A lesson that is read is being read. */}
+                {lesson.contentType === "VIDEO" ? "قيد المشاهدة" : "قيد القراءة"}
+              </span>
             </div>
           )}
         </div>

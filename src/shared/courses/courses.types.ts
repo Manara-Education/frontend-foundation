@@ -33,6 +33,15 @@ import type { VideoProvider } from "@/shared/video";
  */
 export type ContentChangeState = "NEW" | "UPDATED" | "UNCHANGED";
 
+/**
+ * What a lesson teaches with. Mirrors the backend enum of the same name.
+ *
+ * The discriminator, and the only thing that decides which content a lesson shows. Never inferred
+ * from whether `videoUrl` is null: both content fields survive a change of type, so a rich-content
+ * lesson can still be holding the video it used to be.
+ */
+export type LessonContentType = "VIDEO" | "RICH_CONTENT";
+
 export type ContentEntityType = "COURSE" | "MODULE" | "LESSON" | "QUIZ" | "EXAM";
 
 /**
@@ -99,7 +108,22 @@ export interface LessonRequest {
   title: string;
   summary?: string | null;
   description?: string | null;
-  videoUrl: string;
+  /**
+   * Which kind of lesson this is, and therefore which of the two content fields is read.
+   *
+   * Optional on the wire and defaults to `VIDEO` on the server, which is what keeps a client
+   * written before this field existed creating video lessons.
+   */
+  contentType?: LessonContentType;
+  /** Required for a `VIDEO` lesson; ignored for a `RICH_CONTENT` one. */
+  videoUrl?: string | null;
+  /**
+   * The authored document for a `RICH_CONTENT` lesson, as JSON.
+   *
+   * Never stored as sent — the server rebuilds it from an allowlist and refuses unsafe URLs, so
+   * what comes back on the next read is the sanitized form rather than this.
+   */
+  richContent?: string | null;
   orderIndex: number;
   /**
    * Required by the standalone lesson endpoints when the course uses modules. Inside a
@@ -125,6 +149,16 @@ export interface LessonResponse {
   title: string;
   summary: string | null;
   description: string | null;
+  /**
+   * Which kind of lesson this is. Always present, including on a locked row, so a client dispatches
+   * on a stated fact rather than guessing from whether `videoUrl` came back null.
+   */
+  contentType: LessonContentType;
+  /**
+   * The authored document, as JSON, for a `RICH_CONTENT` lesson. Null for a video lesson and for a
+   * locked one — it is lesson content, withheld by the same rule that withholds the video.
+   */
+  richContent: string | null;
   videoUrl: string | null;
   /**
    * Which platform hosts `videoUrl`. Derived by the server from the URL, so it is authoritative
@@ -167,6 +201,14 @@ export interface InstructorLessonResponse {
   title: string;
   summary: string | null;
   description: string | null;
+  contentType: LessonContentType;
+  /**
+   * The authored document as the server stored it.
+   *
+   * Carried whatever the lesson's type is, so reopening the editor on a lesson that was switched to
+   * video still shows the article that is being kept for it.
+   */
+  richContent: string | null;
   videoUrl: string | null;
   /**
    * Which platform hosts `videoUrl`. Derived by the server from the URL, so it is authoritative

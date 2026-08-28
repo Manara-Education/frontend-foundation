@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { PlayCircle, Pencil, Trash2, GripVertical, Video } from "lucide-react";
+import { PlayCircle, Pencil, Trash2, GripVertical, FileText, Video } from "lucide-react";
 import type { CourseLessonEditorState } from "@/shared/courses";
 import { VideoThumbnail, videoSourceFromResponse } from "@/shared/video";
 import { formatVideoProviderLabel } from "../formatters/course-editor.formatter";
@@ -19,12 +19,20 @@ export function LessonCard({ lesson, index, onEdit, onDelete, isDragging }: Less
   const [thumbLoaded, setThumbLoaded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  const isRichContent = lesson.contentType === "RICH_CONTENT";
+
   // The lesson as the server described it: its own URL plus whatever still was resolved
   // for it. Vimeo lessons have one only after a save, which the fallback covers.
-  const videoSource = videoSourceFromResponse({
-    videoUrl: lesson.videoUrl,
-    videoThumbnailUrl: lesson.videoThumbnailUrl,
-  });
+  //
+  // Read only for a video lesson. A lesson switched to rich content keeps its URL in the editor's
+  // state — that retention is what makes the switch reversible — and resolving it here would draw a
+  // video thumbnail and a play icon on a card for an article.
+  const videoSource = isRichContent
+    ? null
+    : videoSourceFromResponse({
+        videoUrl: lesson.videoUrl,
+        videoThumbnailUrl: lesson.videoThumbnailUrl,
+      });
 
   return (
     <motion.div
@@ -81,29 +89,46 @@ export function LessonCard({ lesson, index, onEdit, onDelete, isDragging }: Less
 
         {/* Thumbnail */}
         <div className="flex-shrink-0 flex items-center py-3 pl-3">
-          <div className="relative overflow-hidden" style={{ width: 112, height: 68, borderRadius: 12, background: "#0F1322" }}>
-            <VideoThumbnail
-              source={videoSource}
-              alt={lesson.title}
-              onLoadedChange={setThumbLoaded}
-              fallback={
+          {isRichContent ? (
+            // A content lesson gets a card of its own rather than a black video frame with no
+            // video in it. Same footprint, so a mixed curriculum still reads as one list.
+            <div
+              className="relative overflow-hidden flex items-center justify-center"
+              style={{
+                width: 112,
+                height: 68,
+                borderRadius: 12,
+                background: "rgba(78,91,146,0.07)",
+                border: "1px solid rgba(78,91,146,0.14)",
+              }}
+            >
+              <FileText size={20} color={PRIMARY} strokeWidth={1.6} />
+            </div>
+          ) : (
+            <div className="relative overflow-hidden" style={{ width: 112, height: 68, borderRadius: 12, background: "#0F1322" }}>
+              <VideoThumbnail
+                source={videoSource}
+                alt={lesson.title}
+                onLoadedChange={setThumbLoaded}
+                fallback={
+                  <div
+                    className="absolute inset-0 flex items-center justify-center"
+                    style={{ background: "linear-gradient(135deg, #1a1f3c 0%, #2d3563 100%)" }}
+                  >
+                    <Video size={18} color="rgba(255,255,255,0.25)" />
+                  </div>
+                }
+              />
+              <div className="absolute inset-0 flex items-center justify-center" style={{ pointerEvents: "none" }}>
                 <div
-                  className="absolute inset-0 flex items-center justify-center"
-                  style={{ background: "linear-gradient(135deg, #1a1f3c 0%, #2d3563 100%)" }}
+                  className="rounded-full flex items-center justify-center"
+                  style={{ width: 30, height: 30, background: "rgba(0,0,0,0.5)", opacity: thumbLoaded ? 1 : 0, transition: "opacity 0.3s" }}
                 >
-                  <Video size={18} color="rgba(255,255,255,0.25)" />
+                  <PlayCircle size={16} color="#fff" />
                 </div>
-              }
-            />
-            <div className="absolute inset-0 flex items-center justify-center" style={{ pointerEvents: "none" }}>
-              <div
-                className="rounded-full flex items-center justify-center"
-                style={{ width: 30, height: 30, background: "rgba(0,0,0,0.5)", opacity: thumbLoaded ? 1 : 0, transition: "opacity 0.3s" }}
-              >
-                <PlayCircle size={16} color="#fff" />
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Info */}
@@ -129,6 +154,21 @@ export function LessonCard({ lesson, index, onEdit, onDelete, isDragging }: Less
             </div>
           )}
           <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+            {/*
+              A content lesson is badged for what it is, so an instructor scanning a mixed
+              curriculum can tell the two kinds apart at a glance rather than by their absence.
+            */}
+            {isRichContent && (
+              <div
+                className="rounded-md px-2 py-0.5 flex items-center gap-1"
+                style={{ background: "rgba(78,91,146,0.08)" }}
+              >
+                <FileText size={10} color={PRIMARY} />
+                <span style={{ fontFamily: FONT, fontSize: 10, color: PRIMARY, fontWeight: 600 }}>
+                  محتوى
+                </span>
+              </div>
+            )}
             {/*
               The platform this lesson actually plays from, read from its own URL. A lesson whose
               link Manara cannot place shows no badge rather than claiming the wrong platform.

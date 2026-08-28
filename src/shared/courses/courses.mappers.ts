@@ -123,7 +123,11 @@ function mapInstructorLessonResponseToEditorState(
     title: dto.title ?? "",
     summary: dto.summary ?? "",
     description: dto.description ?? "",
+    // A response from before this field existed has no type; that lesson is a video lesson, which
+    // is the same answer the database's own default gives.
+    contentType: dto.contentType ?? "VIDEO",
     videoUrl: dto.videoUrl ?? "",
+    richContent: dto.richContent ?? null,
     videoThumbnailUrl: dto.videoThumbnailUrl ?? null,
     quiz: mapInstructorQuizResponseToEditorState(dto.quiz),
   };
@@ -215,7 +219,13 @@ function mapLessonEditorStateToRequest(
     title: state.title,
     summary: state.summary,
     description: state.description,
-    videoUrl: state.videoUrl,
+    contentType: state.contentType,
+    // Only the branch this lesson actually uses is sent. The server ignores the other one and keeps
+    // whatever it already had there, so a round trip cannot overwrite the retained content with a
+    // stale copy the editor happened to be holding.
+    ...(state.contentType === "RICH_CONTENT"
+      ? { richContent: state.richContent }
+      : { videoUrl: state.videoUrl }),
     orderIndex: index,
     quiz: mapQuizEditorStateToRequest(state.quiz),
   };

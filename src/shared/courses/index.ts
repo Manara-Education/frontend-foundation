@@ -27,6 +27,7 @@ export type {
   CheckoutResponse,
   ContentChangeResponse,
   ContentChangeState,
+  LessonContentType,
   ContentEntityType,
   CourseAccessResponse,
   CourseDetailsInfo,

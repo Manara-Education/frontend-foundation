@@ -20,6 +20,7 @@ import type {
   CourseAccessType,
   CourseStructure,
   EntitlementSource,
+  LessonContentType,
   RemovedContentResponse,
 } from "@/shared/courses";
 import type { QuizView } from "@/features/quiz/student/quiz-player";
@@ -96,6 +97,14 @@ export interface Lesson {
   number: number;
   title: string;
   duration: string;
+  /**
+   * What this lesson teaches with, carried on the curriculum row so it can be drawn honestly: a
+   * lesson that is read has no running time to print.
+   *
+   * Present on locked rows too — which kind of lesson it is belongs to the listing, not to the
+   * content the lock is withholding.
+   */
+  contentType: LessonContentType;
   status: LessonStatus;
   /** The lesson's own quiz, when the learner may see it. */
   quiz: QuizView | null;
