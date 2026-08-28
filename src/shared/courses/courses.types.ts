@@ -11,6 +11,7 @@ import type {
   CourseAccessType,
   CourseStatus,
   CourseStructure,
+  CourseVisibility,
   EntitlementSource,
   SubscriptionUnit,
 } from "./courses.enums";
@@ -353,6 +354,19 @@ export interface CourseRequest {
    * course cannot unpublish it by saving a lesson.
    */
   status?: CourseStatus;
+  /**
+   * Who the course is offered to. Sent on create **and** update, unlike `status`.
+   *
+   * The difference is deliberate on both sides. Publication has dedicated endpoints because
+   * a stale full-replacement save must not be able to take a live course off the catalogue
+   * in passing. Visibility is an ordinary course setting the instructor edits beside the
+   * title, and `expectedRevision` already refuses a save built on a copy that predates
+   * somebody else's change to it.
+   *
+   * Omitting it means "leave it as it is" on update and "public" on create — so no payload
+   * can hide a course by saying nothing.
+   */
+  visibility?: CourseVisibility;
 }
 
 /**
@@ -409,6 +423,13 @@ export interface CourseResponse {
   structure: CourseStructure | null;
   status: CourseStatus | null;
   /**
+   * Who the course is offered to, beside `status` and never folded into it.
+   *
+   * Optional because a payload from an older backend does not carry it; a missing value
+   * reads as `PUBLIC`, which is what such a backend's courses all are.
+   */
+  visibility?: CourseVisibility | null;
+  /**
    * Whether the course has changed in a way its learners should be told about.
    *
    * The backend's answer, derived there from the publication baseline and the content
@@ -457,6 +478,14 @@ export interface InstructorCourseResponse {
   instructorName: string | null;
   structure: CourseStructure | null;
   status: CourseStatus | null;
+  /**
+   * Who the course is offered to. What the editor's visibility control reads, and what the
+   * instructor's course card renders its "private" marker from.
+   *
+   * Optional for the same reason as on `CourseResponse`: an older backend does not send it,
+   * and its courses are all public.
+   */
+  visibility?: CourseVisibility | null;
   /**
    * Whether the course has changed in a way its learners should be told about.
    *

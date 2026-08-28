@@ -72,6 +72,76 @@ function instructorResponse(overrides: Partial<InstructorCourseResponse> = {}): 
 }
 
 /**
+ * Visibility is the second axis a course has, and every assertion here is about it staying
+ * a second axis: carried beside the publication state, never inferred from it, never
+ * inferring it, and never able to hide a course by being left unsaid.
+ */
+describe("course visibility", () => {
+  it("sends visibility on every save, including an update that omits status", () => {
+    const request = mapCourseEditorStateToCourseRequest(
+      editorState({ status: "PUBLISHED", visibility: "PRIVATE" }),
+    );
+
+    expect(request.visibility).toBe("PRIVATE");
+    expect(request).not.toHaveProperty("status");
+  });
+
+  it("a new course starts public, matching the backend's own default", () => {
+    expect(createEmptyCourseEditorState().visibility).toBe("PUBLIC");
+    expect(mapCourseEditorStateToCourseRequest(createEmptyCourseEditorState()).visibility)
+      .toBe("PUBLIC");
+  });
+
+  it("reads visibility back into editor state, independently of the status", () => {
+    const state = mapInstructorCourseResponseToEditorState(
+      instructorResponse({ status: "PUBLISHED", visibility: "PRIVATE" }),
+    );
+
+    expect(state.status).toBe("PUBLISHED");
+    expect(state.visibility).toBe("PRIVATE");
+  });
+
+  it("reads visibility onto the card, alongside the publication state", () => {
+    const card = mapCourseResponseToCourseCardModel(
+      courseResponse({ status: "PUBLISHED", visibility: "PRIVATE" }),
+    );
+
+    expect(card.status).toBe("PUBLISHED");
+    expect(card.visibility).toBe("PRIVATE");
+  });
+
+  /*
+    A payload from a backend that predates the field has to read as public. The other
+    direction would badge every course on the platform as private and tell instructors their
+    live courses had gone dark — a display lie about a security property, which is the worst
+    way for this particular default to be wrong.
+  */
+  it("treats an absent visibility as public, on both shapes", () => {
+    expect(mapCourseResponseToCourseCardModel(courseResponse({ visibility: undefined })).visibility)
+      .toBe("PUBLIC");
+    expect(mapCourseResponseToCourseCardModel(courseResponse({ visibility: null })).visibility)
+      .toBe("PUBLIC");
+    expect(
+      mapInstructorCourseResponseToEditorState(instructorResponse({ visibility: undefined }))
+        .visibility,
+    ).toBe("PUBLIC");
+  });
+
+  it("carries a draft's visibility without turning it into a publication state", () => {
+    const state = mapInstructorCourseResponseToEditorState(
+      instructorResponse({ status: "DRAFT", visibility: "PRIVATE" }),
+    );
+
+    expect(state.status).toBe("DRAFT");
+    expect(state.visibility).toBe("PRIVATE");
+
+    const request = mapCourseEditorStateToCourseRequest(state, { includeStatus: true });
+    expect(request.status).toBe("DRAFT");
+    expect(request.visibility).toBe("PRIVATE");
+  });
+});
+
+/**
  * The request the editor sends is where two production faults lived, and both were faults
  * of what the payload *contained* rather than of anything it failed to send.
  */

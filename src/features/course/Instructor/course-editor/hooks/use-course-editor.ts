@@ -9,6 +9,7 @@ import {
   type CourseModuleEditorState,
   type CourseStatus,
   type CourseStructure,
+  type CourseVisibility,
   type QuizEditorState,
 } from "@/shared/courses";
 import { courseEditorService } from "../services/course-editor.service";
@@ -430,6 +431,26 @@ export function useCourseEditor(mode: CourseEditorMode) {
   const setStructure = useCallback(
     (structure: CourseStructure) => {
       mutate((prev) => ({ ...prev, structure }));
+    },
+    [mutate],
+  );
+
+  /**
+   * Who the course is offered to.
+   *
+   * Persisted straight away for a course that exists, unlike the title and description,
+   * which wait for the explicit "save" the overview tab already has. Two reasons: it is a
+   * toggle rather than a field being typed into, so there is no half-entered state to
+   * debounce past; and it is the one setting where leaving the change unsaved has a
+   * security shape — an instructor who flips a course to private, sees the control move and
+   * navigates away must not find it still on the catalogue.
+   *
+   * Nothing here touches `status`. Making a course private does not unpublish it, and the
+   * two controls sit side by side in the editor saying exactly that.
+   */
+  const setVisibility = useCallback(
+    (visibility: CourseVisibility) => {
+      mutate((prev) => ({ ...prev, visibility }), true);
     },
     [mutate],
   );
@@ -961,6 +982,7 @@ export function useCourseEditor(mode: CourseEditorMode) {
     setImage,
     clearImage,
     setStructure,
+    setVisibility,
 
     // flat lessons
     addLesson,

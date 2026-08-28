@@ -44,6 +44,7 @@ function courseState(revision: number, modules: CourseModuleEditorState[] = [A, 
     purchasePrice: null,
     subscriptionPlans: [],
     status: "PUBLISHED",
+    visibility: "PUBLIC",
     hasUpdatesSincePublish: false,
     revision,
   };

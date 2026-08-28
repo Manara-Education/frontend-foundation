@@ -67,6 +67,7 @@ function courseState(
     purchasePrice: null,
     subscriptionPlans: [],
     status: "PUBLISHED",
+    visibility: "PUBLIC",
     hasUpdatesSincePublish: false,
     revision: 4,
   };

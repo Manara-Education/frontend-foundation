@@ -1,4 +1,9 @@
-import type { CourseAccessType, CourseStructure, SubscriptionUnit } from "@/shared/courses";
+import type {
+  CourseAccessType,
+  CourseStructure,
+  CourseVisibility,
+  SubscriptionUnit,
+} from "@/shared/courses";
 import type { VideoProvider, VideoResolutionError } from "@/shared/video";
 
 const MODULE_ORDINALS = [
@@ -36,6 +41,22 @@ export function formatSubscriptionUnitLabel(unit: SubscriptionUnit): string {
 
 export function formatStructureLabel(structure: CourseStructure): string {
   return STRUCTURE_LABELS[structure];
+}
+
+/**
+ * Who the course is offered to, in one line for the wizard's review step.
+ *
+ * Says what private *means* rather than only naming it, because this is the last screen
+ * before publishing and it is the moment an instructor is deciding. "خاصة" on its own would
+ * leave the reader to guess whether it also means unpublished — it does not.
+ */
+const VISIBILITY_SUMMARIES: Record<CourseVisibility, string> = {
+  PUBLIC: "عامة — تظهر لكل الطلاب في الاستكشاف والبحث",
+  PRIVATE: "خاصة — لا تظهر في الاستكشاف أو البحث، ويصل إليها الطلاب المشتركون فيها فقط",
+};
+
+export function formatVisibilitySummary(visibility: CourseVisibility): string {
+  return VISIBILITY_SUMMARIES[visibility];
 }
 
 export function formatLessonCountLabel(count: number): string {

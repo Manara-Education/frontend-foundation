@@ -6,7 +6,12 @@
  * have to know that. Mappers in `courses.mappers.ts` are the only place allowed to turn
  * one into the other.
  */
-import type { CourseAccessType, CourseStatus, CourseStructure } from "./courses.enums";
+import type {
+  CourseAccessType,
+  CourseStatus,
+  CourseStructure,
+  CourseVisibility,
+} from "./courses.enums";
 import type { LessonContentType } from "./courses.types";
 import type { SubscriptionUnit } from "./courses.enums";
 
@@ -40,6 +45,11 @@ export interface CourseCardModel {
   accessType: CourseAccessType;
   structure: CourseStructure;
   status: CourseStatus;
+  /**
+   * Who the course is offered to. Rendered as its own marker beside the publication badge,
+   * because a course can be published *and* private at once.
+   */
+  visibility: CourseVisibility;
   studentsCount?: number;
   instructorId?: number;
   instructorName?: string;
@@ -170,6 +180,14 @@ export interface CourseEditorState {
   purchasePrice: number | null;
   subscriptionPlans: SubscriptionPlanEditorState[];
   status: CourseStatus;
+  /**
+   * Who the course is offered to, as the instructor has it set in the editor.
+   *
+   * Held beside `status`, not inside it: the editor shows and saves both, and changing one
+   * never implies anything about the other. Sent with every save — an omitted field means
+   * "unchanged" to the backend, so the editor states what it is holding.
+   */
+  visibility: CourseVisibility;
   /**
    * Whether the course this state was loaded from has changes its learners have not been told about.
    *

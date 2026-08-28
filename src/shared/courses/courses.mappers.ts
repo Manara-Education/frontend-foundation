@@ -9,6 +9,7 @@ import {
   normalizeCourseAccessType,
   normalizeCourseStatus,
   normalizeCourseStructure,
+  normalizeCourseVisibility,
 } from "./courses.enums";
 import type {
   CourseEditorState,
@@ -74,6 +75,7 @@ export function mapCourseResponseToCourseCardModel(dto: CourseResponse): CourseC
     accessType: normalizeCourseAccessType(dto.accessType),
     structure: normalizeCourseStructure(dto.structure),
     status: normalizeCourseStatus(dto.status),
+    visibility: normalizeCourseVisibility(dto.visibility),
     studentsCount: optionalNumber(dto.studentsCount),
     instructorId: dto.instructorId,
     instructorName: optional(dto.instructorName),
@@ -179,6 +181,7 @@ export function mapInstructorCourseResponseToEditorState(
     purchasePrice: dto.purchasePrice ?? dto.price ?? null,
     subscriptionPlans: (dto.subscriptionPlans ?? []).map(mapSubscriptionPlanResponseToEditorState),
     status: normalizeCourseStatus(dto.status),
+    visibility: normalizeCourseVisibility(dto.visibility),
     hasUpdatesSincePublish: dto.hasUpdatesSincePublish === true,
     revision: dto.revision ?? null,
   };
@@ -300,6 +303,15 @@ export function mapCourseEditorStateToCourseRequest(
     // alone — publishing and unpublishing are their own endpoints, so a save built from a
     // stale copy of the course can no longer take a live course off the catalogue.
     ...(options.includeStatus ? { status: state.status } : {}),
+    // Visibility, unlike publication, *is* sent on every save. It is an ordinary course
+    // setting the instructor edits on the same screen as the title, and it has no endpoint
+    // of its own — so the save is how it is persisted, and always stating it is what makes
+    // "I turned this off" reach the server rather than silently meaning "unchanged".
+    //
+    // Safe against the staleness that keeps `status` out: `expectedRevision` travels with
+    // this payload, so a tab holding a copy from before somebody else changed the setting
+    // is refused outright rather than putting the old value back.
+    visibility: state.visibility,
   };
 }
 
@@ -320,6 +332,9 @@ export function createEmptyCourseEditorState(): CourseEditorState {
     purchasePrice: null,
     subscriptionPlans: [],
     status: "DRAFT",
+    // A new course is on offer to everyone unless its author says otherwise — the same
+    // default the backend applies, stated here so the wizard's control starts on it.
+    visibility: "PUBLIC",
     hasUpdatesSincePublish: false,
     revision: null,
   };
