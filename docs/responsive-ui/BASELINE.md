@@ -50,3 +50,45 @@ survives is the feature's own defect, which is what the feature workstreams then
 `/profile` is worst because its content is widest relative to its container; `/login` and
 `/register` are clean because auth does not use the shell — it has its own layout, already
 made responsive in PR #53.
+
+---
+
+# After the shell fix (`fix/responsive-shell`)
+
+Same method, same widths. `worst` = pixels of content rendered outside the viewport.
+
+## Student area — 20 / 20 clean
+
+| Route | 320 | 375 | 768 | 1280 |
+| --- | --- | --- | --- | --- |
+| `/student/courses` | 232 → **0** | 177 → **0** | 0 | 0 |
+| `/student/courses/1` | 197 → **0** | 142 → **0** | 0 | 0 |
+| `/student/courses/1/lessons/103` | 95 → **0** | 40 → **0** | 0 | 0 |
+| `/student/explore` | 179 → **0** | 124 → **0** | 0 | 0 |
+| `/profile` | 387 → **0** | 313 → **0** | 0 | 0 |
+
+## Instructor area — 8 / 20 clean, 12 rows remaining
+
+These are what the shell fix does **not** reach, and they are the feature workstreams'
+scope rather than the shell's:
+
+| Route | 320 | 375 | 768 | 1280 | Owner |
+| --- | --- | --- | --- | --- | --- |
+| `/instructor/home` | 327 | 275 | 280 | **85** | Instructor Dashboard |
+| `/instructor/courses` | 0 | 0 | 0 | 0 | — clean |
+| `/instructor/courses/1/content` | 154 | 99 | 0 | 0 | Course Editor |
+| `/instructor/create-course` | 253 | 198 | 100 | 0 | Course Creation |
+| `/instructor/banners` | 178 | 123 | 25 | 0 | Banners |
+
+`/instructor/home` is the notable one: it overflows at **1280px** as well, so it carries a
+pre-existing desktop defect that has nothing to do with viewport width and would not have
+been found by looking at phones. `/instructor/banners` is the `gridTemplateColumns:
+"1fr 340px"` predicted in the audit.
+
+## What this says about the sequencing
+
+The shell was one defect wearing sixteen masks. Fixing it cleared 28 of 40 measured rows,
+including every student screen, without a single feature file being touched — which is the
+case for having done the foundation and the shell before letting thirteen feature agents
+loose on the same symptoms. Had they run first, most of them would have written a local
+workaround for a defect that was never theirs.

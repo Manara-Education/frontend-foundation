@@ -20,24 +20,51 @@ interface SidebarProps {
   onLogout: () => void;
   role?: string;
   fullName?: string;
+  /**
+   * How the sidebar is being presented.
+   *
+   * `persistent` is the column beside the content, which is the only thing that fits from
+   * `md` up. `drawer` is the same navigation slid over the content on a phone, where 280px
+   * of the 375 available cannot be spent on a permanent column.
+   *
+   * The entries, their order and their active state are identical in both — this changes
+   * where the navigation sits, not what it is.
+   */
+  variant?: "persistent" | "drawer";
+  /** Called when an entry is chosen, so a drawer can shut behind it. */
+  onNavigate?: () => void;
 }
 
-export function Sidebar({ activeSection, onLogout, role, fullName }: SidebarProps) {
+export function Sidebar({
+  activeSection,
+  onLogout,
+  role,
+  fullName,
+  variant = "persistent",
+  onNavigate,
+}: SidebarProps) {
   const navSections = getNavSectionsForRole(role);
+  const isDrawer = variant === "drawer";
   return (
     <aside
       dir="rtl"
       style={{
         width: 280,
         minWidth: 280,
-        height: "100vh",
-        position: "sticky",
-        top: 0,
+        /*
+          `100%` rather than `100vh`: as a drawer this is inside a fixed overlay that has
+          already been sized against `dvh`, and as a persistent column its parent is the
+          shell row. `100vh` measured the viewport with the mobile browser's chrome
+          retracted, so the logout button sat under the address bar.
+        */
+        height: "100%",
         display: "flex",
         flexDirection: "column",
         background: "#FFFFFF",
-        borderLeft: "1px solid rgba(78,91,146,0.1)",
-        boxShadow: "-4px 0 24px rgba(78,91,146,0.05)",
+        borderInlineEnd: "1px solid rgba(78,91,146,0.1)",
+        boxShadow: isDrawer
+          ? "0 0 60px rgba(30,35,64,0.28)"
+          : "-4px 0 24px rgba(78,91,146,0.05)",
         fontFamily: "'Cairo', sans-serif",
         zIndex: 10,
         overflowY: "auto",
@@ -125,6 +152,7 @@ export function Sidebar({ activeSection, onLogout, role, fullName }: SidebarProp
                 <Link
                   key={id}
                   to={to}
+                  onClick={onNavigate}
                   aria-current={isActive ? "page" : undefined}
                   style={{
                     display: "flex",
