@@ -14,82 +14,144 @@ export type StepId = (typeof STEPS)[number]["id"];
 
 /** The wizard's progress rail. Completed steps are clickable, later ones are not. */
 export function StepIndicator({ current, onGoTo }: { current: StepId; onGoTo: (step: StepId) => void }) {
+  const currentStep = STEPS.find((step) => step.id === current) ?? STEPS[0];
+
   return (
-    <div style={{ marginBottom: 28 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 0, overflowX: "auto", paddingBottom: 2 }}>
+    <nav
+      aria-label="مراحل إنشاء الدورة"
+      className="rs-longform"
+      style={{ marginBlockEnd: 24, minInlineSize: 0 }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 8,
+          marginBlockEnd: 10,
+          minInlineSize: 0,
+        }}
+      >
+        <div
+          style={{
+            fontFamily: FONT,
+            fontSize: 12.5,
+            fontWeight: 700,
+            color: PRIMARY,
+            background: "rgba(78,91,146,0.08)",
+            borderRadius: 999,
+            paddingBlock: 5,
+            paddingInline: 12,
+            minBlockSize: 44,
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          الخطوة {current} من {STEPS.length}
+        </div>
+        <div
+          style={{
+            fontFamily: FONT,
+            fontSize: 13,
+            fontWeight: 700,
+            color: "#1E2340",
+            lineHeight: 1.5,
+            minInlineSize: 0,
+            overflowWrap: "anywhere",
+          }}
+        >
+          {currentStep.label}
+        </div>
+      </div>
+
+      <div
+        className="rs-grid"
+        style={
+          {
+            "--rs-grid-min": "108px",
+            "--rs-grid-gap": "8px",
+          } as React.CSSProperties
+        }
+      >
         {STEPS.map((step, idx) => {
           const done = step.id < current;
           const active = step.id === current;
           const Ic = step.icon;
           return (
-            <div
+            <button
               key={step.id}
-              style={{ display: "flex", alignItems: "center", flex: idx < STEPS.length - 1 ? "none" : undefined }}
+              type="button"
+              className="rs-touch"
+              aria-current={active ? "step" : undefined}
+              aria-disabled={!done && !active}
+              disabled={!done && !active}
+              onClick={() => {
+                if (done || active) onGoTo(step.id);
+              }}
+              style={{
+                width: "100%",
+                minHeight: 68,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                background: active ? "rgba(78,91,146,0.07)" : done ? "rgba(78,91,146,0.035)" : "#FAFBFD",
+                border: `1.5px solid ${active ? "rgba(78,91,146,0.36)" : done ? "rgba(78,91,146,0.16)" : "rgba(78,91,146,0.08)"}`,
+                borderRadius: 14,
+                cursor: done ? "pointer" : "default",
+                paddingBlock: 9,
+                paddingInline: 8,
+                outline: "none",
+                minInlineSize: 0,
+                textAlign: "start",
+              }}
             >
-              <button
-                onClick={() => {
-                  if (done || active) onGoTo(step.id);
-                }}
+              <div
                 style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 11,
+                  background: done ? PRIMARY : active ? PRIMARY : "rgba(78,91,146,0.08)",
+                  color: done || active ? "#fff" : "#C4C9DC",
                   display: "flex",
-                  flexDirection: "column",
                   alignItems: "center",
-                  gap: 5,
-                  background: "none",
-                  border: "none",
-                  cursor: done ? "pointer" : "default",
-                  padding: "4px 6px",
-                  outline: "none",
-                  minWidth: 68,
+                  justifyContent: "center",
+                  boxShadow: active ? "0 4px 14px rgba(78,91,146,0.28)" : "none",
+                  transition: "all 0.2s",
+                  flexShrink: 0,
                 }}
               >
-                <div
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 12,
-                    background: done ? PRIMARY : active ? PRIMARY : "rgba(78,91,146,0.08)",
-                    color: done || active ? "#fff" : "#C4C9DC",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    boxShadow: active ? "0 4px 14px rgba(78,91,146,0.32)" : "none",
-                    transition: "all 0.2s",
-                    flexShrink: 0,
-                  }}
-                >
-                  {done ? <CheckCircle size={15} /> : <Ic size={15} />}
-                </div>
+                {done ? <CheckCircle size={15} /> : <Ic size={15} />}
+              </div>
+              <span style={{ display: "flex", flexDirection: "column", gap: 2, minInlineSize: 0 }}>
                 <span
                   style={{
                     fontFamily: FONT,
-                    fontSize: 10.5,
+                    fontSize: 11.5,
                     fontWeight: active ? 700 : 500,
-                    whiteSpace: "nowrap",
                     color: done ? PRIMARY : active ? PRIMARY : "#B0B7D4",
+                    lineHeight: 1.35,
+                    overflowWrap: "anywhere",
                   }}
                 >
                   {step.label}
                 </span>
-              </button>
-              {idx < STEPS.length - 1 && (
-                <div
+                <span
                   style={{
-                    flex: 1,
-                    minWidth: 16,
-                    height: 2,
-                    borderRadius: 1,
-                    background: done ? PRIMARY : "rgba(78,91,146,0.12)",
-                    margin: "0 2px",
-                    marginBottom: 22,
-                    transition: "background 0.2s",
+                    fontFamily: FONT,
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: active ? PRIMARY : done ? "#717182" : "#C4C9DC",
+                    lineHeight: 1.35,
                   }}
-                />
-              )}
-            </div>
+                >
+                  {active ? "الحالية" : done ? "مكتملة" : `بعد ${idx + 1 - current}`}
+                </span>
+              </span>
+            </button>
           );
         })}
       </div>
-    </div>
+    </nav>
   );
 }
