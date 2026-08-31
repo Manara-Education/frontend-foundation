@@ -21,7 +21,7 @@ interface LandingContentProps {
 
 export function LandingContent({ onRegister, onSignIn }: LandingContentProps) {
   return (
-    <div style={{ fontFamily: FONT, overflowX: "hidden" }}>
+    <div style={{ fontFamily: FONT }}>
       <LandingNavbar onSignIn={onSignIn} />
       <main>
         <HeroSection onCta={onRegister} />

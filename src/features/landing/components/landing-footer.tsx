@@ -3,11 +3,11 @@ import { FONT, TEXT } from "./theme";
 
 export function LandingFooter() {
   return (
-    <footer dir="rtl" style={{ background: TEXT, padding: "64px 28px 32px" }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-        <div style={{ marginBottom: 48, display: "flex", alignItems: "flex-start", gap: 16 }}>
+    <footer dir="rtl" style={{ background: TEXT, paddingBlock: "64px 32px", paddingInline: "clamp(16px, 4vw, 28px)" }}>
+      <div style={{ maxInlineSize: 1100, margin: "0 auto" }}>
+        <div style={{ marginBottom: 48, display: "flex", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
           <LandingWordmark size={32} light />
-          <p style={{ fontFamily: FONT, fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.8, margin: 0, maxWidth: 320 }}>
+          <p className="rs-longform" style={{ fontFamily: FONT, fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.8, margin: 0, maxInlineSize: 320, minInlineSize: 0 }}>
             منصة تعلّم منظّمة مبنية لمساعدة المتعلمين على التقدم بوضوح.
           </p>
         </div>

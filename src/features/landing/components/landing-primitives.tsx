@@ -11,7 +11,7 @@ import { PRIMARY, FONT, TEXT, TEXT_MUTED, TEXT_LIGHT } from "./theme";
  */
 export function LandingWordmark({ size = 32, light = false }: { size?: number; light?: boolean }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
       <ManaraLogoIcon size={size} color={light ? "rgba(255,255,255,0.85)" : PRIMARY} />
       <div>
         <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: size * 0.56, color: light ? "#fff" : TEXT, lineHeight: 1 }}>منارة</div>
@@ -33,7 +33,7 @@ export function FadeIn({ children, delay = 0 }: { children: ReactNode; delay?: n
 
 export function Tag({ children, color = PRIMARY }: { children: ReactNode; color?: string }) {
   return (
-    <span style={{ fontFamily: FONT, fontSize: 12, fontWeight: 600, color, background: `${color}12`, border: `1px solid ${color}22`, borderRadius: 99, padding: "4px 14px", display: "inline-block" }}>
+    <span className="rs-longform" style={{ fontFamily: FONT, fontSize: 12, fontWeight: 600, color, background: `${color}12`, border: `1px solid ${color}22`, borderRadius: 99, padding: "4px 14px", display: "inline-block", maxInlineSize: "100%" }}>
       {children}
     </span>
   );
@@ -41,7 +41,7 @@ export function Tag({ children, color = PRIMARY }: { children: ReactNode; color?
 
 export function SectionHeading({ tag, title, subtitle, center = false }: { tag?: string; title: string; subtitle?: string; center?: boolean }) {
   return (
-    <div style={{ textAlign: center ? "center" : "right", maxWidth: center ? 640 : undefined, margin: center ? "0 auto" : undefined }}>
+    <div className="rs-longform" style={{ textAlign: center ? "center" : "right", maxInlineSize: center ? 640 : undefined, margin: center ? "0 auto" : undefined }}>
       {tag && <div style={{ marginBottom: 14 }}><Tag>{tag}</Tag></div>}
       <h2 style={{ fontFamily: FONT, fontWeight: 800, fontSize: "clamp(26px, 4vw, 40px)", color: TEXT, margin: "0 0 16px", lineHeight: 1.3 }}>{title}</h2>
       {subtitle && <p style={{ fontFamily: FONT, fontSize: 16, color: TEXT_MUTED, lineHeight: 1.8, margin: 0 }}>{subtitle}</p>}
