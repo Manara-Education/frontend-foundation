@@ -27,7 +27,11 @@ export function HomeForm({
   onCourseClick,
 }: HomeFormProps) {
   return (
-    <div dir="rtl" style={{ fontFamily: FONT }}>
+    <div
+      dir="rtl"
+      className="rs-longform"
+      style={{ fontFamily: FONT, minInlineSize: 0, maxInlineSize: "100%" }}
+    >
       <AnimatePresence mode="wait">
         {/* ── SKELETON ────────────────────────────────────────── */}
         {isLoading && (
@@ -37,6 +41,7 @@ export function HomeForm({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
+            style={{ minInlineSize: 0, maxInlineSize: "100%" }}
           >
             <PageSkeleton />
           </motion.div>
@@ -50,6 +55,7 @@ export function HomeForm({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.32 }}
+            style={{ minInlineSize: 0, maxInlineSize: "100%" }}
           >
             <GreetingSection firstName={firstName} />
 
