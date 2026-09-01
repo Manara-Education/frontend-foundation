@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { Globe, Lock } from "lucide-react";
 import type { CourseVisibility } from "@/shared/courses";
 import { FONT, PRIMARY } from "./editor-theme";
@@ -48,7 +49,7 @@ export function VisibilitySection({
   onChange: (value: CourseVisibility) => void;
 }) {
   return (
-    <div className="flex gap-4">
+    <div className="rs-grid" style={{ "--rs-grid-min": "260px", "--rs-grid-gap": "16px" } as CSSProperties}>
       {OPTIONS.map(({ value: v, icon: Icon, title, desc }) => {
         const active = value === v;
         return (
@@ -69,6 +70,8 @@ export function VisibilitySection({
               cursor: "pointer",
               transition: "all 0.15s",
               boxShadow: active ? "0 0 0 4px rgba(78,91,146,0.1)" : "none",
+              minHeight: 88,
+              minWidth: 0,
             }}
             onMouseEnter={(e) => {
               if (!active) e.currentTarget.style.borderColor = "rgba(78,91,146,0.3)";
@@ -77,7 +80,7 @@ export function VisibilitySection({
               if (!active) e.currentTarget.style.borderColor = "rgba(78,91,146,0.14)";
             }}
           >
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3" style={{ minWidth: 0 }}>
               <div
                 className="rounded-xl flex items-center justify-center flex-shrink-0"
                 style={{
@@ -89,7 +92,7 @@ export function VisibilitySection({
               >
                 <Icon size={18} />
               </div>
-              <div style={{ flex: 1 }}>
+              <div className="rs-longform" style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{
                     fontFamily: FONT,
@@ -146,7 +149,7 @@ export function VisibilityRadioRow({
   onChange: (value: CourseVisibility) => void;
 }) {
   return (
-    <div style={{ display: "flex", gap: 10 }} role="radiogroup" aria-label="ظهور الدورة">
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }} role="radiogroup" aria-label="ظهور الدورة">
       {TAB_OPTIONS.map(([v, label, sub]) => (
         <button
           key={v}
@@ -156,7 +159,8 @@ export function VisibilityRadioRow({
           aria-label={label}
           onClick={() => onChange(v)}
           style={{
-            flex: 1,
+            flex: "1 1 min(140px, 100%)",
+            minHeight: 44,
             padding: "11px 14px",
             borderRadius: 14,
             border: `1.5px solid ${value === v ? PRIMARY : "rgba(78,91,146,0.14)"}`,
@@ -164,6 +168,7 @@ export function VisibilityRadioRow({
             cursor: "pointer",
             textAlign: "right" as const,
             transition: "all 0.15s",
+            minWidth: 0,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
@@ -194,7 +199,7 @@ export function VisibilityRadioRow({
               {label}
             </span>
           </div>
-          <div style={{ fontFamily: FONT, fontSize: 10.5, color: "#9BA3C4", marginRight: 20 }}>
+          <div className="rs-longform" style={{ fontFamily: FONT, fontSize: 10.5, color: "#9BA3C4", marginInlineStart: 20 }}>
             {sub}
           </div>
         </button>

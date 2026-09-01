@@ -77,11 +77,11 @@ export function SubscriptionStatusCard({
             border: `1.5px solid ${isExpiringSoon ? "rgba(245,158,11,0.22)" : "rgba(34,197,94,0.20)"}`,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16, minWidth: 0 }}>
             <div style={{ width: 44, height: 44, borderRadius: 14, background: isExpiringSoon ? "rgba(245,158,11,0.12)" : "rgba(34,197,94,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <Star size={20} color={isExpiringSoon ? "#F59E0B" : "#22C55E"} strokeWidth={2} />
             </div>
-            <div>
+            <div className="rs-longform" style={{ minWidth: 0 }}>
               <div style={{ fontFamily: FONT, fontSize: 15, color: isExpiringSoon ? "#92400E" : "#15803D" }}>
                 {isExpiringSoon ? "اشتراكك ينتهي قريباً" : "اشتراكك نشط"}
               </div>
@@ -92,9 +92,10 @@ export function SubscriptionStatusCard({
           </div>
           {isExpiringSoon && (
             <button
+              type="button"
               onClick={openCheckout}
               style={{
-                width: "100%", padding: "13px", borderRadius: 14,
+                width: "100%", minHeight: 44, padding: "13px", borderRadius: 14,
                 background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
                 color: "#fff", border: "none", cursor: "pointer",
                 fontFamily: FONT, fontSize: 14, fontWeight: 700,
@@ -133,6 +134,7 @@ export function SubscriptionStatusCard({
               style={{
                 display: "flex",
                 alignItems: "center",
+                flexWrap: "wrap",
                 gap: 10,
                 padding: "12px 16px",
                 borderRadius: 14,
@@ -150,7 +152,7 @@ export function SubscriptionStatusCard({
               >
                 <X size={13} color="#EF4444" strokeWidth={2.5} />
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="rs-longform" style={{ flex: "1 1 min(180px, 100%)", minWidth: 0 }}>
                 <div style={{ fontFamily: FONT, fontSize: 13, color: "#DC2626", marginBottom: 1 }}>
                   لم تكتمل عملية الدفع
                 </div>
@@ -159,8 +161,22 @@ export function SubscriptionStatusCard({
                 </div>
               </div>
               <button
+                type="button"
+                aria-label="إخفاء تنبيه الدفع"
                 onClick={() => setPaymentFailed(false)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#C4C9DE", padding: 0, flexShrink: 0 }}
+                style={{
+                  width: 44,
+                  height: 44,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#C4C9DE",
+                  padding: 0,
+                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
                 <X size={13} strokeWidth={2} />
               </button>
@@ -172,7 +188,7 @@ export function SubscriptionStatusCard({
         <div style={{ fontFamily: FONT, fontSize: 13, color: "#6B7280", marginBottom: 4 }}>
           انتهى في {access.endDateLabel}
         </div>
-        <div style={{ fontFamily: FONT, fontSize: 13, color: "#9BA3C4", marginBottom: 20, lineHeight: 1.6 }}>
+        <div className="rs-longform" style={{ fontFamily: FONT, fontSize: 13, color: "#9BA3C4", marginBottom: 20, lineHeight: 1.6 }}>
           جدّد اشتراكك لمتابعة التعلم من حيث توقفت.
         </div>
 
@@ -182,29 +198,31 @@ export function SubscriptionStatusCard({
             <label
               key={plan.id}
               style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", borderRadius: 14, cursor: "pointer",
+                display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12, padding: "13px 16px", borderRadius: 14, cursor: "pointer",
                 border: `1.5px solid ${selectedPlanId === plan.id ? PRIMARY : "rgba(78,91,146,0.14)"}`,
                 background: selectedPlanId === plan.id ? "rgba(78,91,146,0.06)" : "transparent",
                 transition: "all 0.15s",
+                minHeight: 54,
               }}
             >
               <div style={{ width: 18, height: 18, borderRadius: "50%", border: `2px solid ${selectedPlanId === plan.id ? PRIMARY : "rgba(78,91,146,0.25)"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 {selectedPlanId === plan.id && <div style={{ width: 9, height: 9, borderRadius: "50%", background: PRIMARY }} />}
               </div>
               <input type="radio" name="renewal-plan" value={plan.id} checked={selectedPlanId === plan.id} onChange={() => setSelectedPlanId(plan.id)} style={{ display: "none" }} />
-              <div style={{ flex: 1 }}>
+              <div className="rs-longform" style={{ flex: "1 1 min(160px, 100%)", minWidth: 0 }}>
                 <div style={{ fontFamily: FONT, fontSize: 14, color: "#1F2937" }}>{plan.name}</div>
                 <div style={{ fontFamily: FONT, fontSize: 12, color: "#9BA3C4" }}>{plan.durationLabel}</div>
               </div>
-              <div style={{ fontFamily: FONT, fontSize: 15, color: PRIMARY, fontWeight: 700 }}>{plan.priceLabel}</div>
+              <div style={{ fontFamily: FONT, fontSize: 15, color: PRIMARY, fontWeight: 700, flex: "0 0 auto", marginInlineStart: "auto" }}>{plan.priceLabel}</div>
             </label>
           ))}
         </div>
 
         <button
+          type="button"
           onClick={openCheckout}
           style={{
-            width: "100%", padding: "15px", borderRadius: 16,
+            width: "100%", minHeight: 50, padding: "15px", borderRadius: 16,
             background: `linear-gradient(135deg, ${PRIMARY} 0%, #6B7AB8 100%)`,
             color: "#fff", border: "none", cursor: "pointer",
             fontFamily: FONT, fontSize: 16, fontWeight: 700,

@@ -100,6 +100,7 @@ export function PaymentCTASection({ course, onPay }: PaymentCTASectionProps) {
               style={{
                 display: "flex",
                 alignItems: "center",
+                flexWrap: "wrap",
                 gap: 10,
                 padding: "12px 16px",
                 borderRadius: 14,
@@ -117,7 +118,7 @@ export function PaymentCTASection({ course, onPay }: PaymentCTASectionProps) {
               >
                 <X size={13} color="#EF4444" strokeWidth={2.5} />
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="rs-longform" style={{ flex: "1 1 min(180px, 100%)", minWidth: 0 }}>
                 <div style={{ fontFamily: FONT, fontSize: 13, color: "#DC2626", marginBottom: 1 }}>
                   لم تكتمل عملية الدفع
                 </div>
@@ -126,6 +127,8 @@ export function PaymentCTASection({ course, onPay }: PaymentCTASectionProps) {
                 </div>
               </div>
               <button
+                type="button"
+                aria-label="إخفاء تنبيه الدفع"
                 onClick={(e) => {
                   e.stopPropagation();
                   setPaymentFailed(false);
@@ -135,7 +138,9 @@ export function PaymentCTASection({ course, onPay }: PaymentCTASectionProps) {
                   border: "none",
                   cursor: "pointer",
                   color: "#C4C9DE",
-                  padding: "6px",
+                  width: 44,
+                  height: 44,
+                  padding: 0,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -153,40 +158,42 @@ export function PaymentCTASection({ course, onPay }: PaymentCTASectionProps) {
           )}
         </AnimatePresence>
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12, minWidth: 0 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
             <span style={{ fontFamily: FONT, fontSize: 12, color: "#9BA3C4" }}>سعر الدورة</span>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+            <div style={{ display: "flex", alignItems: "baseline", flexWrap: "wrap", gap: 6, minWidth: 0 }}>
               {isFree ? (
-                <span style={{ fontFamily: FONT, fontSize: 32, color: "#15803D" }}>مجانية</span>
+                <span className="rs-longform" style={{ fontFamily: FONT, fontSize: 32, color: "#15803D" }}>مجانية</span>
               ) : (
                 <>
-                  <span style={{ fontFamily: FONT, fontSize: 32, color: PRIMARY }}>{course.purchasePriceLabel}</span>
-                  <span style={{ fontFamily: FONT, fontSize: 14, color: "#9BA3C4" }}>شراء مرة واحدة</span>
+                  <span className="rs-longform" style={{ fontFamily: FONT, fontSize: 32, color: PRIMARY }}>{course.purchasePriceLabel}</span>
+                  <span className="rs-longform" style={{ fontFamily: FONT, fontSize: 14, color: "#9BA3C4", minWidth: 0 }}>شراء مرة واحدة</span>
                 </>
               )}
             </div>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 7, minWidth: 0 }}>
             {[
               `${course.totalLessons} درس مُحكم`,
               `${course.totalDuration} من المحتوى`,
               "وصول دائم بلا انتهاء",
             ].map((feat) => (
-              <div key={feat} style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <div key={feat} style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
                 <ShieldCheck size={13} color={isFree ? "#15803D" : PRIMARY} strokeWidth={2} />
-                <span style={{ fontFamily: FONT, fontSize: 12, color: "#6B7280" }}>{feat}</span>
+                <span className="rs-longform" style={{ fontFamily: FONT, fontSize: 12, color: "#6B7280", minWidth: 0 }}>{feat}</span>
               </div>
             ))}
           </div>
         </div>
 
         <motion.button
+          type="button"
           whileHover={!isEnrollingFree ? { scale: 1.015 } : {}}
           whileTap={!isEnrollingFree ? { scale: 0.98 } : {}}
           onClick={handleButtonClick}
           style={{
             width: "100%",
+            minHeight: 52,
             padding: "16px 24px",
             borderRadius: 16,
             background: isFree
@@ -212,7 +219,7 @@ export function PaymentCTASection({ course, onPay }: PaymentCTASectionProps) {
           {isEnrollingFree ? "جاري الاشتراك..." : isFree ? "ابدأ التعلم مجاناً" : "اشترك الآن وابدأ التعلم"}
         </motion.button>
 
-        <p style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4", textAlign: "center", margin: "12px 0 0" }}>
+        <p className="rs-longform" style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4", textAlign: "center", margin: "12px 0 0" }}>
           {isFree
             ? "وصول فوري — لا تحتاج إلى بطاقة ائتمانية"
             : "ضمان استرداد المبلغ خلال ٧ أيام · اتصال مشفّر"}
