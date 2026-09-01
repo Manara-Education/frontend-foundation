@@ -23,13 +23,15 @@ export function RecentCoursesSection({
 }: RecentCoursesSectionProps) {
   return (
     <section className="mb-10">
-      <div className="flex items-center justify-between mb-5">
+      <div className="rs-cluster mb-5" style={{ justifyContent: "space-between" }}>
         <h2
+          className="rs-longform"
           style={{
             fontFamily: FONT,
             fontWeight: 700,
             fontSize: 19,
             color: TEXT_DARK,
+            minInlineSize: 0,
           }}
         >
           دوراتي الأخيرة
@@ -37,14 +39,19 @@ export function RecentCoursesSection({
       </div>
 
       {hasCourses ? (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3" style={{ minInlineSize: 0, maxInlineSize: "100%" }}>
           {courses.map((course, i) => (
-            <InstructorCourseCard
+            <div
               key={course.id}
-              course={course}
-              delay={0.1 + i * 0.06}
-              onNavigate={() => onCourseClick?.(course.id.toString())}
-            />
+              className="rs-longform"
+              style={{ minInlineSize: 0, maxInlineSize: "100%" }}
+            >
+              <InstructorCourseCard
+                course={course}
+                delay={0.1 + i * 0.06}
+                onNavigate={() => onCourseClick?.(course.id.toString())}
+              />
+            </div>
           ))}
         </div>
       ) : (

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { CSSProperties } from "react";
 import { motion } from "motion/react";
 import { Plus, Sparkles } from "lucide-react";
 import { PRIMARY, FONT, TEXT_DARK, TEXT_MID } from "./theme";
@@ -22,12 +23,14 @@ export function CreateCourseBanner({ onCreateCourse }: CreateCourseBannerProps) 
         background:
           "linear-gradient(140deg, #EEF0FA 0%, #E6E9F7 60%, #EBE8F8 100%)",
         borderRadius: 28,
-        padding: "44px 44px 44px",
+        padding: "clamp(24px, 5vw, 44px)",
         border: `1.5px solid rgba(78,91,146,0.13)`,
         boxShadow: hovered
           ? "0 16px 48px rgba(78,91,146,0.13)"
           : "0 4px 24px rgba(78,91,146,0.07)",
         transition: "box-shadow 0.35s",
+        minInlineSize: 0,
+        maxInlineSize: "100%",
       }}
     >
       {/* ── Decorative geometry ───────────────────────── */}
@@ -35,8 +38,8 @@ export function CreateCourseBanner({ onCreateCourse }: CreateCourseBannerProps) 
         aria-hidden
         style={{
           position: "absolute",
-          left: 0,
-          top: 0,
+          insetInlineEnd: 0,
+          insetBlockStart: 0,
           width: "46%",
           height: "100%",
           pointerEvents: "none",
@@ -60,25 +63,41 @@ export function CreateCourseBanner({ onCreateCourse }: CreateCourseBannerProps) 
       </svg>
 
       {/* ── Content ───────────────────────────────────── */}
-      <div className="relative flex items-center justify-between" dir="rtl">
+      <div
+        className="relative rs-cluster"
+        dir="rtl"
+        style={{
+          "--rs-cluster-gap": "24px",
+          justifyContent: "space-between",
+        } as CSSProperties}
+      >
         {/* Text */}
-        <div className="flex flex-col gap-4" style={{ maxWidth: 420 }}>
+        <div
+          className="flex flex-col gap-4 rs-longform"
+          style={{
+            flex: "1 1 min(420px, 100%)",
+            minInlineSize: "min(260px, 100%)",
+            maxInlineSize: 420,
+          }}
+        >
           {/* Label pill */}
           <div
             className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 w-fit"
             style={{
               background: "rgba(78,91,146,0.1)",
               border: "1px solid rgba(78,91,146,0.12)",
+              maxInlineSize: "100%",
             }}
           >
             <Sparkles size={12} style={{ color: PRIMARY }} />
             <span
+              className="rs-longform"
               style={{
                 fontFamily: FONT,
                 fontSize: 11.5,
                 fontWeight: 600,
                 color: PRIMARY,
-                letterSpacing: 0.4,
+                letterSpacing: 0,
               }}
             >
               منارة · ابدأ بالتدريس
@@ -94,6 +113,7 @@ export function CreateCourseBanner({ onCreateCourse }: CreateCourseBannerProps) 
                 fontSize: 24,
                 color: TEXT_DARK,
                 lineHeight: 1.45,
+                letterSpacing: 0,
               }}
             >
               شارك علمك…
@@ -117,8 +137,9 @@ export function CreateCourseBanner({ onCreateCourse }: CreateCourseBannerProps) 
             whileHover={{ y: -3, boxShadow: "0 12px 32px rgba(78,91,146,0.34)" }}
             whileTap={{ scale: 0.97 }}
             transition={{ duration: 0.16 }}
-            className="flex items-center gap-2.5 rounded-2xl px-6 py-3 w-fit mt-1"
+            className="rs-cluster rs-touch rounded-2xl px-6 py-3 mt-1"
             style={{
+              "--rs-cluster-gap": "10px",
               background: `linear-gradient(135deg, ${PRIMARY} 0%, #6172AC 100%)`,
               color: "#ffffff",
               border: "none",
@@ -127,21 +148,26 @@ export function CreateCourseBanner({ onCreateCourse }: CreateCourseBannerProps) 
               fontWeight: 700,
               fontSize: 14,
               boxShadow: "0 6px 20px rgba(78,91,146,0.28)",
-            }}
+              minHeight: 44,
+              maxInlineSize: "100%",
+              justifyContent: "center",
+              alignSelf: "flex-start",
+            } as CSSProperties}
           >
             <Plus size={16} strokeWidth={2.5} />
-            إنشاء دورة جديدة
+            <span className="rs-longform">إنشاء دورة جديدة</span>
           </motion.button>
         </div>
 
         {/* Right illustration block (abstract minimal) */}
         <div
-          className="flex-shrink-0 hidden md:flex items-center justify-center"
+          className="hidden md:flex items-center justify-center"
           style={{
-            width: 130,
-            height: 130,
+            width: "clamp(96px, 16vw, 130px)",
+            aspectRatio: "1 / 1",
             opacity: hovered ? 0.9 : 0.6,
             transition: "opacity 0.3s",
+            flex: "0 1 130px",
           }}
         >
           <svg viewBox="0 0 120 120" fill="none" width={120} height={120}>
