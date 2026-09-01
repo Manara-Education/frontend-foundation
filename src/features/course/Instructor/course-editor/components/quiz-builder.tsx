@@ -713,16 +713,25 @@ function QuizSummaryCard({
         padding: "18px 20px",
       }}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
+      {/*
+        Wraps. The title block and the edit/delete pair are both unwilling to shrink — the
+        pair is `flex-shrink-0` by design, so a button never becomes a sliver — which left
+        the row 32px wider than a 320px screen with nowhere to give. Allowed to wrap, the
+        actions drop onto their own line instead.
+      */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex items-start gap-3" style={{ minWidth: 0, flex: "1 1 min(240px, 100%)" }}>
           <div
             className="rounded-xl flex items-center justify-center flex-shrink-0"
             style={{ width: 42, height: 42, background: "rgba(78,91,146,0.12)", color: PRIMARY }}
           >
             <ClipboardList size={18} strokeWidth={1.8} />
           </div>
-          <div>
-            <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 15, color: "#1E2340" }}>
+          <div style={{ minWidth: 0 }}>
+            <div
+              className="rs-longform"
+              style={{ fontFamily: FONT, fontWeight: 700, fontSize: 15, color: "#1E2340" }}
+            >
               {quiz.title}
             </div>
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
