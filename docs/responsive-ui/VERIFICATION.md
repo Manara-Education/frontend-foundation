@@ -24,10 +24,10 @@ signal. A page that clips its content instead of scrolling reports zero.
 So the gate is per-element geometry: for every rendered element, how far its border box
 extends past either viewport edge, via `getBoundingClientRect()`.
 
-## The three corrections
+## The corrections
 
-Each of these changed a conclusion. Two of them would have sent an agent to "fix" something
-that was already correct.
+Each of these changed a conclusion. Two would have sent an agent to "fix" something already
+correct; two more produced confident green results for screens that were never rendered.
 
 ### 1. SVG internals are not overflow
 
@@ -69,6 +69,34 @@ unreachable.
 scroll (`scrollWidth > clientWidth`). Deliberate scroll regions should carry `.rs-scroll-x`,
 so a reviewer can grep the intentional ones.
 
+### 4. A page that never rendered scored as clean
+
+The probe could not tell "nothing overflows" from "nothing rendered". A Vite dev server
+compiles route modules on demand, so a cold first load shows only the shell header for
+several seconds. The settle loop compared 0 offenders to 0 offenders, called it stable, and
+recorded a clean page.
+
+**Symptom:** four of five student routes measured "clean" on the integrated branch while
+rendering nothing but their heading — `/student/courses` at 31 characters,
+`/student/courses/1` at 13. An earlier sweep had reported 63/64 clean on that basis.
+
+**Rule:** the probe waits for real content before measuring, and returns `INVALID` rather
+than a score if the page never produces it.
+
+### 5. A skeleton is stable too
+
+Tightening the rule to "text stopped changing" was not enough: a loading skeleton holds a
+steady length for well over a second, which satisfied a three-read stability window.
+Raising the character threshold was not enough either — a header plus a loading line clears
+any low bar.
+
+**Symptom:** `/instructor/courses/1/content` reported 91 characters, **zero interactive
+elements**, and a clean score. Fully rendered it is 499 characters with 14 controls — and
+carries a real 51px defect. The clean reading was the wrong one; the defect was real.
+
+**Rule:** wait for interactive controls to appear *and* for the text to hold steady, then
+measure. A real screen in this application has controls; a skeleton does not.
+
 ## What is still counted, on purpose
 
 **Content clipped by `overflow: hidden`.** That is not a false positive — it is the defect this
@@ -84,8 +112,9 @@ mid-shimmer is not reported as a defect — that produced a phantom failure too.
 
 ## Standing caveat
 
-The instrument has been the least reliable part of this programme: three corrections, each
-found by chasing a result that looked wrong. A number in these documents is a claim about
+The instrument has been the least reliable part of this programme by a wide margin: five
+corrections, every one found by chasing a result that looked wrong rather than accepting it.
+Not one was a defect in the application code being measured. A number in these documents is a claim about
 what the probe saw, and the probe is only as good as its current exclusion list. Treat a
 surprising green with the same suspicion as a surprising red — that is how all three of these
 were found.
