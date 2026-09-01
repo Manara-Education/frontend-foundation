@@ -29,7 +29,7 @@ export function StructureSection({
   onChange: (value: CourseStructure) => void;
 }) {
   return (
-    <div className="flex gap-4">
+    <div className="rs-grid" style={{ "--rs-grid-min": "220px", "--rs-grid-gap": "16px" } as React.CSSProperties}>
       {OPTIONS.map(({ value: v, icon: Icon, title, desc }) => {
         const active = value === v;
         return (
@@ -37,7 +37,6 @@ export function StructureSection({
             key={v}
             onClick={() => onChange(v)}
             style={{
-              flex: 1,
               padding: "18px 20px",
               borderRadius: 18,
               textAlign: "right",
@@ -46,6 +45,7 @@ export function StructureSection({
               cursor: "pointer",
               transition: "all 0.15s",
               boxShadow: active ? "0 0 0 4px rgba(78,91,146,0.1)" : "none",
+              minWidth: 0,
             }}
             onMouseEnter={(e) => {
               if (!active) e.currentTarget.style.borderColor = "rgba(78,91,146,0.3)";
@@ -54,20 +54,21 @@ export function StructureSection({
               if (!active) e.currentTarget.style.borderColor = "rgba(78,91,146,0.14)";
             }}
           >
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3" style={{ minWidth: 0 }}>
               <div
                 className="rounded-xl flex items-center justify-center flex-shrink-0"
                 style={{
-                  width: 38,
-                  height: 38,
+                  width: 44,
+                  height: 44,
                   background: active ? PRIMARY : "rgba(78,91,146,0.09)",
                   color: active ? "#fff" : "#9BA3C4",
                 }}
               >
                 <Icon size={18} />
               </div>
-              <div style={{ flex: 1 }}>
+              <div className="rs-longform" style={{ flex: 1, minWidth: 0 }}>
                 <div
+                  className="rs-longform"
                   style={{
                     fontFamily: FONT,
                     fontWeight: 700,
@@ -84,14 +85,14 @@ export function StructureSection({
                         height: 8,
                         borderRadius: "50%",
                         background: PRIMARY,
-                        marginLeft: 6,
+                        marginInlineEnd: 6,
                         verticalAlign: "middle",
                       }}
                     />
                   )}
                   {title}
                 </div>
-                <div style={{ fontFamily: FONT, fontSize: 12, color: "#9BA3C4", lineHeight: 1.6 }}>{desc}</div>
+                <div className="rs-longform" style={{ fontFamily: FONT, fontSize: 12, color: "#9BA3C4", lineHeight: 1.6 }}>{desc}</div>
               </div>
             </div>
           </button>
@@ -115,23 +116,24 @@ export function StructureRadioRow({
   onChange: (value: CourseStructure) => void;
 }) {
   return (
-    <div style={{ display: "flex", gap: 10 }}>
+    <div className="rs-grid" style={{ "--rs-grid-min": "170px", "--rs-grid-gap": "10px" } as React.CSSProperties}>
       {TAB_OPTIONS.map(([v, label, sub]) => (
         <button
           key={v}
           onClick={() => onChange(v)}
           style={{
-            flex: 1,
             padding: "11px 14px",
+            minHeight: 44,
             borderRadius: 14,
             border: `1.5px solid ${value === v ? PRIMARY : "rgba(78,91,146,0.14)"}`,
             background: value === v ? "rgba(78,91,146,0.06)" : "#FAFBFD",
             cursor: "pointer",
             textAlign: "right" as const,
             transition: "all 0.15s",
+            minWidth: 0,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3, minWidth: 0 }}>
             <div
               style={{
                 width: 14,
@@ -147,6 +149,7 @@ export function StructureRadioRow({
               {value === v && <div style={{ width: 6, height: 6, borderRadius: 99, background: PRIMARY }} />}
             </div>
             <span
+              className="rs-longform"
               style={{
                 fontFamily: FONT,
                 fontSize: 13,
@@ -157,7 +160,7 @@ export function StructureRadioRow({
               {label}
             </span>
           </div>
-          <div style={{ fontFamily: FONT, fontSize: 10.5, color: "#9BA3C4", marginRight: 20 }}>{sub}</div>
+          <div className="rs-longform" style={{ fontFamily: FONT, fontSize: 10.5, color: "#9BA3C4", marginInlineStart: 20 }}>{sub}</div>
         </button>
       ))}
     </div>
