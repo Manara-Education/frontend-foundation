@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { createMemoryRouter, RouterProvider } from "react-router";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import { setViewport, VIEWPORTS } from "@/test/viewport";
 import { AppLayout } from "./app-layout";
@@ -10,30 +10,45 @@ vi.mock("@/shared/auth", () => ({
   useLogoutAction: () => vi.fn(),
 }));
 
+/*
+  The shell reads its heading and active section from `useRouteMeta`, which is built on
+  `useMatches` and therefore needs a data router. A data router is exactly what this file
+  cannot have: every navigation it performs makes react-router build a `Request`, `Request`
+  comes from Node's undici because jsdom implements no fetch, and undici rejects the
+  `AbortSignal` it is handed — including, as it turns out, the one undici itself produces.
+  The brand check is against a reference this environment no longer exposes.
+
+  That surfaced as "Vitest caught 1 unhandled error": every test green, exit code 1. It is
+  an incompatibility between this repository's jsdom setup and undici, it has nothing to do
+  with the shell, and it would have been silenced rather than fixed by a global handler.
+
+  So the metadata is stubbed and a plain `MemoryRouter` is used. What is under test here is
+  which navigation the shell renders at a given width and how the drawer behaves — none of
+  which involves route data. Real navigation is verified in a browser.
+*/
+vi.mock("@/shared/navigation", () => ({
+  useRouteMeta: () => ({
+    title: "دوراتي",
+    subtitle: "متابعة مسيرتك التعليمية",
+    section: "student-courses",
+    contentWidth: 860,
+    transitionKey: "/student/courses",
+  }),
+}));
+
 const MENU = { name: "فتح القائمة" };
 
 function renderShell(initial = "/student/courses") {
-  const router = createMemoryRouter(
-    [
-      {
-        Component: AppLayout,
-        children: [
-          {
-            path: "student/courses",
-            element: <p>محتوى الصفحة</p>,
-            handle: { title: "دوراتي", section: "student-courses" },
-          },
-          {
-            path: "student/explore",
-            element: <p>الاستكشاف</p>,
-            handle: { title: "استكشاف", section: "student-explore" },
-          },
-        ],
-      },
-    ],
-    { initialEntries: [initial] },
+  return render(
+    <MemoryRouter initialEntries={[initial]}>
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route path="student/courses" element={<p>محتوى الصفحة</p>} />
+          <Route path="student/explore" element={<p>الاستكشاف</p>} />
+        </Route>
+      </Routes>
+    </MemoryRouter>,
   );
-  return { router, ...render(<RouterProvider router={router} />) };
 }
 
 /**
@@ -97,6 +112,7 @@ describe("the drawer", () => {
 
     await userEvent.click(screen.getByRole("button", MENU));
     await screen.findByRole("dialog");
+
     await userEvent.click(screen.getByRole("link", { name: /استكشاف/ }));
 
     // Leaving it open over the page just navigated to is the classic drawer bug.
