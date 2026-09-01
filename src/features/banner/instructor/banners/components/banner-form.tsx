@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { ImageWithFallback } from "@/shared/components/ImageWithFallback";
+import { useIsMobile } from "@/shared/responsive";
 import { BannerStudentPreview } from "@/features/banner/components/banner-student-preview";
 import type { BannerDisplayFrequency } from "@/features/banner/types/banner.types";
 import {
@@ -55,6 +56,7 @@ const inputBase: CSSProperties = {
   padding: "10px 14px",
   transition: "border-color 0.18s, box-shadow 0.18s",
   boxSizing: "border-box",
+  minWidth: 0,
 };
 
 const labelStyle: CSSProperties = { fontFamily: FONT, fontWeight: 600, fontSize: 13, color: "#1E2340" };
@@ -63,8 +65,10 @@ const cardStyle: CSSProperties = {
   background: "#fff",
   borderRadius: 20,
   border: "1.5px solid rgba(78,91,146,0.1)",
-  padding: "22px 24px",
+  padding: "clamp(16px, 5vw, 22px) clamp(16px, 5vw, 24px)",
   boxShadow: "0 2px 12px rgba(78,91,146,0.05)",
+  boxSizing: "border-box",
+  minInlineSize: 0,
 };
 const cardTitleStyle: CSSProperties = {
   fontFamily: FONT,
@@ -73,6 +77,18 @@ const cardTitleStyle: CSSProperties = {
   color: "#1E2340",
   margin: "0 0 18px",
 };
+const formGridStyle = {
+  "--rs-grid-min": "300px",
+  "--rs-grid-gap": "clamp(18px, 4vw, 28px)",
+  alignItems: "start",
+} as CSSProperties;
+const pairedFieldGridStyle = {
+  "--rs-grid-min": "180px",
+  "--rs-grid-gap": "12px",
+} as CSSProperties;
+const durationClusterStyle = {
+  "--rs-cluster-gap": "8px",
+} as CSSProperties;
 
 function Field({
   label,
@@ -86,13 +102,13 @@ function Field({
   children: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1 rs-longform">
       <label style={labelStyle}>
         {label}
-        {required && <span style={{ color: "#D4183D", marginRight: 3 }}>*</span>}
+        {required && <span style={{ color: "#D4183D", marginInlineStart: 3 }}>*</span>}
       </label>
       {children}
-      {error && <p style={errStyle}>{error}</p>}
+      {error && <p className="rs-longform" style={errStyle}>{error}</p>}
     </div>
   );
 }
@@ -113,12 +129,14 @@ export function BannerForm({
   onCancel,
 }: BannerFormProps) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const isMobile = useIsMobile();
 
   return (
-    <div dir="rtl" style={{ fontFamily: FONT }}>
+    <div dir="rtl" style={{ fontFamily: FONT, maxInlineSize: "100%", minInlineSize: 0 }}>
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
+          className="rs-touch"
           onClick={onCancel}
           style={{
             background: "transparent",
@@ -130,7 +148,8 @@ export function BannerForm({
             gap: 5,
             fontFamily: FONT,
             fontSize: 13,
-            padding: 0,
+            minHeight: 44,
+            paddingInline: 4,
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.color = PRIMARY;
@@ -148,9 +167,9 @@ export function BannerForm({
         </h2>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 28, alignItems: "start" }}>
+      <div className="rs-grid" style={formGridStyle}>
         {/* ── Form ── */}
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6" style={{ minWidth: 0 }}>
           {/* Basic info */}
           <div style={cardStyle}>
             <h3 style={cardTitleStyle}>المعلومات الأساسية</h3>
@@ -169,9 +188,9 @@ export function BannerForm({
                     border: `1.5px solid ${errors.internalName ? "#D4183D" : "rgba(78,91,146,0.16)"}`,
                   }}
                 />
-                <p style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4", marginTop: 2 }}>
-                  مرئي للمدرس فقط — لا يراه الطلاب
-                </p>
+              <p style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4", marginTop: 2 }}>
+                مرئي للمدرس فقط — لا يراه الطلاب
+              </p>
               </Field>
               <Field label="عنوان الإعلان" required error={errors.title}>
                 <input
@@ -205,20 +224,29 @@ export function BannerForm({
             <h3 style={cardTitleStyle}>صورة الإعلان</h3>
             <div className="flex flex-col gap-3">
               {form.imageUrl ? (
-                <div style={{ borderRadius: 14, overflow: "hidden", position: "relative", height: 140 }}>
+                <div
+                  style={{
+                    borderRadius: 14,
+                    overflow: "hidden",
+                    position: "relative",
+                    aspectRatio: "16 / 7",
+                    minHeight: 120,
+                  }}
+                >
                   <ImageWithFallback
                     src={form.imageUrl}
                     alt="معاينة الصورة"
                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                   />
                   <button
+                    className="rs-touch"
                     onClick={onRemoveImage}
                     style={{
                       position: "absolute",
                       top: 8,
-                      left: 8,
-                      width: 28,
-                      height: 28,
+                      insetInlineEnd: 8,
+                      width: 44,
+                      height: 44,
                       borderRadius: 99,
                       background: "rgba(0,0,0,0.5)",
                       border: "none",
@@ -237,7 +265,7 @@ export function BannerForm({
                   onClick={() => fileRef.current?.click()}
                   disabled={uploading}
                   style={{
-                    height: 100,
+                    minHeight: 112,
                     borderRadius: 14,
                     background: "rgba(78,91,146,0.03)",
                     border: "1.5px dashed rgba(78,91,146,0.2)",
@@ -247,8 +275,10 @@ export function BannerForm({
                     alignItems: "center",
                     justifyContent: "center",
                     gap: 6,
+                    padding: "16px",
                     color: "#9BA3C4",
                     transition: "all 0.15s",
+                    boxSizing: "border-box",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = "rgba(78,91,146,0.06)";
@@ -272,7 +302,7 @@ export function BannerForm({
                 style={{ display: "none" }}
                 onChange={(e) => onImageFile(e.target.files?.[0])}
               />
-              <p style={{ fontFamily: FONT, fontSize: 11.5, color: "#B0B7D4" }}>
+              <p className="rs-longform" style={{ fontFamily: FONT, fontSize: 11.5, color: "#B0B7D4" }}>
                 أو أدخل رابط الصورة مباشرةً (PNG، JPG، WebP — الحد الأقصى ٥ ميجابايت)
               </p>
               <Field label="" error={errors.imageUrl}>
@@ -325,7 +355,7 @@ export function BannerForm({
           <div style={cardStyle}>
             <h3 style={cardTitleStyle}>الجدولة والمدة</h3>
             <div className="flex flex-col gap-4">
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="rs-grid" style={pairedFieldGridStyle}>
                 <Field label="تاريخ البدء">
                   <input
                     type="date"
@@ -347,15 +377,15 @@ export function BannerForm({
               {/* Duration shortcuts */}
               <div>
                 <p style={{ ...labelStyle, marginBottom: 8 }}>مدة العرض — اختصارات</p>
-                <div className="flex flex-wrap gap-2">
+                <div className="rs-cluster" style={durationClusterStyle}>
                   {DURATION_SHORTCUTS.map((d) => (
                     <button
+                      className="rs-touch"
                       key={d.days}
                       onClick={() => onApplyDuration(d.days)}
                       style={{
-                        height: 32,
-                        paddingLeft: 14,
-                        paddingRight: 14,
+                        minHeight: 44,
+                        paddingInline: 14,
                         borderRadius: 10,
                         background: "rgba(78,91,146,0.06)",
                         border: "1.5px solid rgba(78,91,146,0.14)",
@@ -379,7 +409,7 @@ export function BannerForm({
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="rs-grid" style={pairedFieldGridStyle}>
                 <Field label="تاريخ الانتهاء" required error={errors.endDate}>
                   <input
                     type="date"
@@ -410,7 +440,7 @@ export function BannerForm({
                   <select
                     value={form.timezone}
                     onChange={(e) => onFieldChange({ timezone: e.target.value })}
-                    style={{ ...inputBase, height: 44, appearance: "none", paddingLeft: 36, cursor: "pointer" }}
+                    style={{ ...inputBase, height: 44, appearance: "none", paddingInlineEnd: 36, cursor: "pointer" }}
                   >
                     {TIMEZONES.map((tz) => (
                       <option key={tz.value} value={tz.value}>
@@ -422,7 +452,7 @@ export function BannerForm({
                     size={14}
                     style={{
                       position: "absolute",
-                      left: 12,
+                      insetInlineEnd: 12,
                       top: "50%",
                       transform: "translateY(-50%)",
                       color: "#9BA3C4",
@@ -445,7 +475,7 @@ export function BannerForm({
                     onChange={(e) =>
                       onFieldChange({ displayFrequency: e.target.value as BannerDisplayFrequency })
                     }
-                    style={{ ...inputBase, height: 44, appearance: "none", paddingLeft: 36, cursor: "pointer" }}
+                    style={{ ...inputBase, height: 44, appearance: "none", paddingInlineEnd: 36, cursor: "pointer" }}
                   >
                     {FREQUENCY_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>
@@ -457,7 +487,7 @@ export function BannerForm({
                     size={14}
                     style={{
                       position: "absolute",
-                      left: 12,
+                      insetInlineEnd: 12,
                       top: "50%",
                       transform: "translateY(-50%)",
                       color: "#9BA3C4",
@@ -491,15 +521,16 @@ export function BannerForm({
                       border: "1px solid rgba(78,91,146,0.08)",
                     }}
                   >
-                    <div>
+                    <div className="rs-longform" style={{ minWidth: 0 }}>
                       <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: "#1E2340" }}>{label}</div>
                       <div style={{ fontFamily: FONT, fontSize: 11.5, color: "#9BA3C4", marginTop: 2 }}>{desc}</div>
                     </div>
                     <button
+                      className="rs-touch"
                       onClick={() => onFieldChange({ [key]: !form[key] })}
                       style={{
-                        width: 44,
-                        height: 24,
+                        width: 64,
+                        height: 44,
                         borderRadius: 99,
                         background: form[key] ? PRIMARY : "rgba(78,91,146,0.15)",
                         border: "none",
@@ -512,13 +543,13 @@ export function BannerForm({
                       <div
                         style={{
                           position: "absolute",
-                          top: 3,
-                          left: form[key] ? 23 : 3,
-                          width: 18,
-                          height: 18,
+                          top: 11,
+                          insetInlineStart: form[key] ? 8 : 34,
+                          width: 22,
+                          height: 22,
                           borderRadius: 99,
                           background: "#fff",
-                          transition: "left 0.22s",
+                          transition: "inset-inline-start 0.22s",
                           boxShadow: "0 1px 4px rgba(0,0,0,0.18)",
                         }}
                       />
@@ -549,12 +580,12 @@ export function BannerForm({
           )}
 
           {/* Actions */}
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="rs-cluster" style={{ "--rs-cluster-gap": "12px" } as CSSProperties}>
             {savedMessage ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 rs-longform"
                 style={{
                   padding: "10px 18px",
                   borderRadius: 12,
@@ -574,9 +605,8 @@ export function BannerForm({
                   onClick={() => onSave("publish")}
                   disabled={saving}
                   style={{
-                    height: 46,
-                    paddingLeft: 24,
-                    paddingRight: 24,
+                    minHeight: 46,
+                    paddingInline: 24,
                     borderRadius: 13,
                     background: saving
                       ? "rgba(78,91,146,0.3)"
@@ -600,9 +630,8 @@ export function BannerForm({
                   onClick={() => onSave("schedule")}
                   disabled={saving}
                   style={{
-                    height: 46,
-                    paddingLeft: 20,
-                    paddingRight: 20,
+                    minHeight: 46,
+                    paddingInline: 20,
                     borderRadius: 13,
                     background: "rgba(59,130,246,0.09)",
                     color: "#1D4ED8",
@@ -622,9 +651,8 @@ export function BannerForm({
                   onClick={() => onSave("draft")}
                   disabled={saving}
                   style={{
-                    height: 46,
-                    paddingLeft: 20,
-                    paddingRight: 20,
+                    minHeight: 46,
+                    paddingInline: 20,
                     borderRadius: 13,
                     background: "transparent",
                     color: "#717182",
@@ -640,9 +668,8 @@ export function BannerForm({
                 <button
                   onClick={onCancel}
                   style={{
-                    height: 46,
-                    paddingLeft: 18,
-                    paddingRight: 18,
+                    minHeight: 46,
+                    paddingInline: 18,
                     borderRadius: 13,
                     background: "transparent",
                     color: "#C4C9DC",
@@ -660,7 +687,7 @@ export function BannerForm({
         </div>
 
         {/* ── Live Preview ── */}
-        <div style={{ position: "sticky", top: 24 }}>
+        <div style={{ position: isMobile ? "static" : "sticky", top: 24, minWidth: 0 }}>
           <div
             style={{
               background: "#fff",

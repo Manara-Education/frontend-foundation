@@ -47,6 +47,8 @@ export function BannerStudentPreview({
         border: "1px solid rgba(78,91,146,0.1)",
         background: "#1E2340",
         minHeight: compact ? 120 : 160,
+        maxInlineSize: "100%",
+        boxSizing: "border-box",
       }}
     >
       {/* Background image */}
@@ -75,10 +77,13 @@ export function BannerStudentPreview({
       <div
         style={{
           position: "relative",
-          padding: compact ? "22px 24px" : "32px 36px",
+          padding: compact
+            ? "clamp(18px, 6vw, 22px) clamp(16px, 6vw, 24px)"
+            : "clamp(22px, 7vw, 32px) clamp(18px, 7vw, 36px)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          flexWrap: "wrap",
           gap: 16,
           minHeight: compact ? 150 : 200,
           touchAction: "pan-y",
@@ -97,8 +102,9 @@ export function BannerStudentPreview({
           else onSwipeRight?.();
         }}
       >
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: "1 1 240px", minWidth: 0 }}>
           <div
+            className="rs-longform"
             style={{
               fontFamily: FONT,
               fontWeight: 700,
@@ -112,6 +118,7 @@ export function BannerStudentPreview({
           </div>
           {banner.description && (
             <div
+              className="rs-longform"
               style={{
                 fontFamily: FONT,
                 fontSize: compact ? 12 : 13.5,
@@ -125,17 +132,18 @@ export function BannerStudentPreview({
           )}
           {hasCta && (
             <a
+              className="rs-longform"
               href={banner.callToActionUrl}
               target={banner.callToActionUrl?.startsWith("http") ? "_blank" : "_self"}
               rel="noopener noreferrer"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
+                flexWrap: "wrap",
                 gap: 6,
                 marginTop: 14,
-                height: compact ? 32 : 38,
-                paddingLeft: compact ? 14 : 18,
-                paddingRight: compact ? 14 : 18,
+                minHeight: compact ? 44 : 44,
+                paddingInline: compact ? 14 : 18,
                 borderRadius: 10,
                 background: "rgba(255,255,255,0.18)",
                 border: "1.5px solid rgba(255,255,255,0.3)",
@@ -147,13 +155,16 @@ export function BannerStudentPreview({
                 backdropFilter: "blur(4px)",
                 transition: "background 0.15s",
                 cursor: "pointer",
+                maxInlineSize: "100%",
+                lineHeight: 1.4,
+                boxSizing: "border-box",
               }}
               onClick={(e) => {
                 if (!banner.callToActionUrl || banner.callToActionUrl === "#") e.preventDefault();
               }}
             >
-              {banner.callToActionLabel}
-              {banner.callToActionUrl?.startsWith("http") && <ExternalLink size={12} />}
+              <span className="rs-longform" style={{ minWidth: 0 }}>{banner.callToActionLabel}</span>
+              {banner.callToActionUrl?.startsWith("http") && <ExternalLink size={12} style={{ flexShrink: 0 }} />}
             </a>
           )}
         </div>

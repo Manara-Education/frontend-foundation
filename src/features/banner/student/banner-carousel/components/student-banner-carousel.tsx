@@ -94,23 +94,35 @@ export function StudentBannerCarousel({ fallback }: StudentBannerCarouselProps =
 
       {/* Controls + dots (only when multiple banners) */}
       {isMulti && (
-        <div className="flex items-center justify-center" style={{ marginTop: 10, gap: 6 }}>
+        <div className="flex items-center justify-center" style={{ marginTop: 10, gap: 2, flexWrap: "wrap" }}>
           {visibleBanners.map((_, i) => (
             <button
               key={i}
               onClick={() => onSelect(i)}
               aria-label={`الإعلان ${i + 1}`}
               style={{
-                width: i === currentIndex ? 18 : 7,
-                height: 7,
+                width: 44,
+                height: 44,
                 borderRadius: 99,
-                background: i === currentIndex ? "#4E5B92" : "rgba(78,91,146,0.22)",
+                background: "transparent",
                 border: "none",
                 cursor: "pointer",
                 padding: 0,
-                transition: "width 0.25s, background 0.2s",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
-            />
+            >
+              <span
+                style={{
+                  width: i === currentIndex ? 18 : 7,
+                  height: 7,
+                  borderRadius: 99,
+                  background: i === currentIndex ? "#4E5B92" : "rgba(78,91,146,0.22)",
+                  transition: "width 0.25s, background 0.2s",
+                }}
+              />
+            </button>
           ))}
         </div>
       )}

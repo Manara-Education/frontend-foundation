@@ -64,7 +64,8 @@ export function BannerFormPage({ bannerId, onSaved, onCancel }: BannerFormPagePr
           <div
             key={i}
             style={{
-              height: 140,
+              minHeight: 120,
+              aspectRatio: "7 / 1",
               borderRadius: 18,
               background: "linear-gradient(90deg, #F2F3F9 0%, #E8EAF2 50%, #F2F3F9 100%)",
               backgroundSize: "200% 100%",
@@ -83,9 +84,8 @@ export function BannerFormPage({ bannerId, onSaved, onCancel }: BannerFormPagePr
         <button
           onClick={onCancel}
           style={{
-            height: 40,
-            paddingLeft: 18,
-            paddingRight: 18,
+            minHeight: 44,
+            paddingInline: 18,
             borderRadius: 12,
             background: "rgba(78,91,146,0.06)",
             color: PRIMARY,
