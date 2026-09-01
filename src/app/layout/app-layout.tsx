@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Menu } from "lucide-react";
 import { Sidebar } from "@/features/main/components/sidebar";
 import { useAuth, useLogoutAction } from "@/shared/auth";
+import { offscreenInlineStart, towardInlineEnd, useDirection } from "@/shared/direction";
 import { useRouteMeta } from "@/shared/navigation";
 import { useIsMobile } from "@/shared/responsive";
 
@@ -28,6 +29,20 @@ import { useIsMobile } from "@/shared/responsive";
  * navigation — the same component, the same entries in the same order, lit by the same
  * route metadata — just somewhere it fits. Above `md` nothing about this file's output
  * has changed.
+ *
+ * ── On which side the navigation is on ──
+ *
+ * The navigation lives on the **inline-start** edge: the right in Arabic, the left in
+ * English. Not "the right", and not "the right when the language is Arabic" — the side is
+ * `LayoutDirection`'s answer, read once here and used for the column, the drawer, the
+ * drawer's animation and the heading's alike, so those four cannot drift apart.
+ *
+ * The drawer had drifted. It was anchored with `inset-inline-end: 0`, which in RTL is the
+ * *left*, and animated with a hard-coded `x: "100%"`, which is *rightwards* in both
+ * directions because transforms are physical. So on a phone the button sat on the right and
+ * the navigation flew in from mid-screen and parked on the left. The column above `md` was
+ * never wrong, which is what made it look like a drawer bug rather than what it was: two
+ * different answers in one shell to the question of which side navigation is on.
  */
 export function AppLayout() {
   const { user } = useAuth();
@@ -35,6 +50,11 @@ export function AppLayout() {
   const logout = useLogoutAction();
   const meta = useRouteMeta();
 
+  /*
+    The one input the whole shell's sidedness is derived from. Everything below asks this
+    rather than asking whether the copy is Arabic.
+  */
+  const direction = useDirection();
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -94,6 +114,9 @@ export function AppLayout() {
   const contentMaxWidth: number | string =
     meta.contentWidth === "full" ? "none" : meta.contentWidth;
 
+  /* Where the drawer rests when shut: just past the edge it is anchored to. */
+  const drawerClosedX = offscreenInlineStart(direction);
+
   const navigation = (
     <Sidebar
       activeSection={meta.section}
@@ -105,7 +128,12 @@ export function AppLayout() {
 
   return (
     <div
-      dir="rtl"
+      /*
+        The direction is put on the DOM here, not just held in React state: it is what every
+        logical property below — and inside the sidebar — resolves against. A `dir` the tree
+        cannot see would leave `inset-inline-start` answering to the document instead.
+      */
+      dir={direction}
       style={{
         display: "flex",
         /*
@@ -120,9 +148,10 @@ export function AppLayout() {
       }}
     >
       {/*
-        Navigation first in the DOM. In RTL that puts it on the right, exactly where it
-        was — and it also means a keyboard user reaches the navigation before the page
-        content rather than after all of it.
+        Navigation first in the DOM, and the row is a flex container that reads in `dir`
+        order — so it lands on the inline-start edge in either direction with no offset
+        arithmetic and no `margin-left: 280px`. It also means a keyboard user reaches the
+        navigation before the page content rather than after all of it.
       */}
       {!isMobile && navigation}
 
@@ -183,7 +212,9 @@ export function AppLayout() {
           */}
           <motion.div
             key={meta.title ?? ""}
-            initial={{ opacity: 0, x: -10 }}
+            /* Settles *towards* the inline-start edge, so the heading and the navigation
+               beside it are moving in the same direction rather than opposite ones. */
+            initial={{ opacity: 0, x: towardInlineEnd(direction, 10) }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.2 }}
             className="flex flex-col gap-0.5"
@@ -259,18 +290,29 @@ export function AppLayout() {
               aria-modal="true"
               aria-label="القائمة"
               tabIndex={-1}
-              /* Enters from the side it lives on, which in RTL is the right. */
-              initial={{ x: "100%" }}
+              /*
+                Enters from the edge it lives on and leaves the same way — rightwards in
+                Arabic, leftwards in English. A transform has no logical form, so the
+                direction has to be supplied; `offscreenInlineStart` is the only place that
+                sign is decided.
+              */
+              initial={{ x: drawerClosedX }}
               animate={{ x: 0 }}
-              exit={{ x: "100%" }}
+              exit={{ x: drawerClosedX }}
               transition={{ type: "tween", duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
               style={{
                 position: "fixed",
                 insetBlock: 0,
-                insetInlineEnd: 0,
+                /*
+                  The same edge the persistent column occupies and the same edge the button
+                  that opens it sits on: the start. In RTL that is the right — which
+                  `inset-inline-end` was not.
+                */
+                insetInlineStart: 0,
                 zIndex: 41,
-                /* Never wider than the screen it is covering. */
-                maxWidth: "min(280px, 88vw)",
+                /* Never wider than the screen it is covering. Sized here rather than left
+                   to the sidebar's intrinsic 280px, so the cap can actually bite. */
+                inlineSize: "min(280px, 88vw)",
                 outline: "none",
               }}
             >

@@ -118,3 +118,36 @@ Not one was a defect in the application code being measured. A number in these d
 what the probe saw, and the probe is only as good as its current exclusion list. Treat a
 surprising green with the same suspicion as a surprising red — that is how all three of these
 were found.
+
+## Addendum: verifying which side the navigation is on
+
+The overflow probe above cannot answer this one. A drawer anchored to the wrong edge is
+fully inside the viewport, so it scores clean — which is how the RTL drawer defect survived
+the whole responsive pass with every gate green.
+
+The direction measurement is separate and asks three things of the shell, at each width and
+in each direction:
+
+| Reading | RTL | LTR |
+| --- | --- | --- |
+| `getComputedStyle(drawer)` resolved edge | `right: 0px` | `left: 0px` |
+| `translateX` sign while entering/leaving | positive | negative |
+| `aside` border box, above `md` | `[W-280, W]` | `[0, 280]` |
+
+Two notes on how it is taken, both of which cost a wrong answer first:
+
+**`inset-inline-start` has to be read as `left`/`right`, not by name.** The whole class of
+bug is a logical property resolving to the physical edge you did not expect, so asserting
+that `inset-inline-start` is set proves nothing about which side it landed on.
+`getComputedStyle` resolves it, and that resolved value is the measurement.
+
+**Browser page zoom silently invalidates a width sweep.** Chrome's zoom changes CSS-pixel
+count without changing the window, so a 644px window reported `innerWidth: 1479` and every
+"mobile" reading was the desktop branch. The sweep runs the app in a same-origin `<iframe>`
+sized per case instead: media queries resolve against the frame, so the width under test is
+the width that was asked for, and `dir` can be flipped on the frame's own `<html>` to
+exercise LTR without a second build.
+
+Widths measured: 320, 360, 375, 390, 412, 480, 600, 767, 768, 820, 1024, 1280 — each in both
+directions, drawer closed, open, and mid-exit, with `documentElement.scrollWidth` sampled
+throughout so a panel parked off-screen cannot quietly widen the document.
