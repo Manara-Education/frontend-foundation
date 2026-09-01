@@ -11,14 +11,14 @@ export function ProblemSection() {
     { icon: <Lightbulb size={22} strokeWidth={1.6} />, title: "التوقف عند الصعوبات", desc: "المتعلمون يحتاجون أحيانًا إلى تلميح صغير لا إلى الإجابة الكاملة." },
   ];
   return (
-    <section dir="rtl" style={{ padding: "100px 28px", background: BG }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+    <section dir="rtl" style={{ paddingBlock: "clamp(72px, 10vw, 100px)", paddingInline: "clamp(16px, 4vw, 28px)", background: BG }}>
+      <div style={{ maxInlineSize: 1100, margin: "0 auto" }}>
         <FadeIn><SectionHeading tag="المشكلة" title="التعلّم لا يجب أن يكون فوضويًا" subtitle="كثير من منصات التعلّم توفّر المحتوى لكنها لا تُنظّم الرحلة." center /></FadeIn>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20, marginTop: 56 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(240px, 100%), 1fr))", gap: 20, marginTop: 56 }}>
           {items.map(({ icon, title, desc }, i) => (
             <FadeIn key={title} delay={i * 0.08}>
-              <div style={{ padding: "28px 24px", borderRadius: 20, border: `1px solid ${BORDER}`, background: BG_SOFT }}>
-                <div style={{ width: 48, height: 48, borderRadius: 14, background: `${PRIMARY}10`, color: PRIMARY, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 18 }}>{icon}</div>
+              <div className="rs-longform" style={{ paddingBlock: 28, paddingInline: "clamp(20px, 6vw, 24px)", borderRadius: 20, border: `1px solid ${BORDER}`, background: BG_SOFT }}>
+                <div style={{ inlineSize: 48, blockSize: 48, borderRadius: 14, background: `${PRIMARY}10`, color: PRIMARY, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 18 }}>{icon}</div>
                 <h3 style={{ fontFamily: FONT, fontWeight: 700, fontSize: 16, color: TEXT, margin: "0 0 10px" }}>{title}</h3>
                 <p style={{ fontFamily: FONT, fontSize: 13.5, color: TEXT_MUTED, lineHeight: 1.75, margin: 0 }}>{desc}</p>
               </div>
