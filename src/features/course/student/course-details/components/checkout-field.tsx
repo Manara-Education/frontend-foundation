@@ -20,7 +20,7 @@ export function CheckoutField({
 }: CheckoutFieldProps) {
   const [focused, setFocused] = useState(false);
   return (
-    <div style={{ marginBottom: 14 }}>
+    <div style={{ marginBottom: 14, minWidth: 0 }}>
       <label style={{ fontFamily: FONT, fontSize: 11, color: "#6B7280", display: "block", marginBottom: 5, textAlign: "right" }}>
         {label}
       </label>
@@ -39,8 +39,7 @@ export function CheckoutField({
             borderRadius: 11,
             border: `1.5px solid ${focused ? PRIMARY : "#E5E7EB"}`,
             background: "#FAFAFA",
-            paddingLeft: "14px",
-            paddingRight: "14px",
+            paddingInline: "14px",
             fontFamily: "monospace, 'Cairo', sans-serif",
             fontSize: 14,
             color: "#1F2937",

@@ -23,6 +23,14 @@ interface FlatCurriculumSectionProps {
   onReorderCommit: () => void;
 }
 
+function moveItem<T>(items: T[], index: number, direction: -1 | 1): T[] {
+  const nextIndex = index + direction;
+  if (nextIndex < 0 || nextIndex >= items.length) return items;
+  const next = items.slice();
+  [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+  return next;
+}
+
 /** The `FLAT` content branch: a single draggable list of lessons. */
 export function FlatCurriculumSection({
   lessons,
@@ -40,8 +48,15 @@ export function FlatCurriculumSection({
   const isTabs = variant === "tabs";
   const editingLesson = editKey ? lessons.find((l) => l.key === editKey) : undefined;
 
+  function moveLesson(index: number, direction: -1 | 1) {
+    const next = moveItem(lessons, index, direction);
+    if (next === lessons) return;
+    onReorder(next);
+    onReorderCommit();
+  }
+
   return (
-    <div>
+    <div style={{ minWidth: 0, maxInlineSize: "100%" }}>
       {/* Count badge — wizard only */}
       {!isTabs && lessons.length > 0 && (
         <div className="flex items-center gap-2 mb-4">
@@ -72,14 +87,14 @@ export function FlatCurriculumSection({
           axis="y"
           values={lessons}
           onReorder={onReorder}
-          style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}
+          style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}
         >
           <AnimatePresence>
             {lessons.map((lesson, idx) => (
               <Reorder.Item
                 key={lesson.key}
                 value={lesson}
-                style={{ listStyle: "none" }}
+                style={{ listStyle: "none", minWidth: 0 }}
                 onDragEnd={onReorderCommit}
               >
                 <AnimatePresence>
@@ -99,6 +114,10 @@ export function FlatCurriculumSection({
                     index={idx}
                     onEdit={() => onOpenEdit(lesson.key)}
                     onDelete={() => onDeleteLesson(lesson.key)}
+                    canMoveUp={idx > 0}
+                    canMoveDown={idx < lessons.length - 1}
+                    onMoveUp={() => moveLesson(idx, -1)}
+                    onMoveDown={() => moveLesson(idx, 1)}
                   />
                 )}
               </Reorder.Item>
@@ -113,9 +132,10 @@ export function FlatCurriculumSection({
           style={{
             border: "1.5px dashed rgba(78,91,146,0.18)",
             borderRadius: 16,
-            padding: "28px",
+            padding: "clamp(20px, 7vw, 28px)",
             textAlign: "center",
             background: "rgba(78,91,146,0.02)",
+            minInlineSize: 0,
           }}
         >
           <div className="flex flex-col items-center gap-2">
@@ -125,8 +145,8 @@ export function FlatCurriculumSection({
             >
               <BookOpen size={20} />
             </div>
-            <div style={{ fontFamily: FONT, fontSize: 14, color: "#717182" }}>لم تضف أي درس بعد</div>
-            <div style={{ fontFamily: FONT, fontSize: 12, color: "#9BA3C4" }}>ابدأ بإضافة أول درس في دورتك</div>
+            <div className="rs-longform" style={{ fontFamily: FONT, fontSize: 14, color: "#717182" }}>لم تضف أي درس بعد</div>
+            <div className="rs-longform" style={{ fontFamily: FONT, fontSize: 12, color: "#9BA3C4" }}>ابدأ بإضافة أول درس في دورتك</div>
           </div>
         </div>
       )}
@@ -140,6 +160,7 @@ export function FlatCurriculumSection({
             alignItems: "center",
             gap: 8,
             marginTop: 12,
+            minHeight: 44,
             padding: "10px 18px",
             borderRadius: 14,
             border: "1.5px dashed rgba(78,91,146,0.25)",
@@ -149,6 +170,7 @@ export function FlatCurriculumSection({
             fontSize: 13,
             color: PRIMARY,
             transition: "all 0.15s",
+            maxInlineSize: "100%",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = "rgba(78,91,146,0.05)";
@@ -169,7 +191,8 @@ export function FlatCurriculumSection({
           style={{
             width: "100%",
             marginTop: 12,
-            padding: "14px 0",
+            minHeight: 44,
+            padding: "12px 14px",
             borderRadius: 16,
             border: "1.5px dashed rgba(78,91,146,0.22)",
             background: "transparent",
@@ -182,6 +205,7 @@ export function FlatCurriculumSection({
             alignItems: "center",
             justifyContent: "center",
             gap: 8,
+            boxSizing: "border-box",
           }}
         >
           <Plus size={15} /> إضافة درس جديد
@@ -199,9 +223,8 @@ export function AddLessonButton({ onClick }: { onClick: () => void }) {
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.97 }}
       style={{
-        height: 38,
-        paddingLeft: 16,
-        paddingRight: 16,
+        minHeight: 44,
+        paddingInline: 16,
         borderRadius: 12,
         background: `linear-gradient(135deg, ${PRIMARY} 0%, #6172AC 100%)`,
         color: "#fff",
@@ -214,6 +237,7 @@ export function AddLessonButton({ onClick }: { onClick: () => void }) {
         alignItems: "center",
         gap: 7,
         boxShadow: "0 3px 12px rgba(78,91,146,0.22)",
+        whiteSpace: "nowrap",
       }}
     >
       <Plus size={14} /> إضافة درس

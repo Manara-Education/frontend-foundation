@@ -32,8 +32,21 @@ export function ImageUpload({ value, preview, onChange, error }: ImageUploadProp
   const hasError = !!error;
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <label style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13.5, color: "#1E2340", display: "flex", alignItems: "center", gap: 4 }}>
+    <div className="flex flex-col gap-1.5" style={{ minWidth: 0 }}>
+      <label
+        className="rs-longform"
+        style={{
+          fontFamily: FONT,
+          fontWeight: 600,
+          fontSize: 13.5,
+          color: "#1E2340",
+          display: "flex",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 4,
+          minWidth: 0,
+        }}
+      >
         صورة الدورة
       </label>
 
@@ -43,24 +56,40 @@ export function ImageUpload({ value, preview, onChange, error }: ImageUploadProp
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.22 }}
           className="relative overflow-hidden"
-          style={{ borderRadius: 16, height: 200 }}
+          style={{ borderRadius: 16, aspectRatio: "16 / 7", minHeight: 140, maxInlineSize: "100%" }}
         >
           <img src={preview} alt="معاينة" className="w-full h-full object-cover" />
           <div
             className="absolute inset-0"
             style={{ background: "linear-gradient(to bottom, transparent 50%, rgba(14,18,42,0.5) 100%)" }}
           />
-          <div className="absolute bottom-3 right-3 left-3 flex items-center justify-between">
+          <div
+            className="absolute flex items-center justify-between"
+            style={{
+              insetInline: 12,
+              bottom: 12,
+              gap: 8,
+              minWidth: 0,
+            }}
+          >
             <span
-              className="rounded-xl px-3 py-1"
-              style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)", color: "#fff", fontFamily: FONT, fontSize: 12, fontWeight: 600 }}
+              className="rounded-xl px-3 py-1 rs-longform"
+              style={{
+                background: "rgba(255,255,255,0.2)",
+                backdropFilter: "blur(8px)",
+                color: "#fff",
+                fontFamily: FONT,
+                fontSize: 12,
+                fontWeight: 600,
+                minWidth: 0,
+              }}
             >
               {value?.name}
             </span>
             <button
               onClick={() => onChange(null, null)}
               className="rounded-full flex items-center justify-center transition-all"
-              style={{ width: 32, height: 32, background: "rgba(212,24,61,0.85)", color: "#fff", border: "none", cursor: "pointer" }}
+              style={{ width: 44, height: 44, background: "rgba(212,24,61,0.85)", color: "#fff", border: "none", cursor: "pointer", flexShrink: 0 }}
               onMouseEnter={(e) => e.currentTarget.style.background = "rgba(212,24,61,1)"}
               onMouseLeave={(e) => e.currentTarget.style.background = "rgba(212,24,61,0.85)"}
             >
@@ -73,9 +102,11 @@ export function ImageUpload({ value, preview, onChange, error }: ImageUploadProp
           className="flex flex-col items-center justify-center gap-3 cursor-pointer transition-all duration-200"
           style={{
             borderRadius: 16,
-            height: 160,
+            minHeight: 160,
             border: `2px dashed ${hasError ? "#D4183D" : dragging ? PRIMARY : "rgba(78,91,146,0.22)"}`,
             background: dragging ? "rgba(78,91,146,0.04)" : hasError ? "rgba(212,24,61,0.03)" : "rgba(78,91,146,0.02)",
+            padding: "18px",
+            boxSizing: "border-box",
           }}
           onClick={() => fileRef.current?.click()}
           onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
@@ -90,11 +121,11 @@ export function ImageUpload({ value, preview, onChange, error }: ImageUploadProp
           >
             <ImageIcon size={22} />
           </div>
-          <div className="flex flex-col items-center gap-1" style={{ fontFamily: FONT }}>
-            <span style={{ fontWeight: 600, fontSize: 13.5, color: dragging ? PRIMARY : "#1E2340" }}>
+          <div className="flex flex-col items-center gap-1 rs-longform" style={{ fontFamily: FONT, minWidth: 0 }}>
+            <span className="rs-longform" style={{ fontWeight: 600, fontSize: 13.5, color: dragging ? PRIMARY : "#1E2340" }}>
               {dragging ? "أفلت الصورة هنا" : "ارفع صورة للدورة"}
             </span>
-            <span style={{ fontSize: 11.5, color: "#9BA3C4" }}>
+            <span className="rs-longform" style={{ fontSize: 11.5, color: "#9BA3C4" }}>
               PNG، JPG، WEBP — حتى 5 ميغابايت
             </span>
           </div>
@@ -107,6 +138,7 @@ export function ImageUpload({ value, preview, onChange, error }: ImageUploadProp
                 fontFamily: FONT,
                 fontWeight: 600,
                 fontSize: 12,
+                minHeight: 44,
               }}
             >
               <Upload size={13} />
@@ -126,6 +158,7 @@ export function ImageUpload({ value, preview, onChange, error }: ImageUploadProp
       <AnimatePresence>
         {error && (
           <motion.p
+            className="rs-longform"
             initial={{ opacity: 0, y: -4, height: 0 }}
             animate={{ opacity: 1, y: 0, height: "auto" }}
             exit={{ opacity: 0, y: -4, height: 0 }}

@@ -8,7 +8,9 @@
     "typecheck": "tsc --noEmit",
     "dev": "vite",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "mock-api": "node tools/mock-api/server.mjs",
+    "dev:mock": "node tools/mock-api/server.mjs & vite"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

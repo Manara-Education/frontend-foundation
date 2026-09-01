@@ -10,8 +10,31 @@ const SHIMMER_CSS = `
   }
 `;
 
-function Sk({ w, h, r = 10, style = {} }: { w?: number | string; h: number | string; r?: number; style?: React.CSSProperties }) {
-  return <div className="ccv-sk" style={{ width: w ?? "100%", height: h, borderRadius: r, flexShrink: 0, ...style }} />;
+function Sk({
+  w,
+  h,
+  r = 10,
+  style = {},
+}: {
+  w?: number | string;
+  h: number | string;
+  r?: number;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <div
+      className="ccv-sk"
+      style={{
+        width: w ?? "100%",
+        maxWidth: "100%",
+        minWidth: 0,
+        height: h,
+        borderRadius: r,
+        flexShrink: 0,
+        ...style,
+      }}
+    />
+  );
 }
 
 export function FormSkeleton() {
@@ -19,10 +42,19 @@ export function FormSkeleton() {
     <>
       <style>{SHIMMER_CSS}</style>
       <div className="flex flex-col gap-2 mb-8">
-        <Sk h={32} w={280} r={10} />
-        <Sk h={16} w={360} r={7} />
+        <Sk h={32} w="min(280px, 100%)" r={10} />
+        <Sk h={16} w="min(360px, 100%)" r={7} />
       </div>
-      <div className="rounded-3xl p-8 mb-6" style={{ background: "#fff", border: "1px solid rgba(78,91,146,0.08)" }}>
+      <div
+        className="rounded-3xl mb-6"
+        style={{
+          background: "#fff",
+          border: "1px solid rgba(78,91,146,0.08)",
+          padding: "clamp(18px, 5vw, 32px)",
+          minWidth: 0,
+          maxWidth: "100%",
+        }}
+      >
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
             <Sk h={14} w={100} r={6} />
@@ -37,9 +69,12 @@ export function FormSkeleton() {
             <Sk h={140} r={14} />
           </div>
         </div>
-        <div className="flex justify-start gap-3 mt-8">
-          <Sk h={46} w={140} r={14} />
-          <Sk h={46} w={100} r={14} />
+        <div
+          className="rs-cluster mt-8"
+          style={{ "--rs-cluster-gap": "12px", justifyContent: "flex-start" } as React.CSSProperties}
+        >
+          <Sk h={46} w="min(140px, 100%)" r={14} style={{ flex: "1 1 140px" }} />
+          <Sk h={46} w="min(100px, 100%)" r={14} style={{ flex: "1 1 100px" }} />
         </div>
       </div>
       <Sk h={60} r={16} />

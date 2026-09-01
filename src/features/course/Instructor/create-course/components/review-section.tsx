@@ -22,16 +22,30 @@ function ReviewCard({
     <div
       style={{
         background: "#fff",
-        borderRadius: 20,
+        borderRadius: "clamp(16px, 4vw, 20px)",
         border: "1.5px solid rgba(78,91,146,0.09)",
-        padding: "20px 24px",
+        padding: "clamp(16px, 5vw, 24px)",
         marginBottom: 12,
+        minInlineSize: 0,
+        maxInlineSize: "100%",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 14.5, color: "#1E2340" }}>{label}</div>
+      <div className="rs-cluster" style={{ justifyContent: "space-between", marginBottom: 12 }}>
+        <div
+          style={{
+            fontFamily: FONT,
+            fontWeight: 700,
+            fontSize: 14.5,
+            color: "#1E2340",
+            minInlineSize: 0,
+            overflowWrap: "anywhere",
+          }}
+        >
+          {label}
+        </div>
         <button
           onClick={onEdit}
+          className="rs-touch"
           style={{
             fontFamily: FONT,
             fontSize: 12,
@@ -40,8 +54,11 @@ function ReviewCard({
             background: "rgba(78,91,146,0.07)",
             border: "none",
             borderRadius: 9,
-            padding: "5px 12px",
+            minBlockSize: 44,
+            paddingBlock: 5,
+            paddingInline: 12,
             cursor: "pointer",
+            flexShrink: 0,
           }}
         >
           تعديل
@@ -54,9 +71,34 @@ function ReviewCard({
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "flex-start" }}>
-      <span style={{ fontFamily: FONT, fontSize: 12.5, color: "#9BA3C4", minWidth: 80, flexShrink: 0 }}>{label}</span>
-      <span style={{ fontFamily: FONT, fontSize: 12.5, color: "#1E2340", flex: 1 }}>{value || "—"}</span>
+    <div
+      className="rs-cluster"
+      style={{ "--rs-cluster-gap": "8px", marginBottom: 6, alignItems: "flex-start" } as React.CSSProperties}
+    >
+      <span
+        style={{
+          fontFamily: FONT,
+          fontSize: 12.5,
+          color: "#9BA3C4",
+          flex: "0 0 min(80px, 100%)",
+          minInlineSize: 0,
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          fontFamily: FONT,
+          fontSize: 12.5,
+          color: "#1E2340",
+          flex: "1 1 140px",
+          minInlineSize: 0,
+          overflowWrap: "anywhere",
+          lineHeight: 1.65,
+        }}
+      >
+        {value || "—"}
+      </span>
     </div>
   );
 }
@@ -127,7 +169,17 @@ export function ReviewSection({ state, purchasePrice, hasCoverImage, onGoToStep 
         {state.accessType === "SUBSCRIPTION" && state.subscriptionPlans.length > 0 && (
           <div style={{ marginTop: 6 }}>
             {state.subscriptionPlans.map((p) => (
-              <div key={p.key} style={{ fontFamily: FONT, fontSize: 12, color: "#9BA3C4", marginBottom: 3 }}>
+              <div
+                key={p.key}
+                style={{
+                  fontFamily: FONT,
+                  fontSize: 12,
+                  color: "#9BA3C4",
+                  marginBottom: 3,
+                  overflowWrap: "anywhere",
+                  lineHeight: 1.7,
+                }}
+              >
                 • {p.name}: {p.duration} {formatSubscriptionUnitLabel(p.unit)} — {p.price} ج.م
               </div>
             ))}

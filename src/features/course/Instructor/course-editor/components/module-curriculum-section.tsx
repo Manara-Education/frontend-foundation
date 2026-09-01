@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence, Reorder, useDragControls } from "motion/react";
-import { ChevronDown, ChevronUp, GripVertical, Layers, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, GripVertical, Layers, Plus, Trash2 } from "lucide-react";
 import type { CourseLessonEditorState, CourseModuleEditorState } from "@/shared/courses";
 import {
   formatLessonCountLabel,
@@ -23,7 +23,7 @@ const TOKENS = {
   wizard: {
     itemMargin: 12,
     cardRadius: 18,
-    headerPadding: "14px 16px 14px 12px",
+    headerPadding: "14px clamp(12px, 4vw, 16px)",
     headerGap: 12,
     gripSize: 16,
     iconBox: 36,
@@ -46,7 +46,7 @@ const TOKENS = {
   tabs: {
     itemMargin: 10,
     cardRadius: 20,
-    headerPadding: "13px 16px 13px 12px",
+    headerPadding: "13px clamp(12px, 4vw, 16px)",
     headerGap: 10,
     gripSize: 15,
     iconBox: 34,
@@ -78,7 +78,16 @@ const COMPACT_INPUT: React.CSSProperties = {
   color: "#1E2340",
   outline: "none",
   boxSizing: "border-box" as const,
+  minWidth: 0,
 };
+
+function moveItem<T>(items: T[], index: number, direction: -1 | 1): T[] {
+  const nextIndex = index + direction;
+  if (nextIndex < 0 || nextIndex >= items.length) return items;
+  const next = items.slice();
+  [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+  return next;
+}
 
 // ── Module form ───────────────────────────────────────────────────────────────
 
@@ -115,28 +124,30 @@ function ModuleInlineForm({
         animate={{ opacity: 1, height: "auto" }}
         exit={{ opacity: 0, height: 0 }}
         transition={{ duration: isEdit ? 0.2 : 0.22 }}
-        style={{ overflow: "hidden", marginBottom: isEdit ? 0 : 10 }}
+        style={{ overflow: "hidden", marginBottom: isEdit ? 0 : 10, minWidth: 0 }}
       >
         <div
           style={
             isEdit
-              ? { borderTop: "1px solid rgba(78,91,146,0.07)", padding: "16px 16px" }
+              ? { borderTop: "1px solid rgba(78,91,146,0.07)", padding: "16px clamp(12px, 4vw, 16px)", minWidth: 0 }
               : {
                   background: "#fff",
                   border: "1.5px solid rgba(78,91,146,0.15)",
                   borderRadius: 18,
-                  padding: "20px 22px",
+                  padding: "20px clamp(16px, 4vw, 22px)",
+                  minWidth: 0,
                 }
           }
         >
           {!isEdit && (
-            <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 14, color: "#1E2340", marginBottom: 14 }}>
+            <div className="rs-longform" style={{ fontFamily: FONT, fontWeight: 700, fontSize: 14, color: "#1E2340", marginBottom: 14 }}>
               إضافة وحدة جديدة
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div>
+            <div className="rs-longform" style={{ minWidth: 0 }}>
               <label
+                className="rs-longform"
                 style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: "#1E2340", display: "block", marginBottom: 5 }}
               >
                 اسم الوحدة *
@@ -150,18 +161,18 @@ function ModuleInlineForm({
                 placeholder={isEdit ? undefined : "مثال: مقدمة في البرمجة"}
                 style={{
                   ...COMPACT_INPUT,
-                  height: isEdit ? 42 : 44,
-                  paddingRight: 12,
-                  paddingLeft: 12,
+                  minHeight: 44,
+                  paddingInline: 12,
                   border: `1.5px solid ${titleErr ? "#D4183D" : "rgba(78,91,146,0.16)"}`,
                 }}
               />
               {titleErr && (
-                <p style={{ fontFamily: FONT, fontSize: 11.5, color: "#D4183D", marginTop: 4 }}>{titleErr}</p>
+                <p className="rs-longform" style={{ fontFamily: FONT, fontSize: 11.5, color: "#D4183D", marginTop: 4 }}>{titleErr}</p>
               )}
             </div>
-            <div>
+            <div className="rs-longform" style={{ minWidth: 0 }}>
               <label
+                className="rs-longform"
                 style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: "#1E2340", display: "block", marginBottom: 5 }}
               >
                 وصف الوحدة
@@ -174,13 +185,12 @@ function ModuleInlineForm({
                 style={{ ...COMPACT_INPUT, padding: "10px 12px", resize: "none" as const }}
               />
             </div>
-            <div style={{ display: "flex", gap: 8, marginTop: isEdit ? 0 : 2 }}>
+            <div className="rs-cluster" style={{ "--rs-cluster-gap": "8px", marginTop: isEdit ? 0 : 2 } as React.CSSProperties}>
               <button
                 onClick={handleSave}
                 style={{
-                  height: isEdit ? 36 : 38,
-                  paddingLeft: isEdit ? 18 : 20,
-                  paddingRight: isEdit ? 18 : 20,
+                  minHeight: 44,
+                  paddingInline: isEdit ? 18 : 20,
                   borderRadius: isEdit ? 10 : 11,
                   background: PRIMARY,
                   color: "#fff",
@@ -196,9 +206,8 @@ function ModuleInlineForm({
               <button
                 onClick={onClose}
                 style={{
-                  height: isEdit ? 36 : 38,
-                  paddingLeft: isEdit ? 14 : 16,
-                  paddingRight: isEdit ? 14 : 16,
+                  minHeight: 44,
+                  paddingInline: isEdit ? 14 : 16,
                   borderRadius: isEdit ? 10 : 11,
                   background: "rgba(78,91,146,0.07)",
                   color: "#717182",
@@ -229,12 +238,13 @@ function ModuleInlineForm({
         style={{
           border: "1.5px solid rgba(78,91,146,0.18)",
           borderRadius: 18,
-          padding: "22px 22px 20px",
+          padding: "22px clamp(16px, 5vw, 22px) 20px",
           marginTop: 12,
           background: "rgba(78,91,146,0.02)",
+          minInlineSize: 0,
         }}
       >
-        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 14, color: "#1E2340", marginBottom: 16 }}>
+        <div className="rs-longform" style={{ fontFamily: FONT, fontWeight: 700, fontSize: 14, color: "#1E2340", marginBottom: 16 }}>
           {isEdit ? "تعديل الوحدة" : "إضافة وحدة"}
         </div>
         <div className="flex flex-col gap-4">
@@ -259,13 +269,12 @@ function ModuleInlineForm({
             />
           </Field>
         </div>
-        <div className="flex items-center gap-3 mt-5">
+        <div className="rs-cluster mt-5" style={{ "--rs-cluster-gap": "12px" } as React.CSSProperties}>
           <button
             onClick={handleSave}
             style={{
-              height: 40,
-              paddingLeft: 22,
-              paddingRight: 22,
+              minHeight: 44,
+              paddingInline: 22,
               borderRadius: 12,
               background: PRIMARY,
               color: "#fff",
@@ -281,9 +290,8 @@ function ModuleInlineForm({
           <button
             onClick={onClose}
             style={{
-              height: 40,
-              paddingLeft: 18,
-              paddingRight: 18,
+              minHeight: 44,
+              paddingInline: 18,
               borderRadius: 12,
               background: "transparent",
               color: "#717182",
@@ -313,6 +321,10 @@ interface ModuleCardProps {
   onDeleteModule: () => void;
   /** Fires once, when the module has been dropped in its new place. */
   onReorderCommit: () => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
   onSaveLesson: (lessonKey: string | null, draft: LessonDraft) => void;
   onDeleteLesson: (lessonKey: string) => void;
   onReorderLessons: (lessons: CourseLessonEditorState[]) => void;
@@ -328,6 +340,10 @@ function ModuleCard({
   onEditModule,
   onDeleteModule,
   onReorderCommit,
+  canMoveUp,
+  canMoveDown,
+  onMoveUp,
+  onMoveDown,
   onSaveLesson,
   onDeleteLesson,
   onReorderLessons,
@@ -351,13 +367,40 @@ function ModuleCard({
 
   const editingLesson = lessonEditKey ? module.lessons.find((l) => l.key === lessonEditKey) : undefined;
 
+  function moveLesson(index: number, direction: -1 | 1) {
+    const next = moveItem(module.lessons, index, direction);
+    if (next === module.lessons) return;
+    onReorderLessons(next);
+    onReorderLessonsCommit();
+  }
+
   const body = (
     <>
       {/* Module header */}
-      <div style={{ display: "flex", alignItems: "center", gap: t.headerGap, padding: t.headerPadding }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: t.headerGap,
+          padding: t.headerPadding,
+          minWidth: 0,
+        }}
+      >
         <div
           onPointerDown={(e) => dragControls.start(e)}
-          style={{ cursor: "grab", color: "#C4C9DE", flexShrink: 0, display: "flex", touchAction: "none" }}
+          className="rs-touch"
+          style={{
+            cursor: "grab",
+            color: "#C4C9DE",
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            touchAction: "none",
+            width: 44,
+            height: 44,
+          }}
         >
           <GripVertical size={t.gripSize} />
         </div>
@@ -378,21 +421,21 @@ function ModuleCard({
           <Layers size={t.iconSize} />
         </div>
 
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="rs-longform" style={{ flex: "1 1 min(160px, 100%)", minWidth: 0 }}>
           <div
+            className="rs-longform"
             style={{
               fontFamily: FONT,
               fontWeight: t.titleWeight,
               fontSize: 14,
               color: "#1E2340",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
+              lineHeight: 1.45,
             }}
           >
             الوحدة {formatModuleOrdinal(index)}: {module.title}
           </div>
           <div
+            className="rs-longform"
             style={{ fontFamily: FONT, fontSize: t.subtitleSize, color: "#9BA3C4", marginTop: t.subtitleMargin }}
           >
             {module.lessons.length} {formatLessonCountLabel(module.lessons.length)}
@@ -400,72 +443,131 @@ function ModuleCard({
           </div>
         </div>
 
-        {/* Edit module */}
-        <button
-          onClick={() => setEditModuleOpen((v) => !v)}
+        <div
+          className="rs-cluster"
           style={{
-            padding: "5px 10px",
-            borderRadius: 10,
-            background: "rgba(78,91,146,0.07)",
-            border: "none",
-            cursor: "pointer",
-            fontFamily: FONT,
-            fontSize: 12,
-            color: PRIMARY,
-            flexShrink: 0,
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = t.editHoverBg)}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(78,91,146,0.07)")}
+            "--rs-cluster-gap": "6px",
+            flex: "0 1 auto",
+            marginInlineStart: "auto",
+            justifyContent: "flex-end",
+          } as React.CSSProperties}
         >
-          تعديل
-        </button>
+          {/* Edit module */}
+          <button
+            onClick={() => setEditModuleOpen((v) => !v)}
+            style={{
+              minHeight: 44,
+              paddingInline: 12,
+              borderRadius: 10,
+              background: "rgba(78,91,146,0.07)",
+              border: "none",
+              cursor: "pointer",
+              fontFamily: FONT,
+              fontSize: 12,
+              color: PRIMARY,
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = t.editHoverBg)}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(78,91,146,0.07)")}
+          >
+            تعديل
+          </button>
 
-        {/* Delete */}
-        <button
-          onClick={onDeleteModule}
-          style={{
-            width: 30,
-            height: 30,
-            borderRadius: 9,
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            color: "#D4183D",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            opacity: t.deleteOpacity,
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = t.deleteOpacity)}
-        >
-          <Trash2 size={t.deleteSize} />
-        </button>
+          <button
+            onClick={onMoveUp}
+            disabled={!canMoveUp}
+            aria-label={`نقل الوحدة ${formatModuleOrdinal(index)} لأعلى`}
+            title="نقل الوحدة لأعلى"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 9,
+              background: "transparent",
+              border: "none",
+              cursor: canMoveUp ? "pointer" : "default",
+              color: canMoveUp ? "#9BA3C4" : "#D0D4E8",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              opacity: canMoveUp ? 1 : 0.45,
+            }}
+          >
+            <ArrowUp size={t.chevronSize} />
+          </button>
 
-        {/* Expand toggle */}
-        <button
-          onClick={onToggleExpanded}
-          // The control had no accessible name at all, which for a button that shows and
-          // hides a module's lessons leaves a screen reader with nothing to announce.
-          aria-label={expanded ? "طي دروس الوحدة" : "عرض دروس الوحدة"}
-          aria-expanded={expanded}
-          style={{
-            width: 30,
-            height: 30,
-            borderRadius: 9,
-            background: "rgba(78,91,146,0.06)",
-            border: "none",
-            cursor: "pointer",
-            color: PRIMARY,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          {expanded ? <ChevronUp size={t.chevronSize} /> : <ChevronDown size={t.chevronSize} />}
-        </button>
+          <button
+            onClick={onMoveDown}
+            disabled={!canMoveDown}
+            aria-label={`نقل الوحدة ${formatModuleOrdinal(index)} لأسفل`}
+            title="نقل الوحدة لأسفل"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 9,
+              background: "transparent",
+              border: "none",
+              cursor: canMoveDown ? "pointer" : "default",
+              color: canMoveDown ? "#9BA3C4" : "#D0D4E8",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              opacity: canMoveDown ? 1 : 0.45,
+            }}
+          >
+            <ArrowDown size={t.chevronSize} />
+          </button>
+
+          {/* Delete */}
+          <button
+            onClick={onDeleteModule}
+            aria-label="حذف الوحدة"
+            title="حذف الوحدة"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 9,
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              color: "#D4183D",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              opacity: t.deleteOpacity,
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+            onMouseLeave={(e) => (e.currentTarget.style.opacity = t.deleteOpacity)}
+          >
+            <Trash2 size={t.deleteSize} />
+          </button>
+
+          {/* Expand toggle */}
+          <button
+            onClick={onToggleExpanded}
+            // The control had no accessible name at all, which for a button that shows and
+            // hides a module's lessons leaves a screen reader with nothing to announce.
+            aria-label={expanded ? "طي دروس الوحدة" : "عرض دروس الوحدة"}
+            aria-expanded={expanded}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 9,
+              background: "rgba(78,91,146,0.06)",
+              border: "none",
+              cursor: "pointer",
+              color: PRIMARY,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            {expanded ? <ChevronUp size={t.chevronSize} /> : <ChevronDown size={t.chevronSize} />}
+          </button>
+        </div>
       </div>
 
       {/* Inline module edit form */}
@@ -506,7 +608,12 @@ function ModuleCard({
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: variant === "wizard" ? 0.22 : 0.2 }}
-            style={{ overflow: "hidden", borderTop: "1px solid rgba(78,91,146,0.07)", padding: "16px 16px 18px" }}
+            style={{
+              overflow: "hidden",
+              borderTop: "1px solid rgba(78,91,146,0.07)",
+              padding: "16px clamp(12px, 4vw, 16px) 18px",
+              minWidth: 0,
+            }}
           >
             {/* New-lesson form */}
             <AnimatePresence>
@@ -533,6 +640,7 @@ function ModuleCard({
                   display: "flex",
                   flexDirection: "column",
                   gap: t.lessonGap,
+                  minWidth: 0,
                 }}
               >
                 <AnimatePresence>
@@ -540,7 +648,7 @@ function ModuleCard({
                     <Reorder.Item
                       key={lesson.key}
                       value={lesson}
-                      style={{ listStyle: "none" }}
+                      style={{ listStyle: "none", minWidth: 0 }}
                       onDragEnd={onReorderLessonsCommit}
                     >
                       <AnimatePresence>
@@ -563,6 +671,10 @@ function ModuleCard({
                             setLessonFormOpen(true);
                           }}
                           onDelete={() => onDeleteLesson(lesson.key)}
+                          canMoveUp={idx > 0}
+                          canMoveDown={idx < module.lessons.length - 1}
+                          onMoveUp={() => moveLesson(idx, -1)}
+                          onMoveDown={() => moveLesson(idx, 1)}
                         />
                       )}
                     </Reorder.Item>
@@ -598,6 +710,7 @@ function ModuleCard({
                   alignItems: "center",
                   gap: 7,
                   marginTop: variant === "wizard" ? 8 : module.lessons.length > 0 ? 10 : 0,
+                  minHeight: 44,
                   padding: "8px 14px",
                   borderRadius: 12,
                   border: "1.5px dashed rgba(78,91,146,0.22)",
@@ -624,6 +737,8 @@ function ModuleCard({
     border: "1.5px solid rgba(78,91,146,0.12)",
     borderRadius: t.cardRadius,
     overflow: "hidden",
+    minInlineSize: 0,
+    maxInlineSize: "100%",
   };
 
   return (
@@ -636,7 +751,7 @@ function ModuleCard({
       // `onReorder` fires continuously while a module is being dragged past its
       // neighbours, so it only moves the local list; the drop is what persists.
       onDragEnd={onReorderCommit}
-      style={{ listStyle: "none", marginBottom: t.itemMargin }}
+      style={{ listStyle: "none", marginBottom: t.itemMargin, minWidth: 0 }}
     >
       {variant === "wizard" ? (
         <motion.div layout style={cardStyle}>
@@ -696,19 +811,26 @@ export function ModuleCurriculumSection({
     setExpandedKeys((prev) => ({ ...prev, [key]: true }));
   }
 
+  function moveModule(index: number, direction: -1 | 1) {
+    const next = moveItem(modules, index, direction);
+    if (next === modules) return;
+    onReorderModules(next);
+    onReorderModulesCommit();
+  }
+
   return (
-    <div>
+    <div style={{ minWidth: 0, maxInlineSize: "100%" }}>
       {/* Stats */}
       {modules.length > 0 &&
         (variant === "wizard" ? (
-          <div className="flex items-center gap-2 mb-4">
-            <span style={{ fontFamily: FONT, fontSize: 13, color: "#9BA3C4" }}>
+          <div className="flex items-center gap-2 mb-4" style={{ minWidth: 0 }}>
+            <span className="rs-longform" style={{ fontFamily: FONT, fontSize: 13, color: "#9BA3C4" }}>
               {modules.length} {formatModuleCountLabel(modules.length)} · {totalLessons}{" "}
               {formatLessonCountLabel(totalLessons)}
             </span>
           </div>
         ) : (
-          <div style={{ fontFamily: FONT, fontSize: 13, color: "#9BA3C4", marginBottom: 12 }}>
+          <div className="rs-longform" style={{ fontFamily: FONT, fontSize: 13, color: "#9BA3C4", marginBottom: 12 }}>
             {modules.length} {formatModuleCountLabel(modules.length)} · {totalLessons}{" "}
             {formatLessonCountLabel(totalLessons)}
           </div>
@@ -720,10 +842,11 @@ export function ModuleCurriculumSection({
           style={{
             border: "1.5px dashed rgba(78,91,146,0.18)",
             borderRadius: 16,
-            padding: "28px",
+            padding: "clamp(20px, 7vw, 28px)",
             textAlign: "center",
             background: "rgba(78,91,146,0.02)",
             marginBottom: 12,
+            minInlineSize: 0,
           }}
         >
           <div className="flex flex-col items-center gap-2">
@@ -733,8 +856,8 @@ export function ModuleCurriculumSection({
             >
               <Layers size={20} />
             </div>
-            <div style={{ fontFamily: FONT, fontSize: 14, color: "#717182" }}>لم تضف أي وحدة بعد</div>
-            <div style={{ fontFamily: FONT, fontSize: 12, color: "#9BA3C4" }}>{t.emptySubtitle}</div>
+            <div className="rs-longform" style={{ fontFamily: FONT, fontSize: 14, color: "#717182" }}>لم تضف أي وحدة بعد</div>
+            <div className="rs-longform" style={{ fontFamily: FONT, fontSize: 12, color: "#9BA3C4" }}>{t.emptySubtitle}</div>
           </div>
         </div>
       )}
@@ -744,7 +867,7 @@ export function ModuleCurriculumSection({
         axis="y"
         values={modules}
         onReorder={onReorderModules}
-        style={{ listStyle: "none", padding: 0, margin: 0 }}
+        style={{ listStyle: "none", padding: 0, margin: 0, minWidth: 0 }}
       >
         <AnimatePresence>
           {modules.map((module, index) => (
@@ -760,6 +883,10 @@ export function ModuleCurriculumSection({
               onEditModule={(draft) => onUpdateModule(module.key, draft)}
               onDeleteModule={() => onDeleteModule(module.key)}
               onReorderCommit={onReorderModulesCommit}
+              canMoveUp={index > 0}
+              canMoveDown={index < modules.length - 1}
+              onMoveUp={() => moveModule(index, -1)}
+              onMoveDown={() => moveModule(index, 1)}
               onSaveLesson={(lessonKey, draft) => onSaveModuleLesson(module.key, lessonKey, draft)}
               onDeleteLesson={(lessonKey) => onDeleteModuleLesson(module.key, lessonKey)}
               onReorderLessons={(lessons) => onReorderModuleLessons(module.key, lessons)}
@@ -785,6 +912,7 @@ export function ModuleCurriculumSection({
             alignItems: "center",
             gap: 8,
             marginTop: t.addModuleMarginTop,
+            minHeight: 44,
             padding: "10px 18px",
             borderRadius: 14,
             border: "1.5px dashed rgba(78,91,146,0.25)",
@@ -794,6 +922,7 @@ export function ModuleCurriculumSection({
             fontSize: 13,
             color: PRIMARY,
             transition: "all 0.15s",
+            maxInlineSize: "100%",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = "rgba(78,91,146,0.05)";

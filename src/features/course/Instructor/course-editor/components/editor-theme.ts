@@ -29,13 +29,13 @@ export function inputStyle(hasValue: boolean, hasError?: boolean): React.CSSProp
     borderRadius: 12,
     border: `1.5px solid ${hasError ? "#D4183D" : hasValue ? PRIMARY : "rgba(78,91,146,0.16)"}`,
     background: hasError ? "rgba(212,24,61,0.02)" : hasValue ? "rgba(78,91,146,0.02)" : "#FAFBFD",
-    paddingRight: 14,
-    paddingLeft: 14,
+    paddingInline: 14,
     fontFamily: FONT,
     fontSize: 14,
     color: "#1E2340",
     outline: "none",
     boxSizing: "border-box" as const,
+    minWidth: 0,
   };
 }
 
@@ -50,4 +50,5 @@ export const TAB_INPUT_BASE: React.CSSProperties = {
   color: "#1E2340",
   outline: "none",
   boxSizing: "border-box",
+  minWidth: 0,
 };
