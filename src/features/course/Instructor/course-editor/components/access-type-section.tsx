@@ -33,10 +33,12 @@ export function AccessTypeSection({
         return (
           <button
             key={v}
+            type="button"
             onClick={() => onChange(v)}
             style={{
               display: "flex",
               alignItems: "center",
+              flexWrap: "wrap",
               gap: 14,
               padding: "16px 18px",
               borderRadius: 16,
@@ -46,6 +48,7 @@ export function AccessTypeSection({
               textAlign: "right",
               transition: "all 0.15s",
               boxShadow: active ? "0 0 0 3px rgba(78,91,146,0.10)" : "none",
+              minHeight: 70,
             }}
             onMouseEnter={(e) => {
               if (!active) e.currentTarget.style.borderColor = "rgba(78,91,146,0.28)";
@@ -82,7 +85,7 @@ export function AccessTypeSection({
               <Icon size={17} />
             </div>
 
-            <div style={{ flex: 1, textAlign: "right" }}>
+            <div className="rs-longform" style={{ flex: "1 1 min(180px, 100%)", minWidth: 0, textAlign: "right" }}>
               <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 14, color: active ? PRIMARY : "#1E2340" }}>
                 {title}
               </div>
@@ -110,13 +113,15 @@ export function AccessTypeRow({
   onChange: (value: CourseAccessType) => void;
 }) {
   return (
-    <div style={{ display: "flex", gap: 10 }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
       {TAB_OPTIONS.map(([v, label, sub]) => (
         <button
           key={v}
+          type="button"
           onClick={() => onChange(v)}
           style={{
-            flex: 1,
+            flex: "1 1 min(120px, 100%)",
+            minHeight: 44,
             padding: "11px 10px",
             borderRadius: 13,
             border: `1.5px solid ${value === v ? PRIMARY : "rgba(78,91,146,0.14)"}`,
@@ -136,7 +141,7 @@ export function AccessTypeRow({
           >
             {label}
           </div>
-          <div style={{ fontFamily: FONT, fontSize: 11, color: "#9BA3C4", marginTop: 2 }}>{sub}</div>
+          <div className="rs-longform" style={{ fontFamily: FONT, fontSize: 11, color: "#9BA3C4", marginTop: 2 }}>{sub}</div>
         </button>
       ))}
     </div>

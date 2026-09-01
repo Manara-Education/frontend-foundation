@@ -81,6 +81,7 @@ export function SubscriptionCTASection({ course, plans, onPay }: SubscriptionCTA
               style={{
                 display: "flex",
                 alignItems: "center",
+                flexWrap: "wrap",
                 gap: 10,
                 padding: "12px 16px",
                 borderRadius: 14,
@@ -98,7 +99,7 @@ export function SubscriptionCTASection({ course, plans, onPay }: SubscriptionCTA
               >
                 <X size={13} color="#EF4444" strokeWidth={2.5} />
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="rs-longform" style={{ flex: "1 1 min(180px, 100%)", minWidth: 0 }}>
                 <div style={{ fontFamily: FONT, fontSize: 13, color: "#DC2626", marginBottom: 1 }}>
                   لم تكتمل عملية الدفع
                 </div>
@@ -107,8 +108,22 @@ export function SubscriptionCTASection({ course, plans, onPay }: SubscriptionCTA
                 </div>
               </div>
               <button
+                type="button"
+                aria-label="إخفاء تنبيه الدفع"
                 onClick={() => setPaymentFailed(false)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#C4C9DE", padding: 0, flexShrink: 0 }}
+                style={{
+                  width: 44,
+                  height: 44,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#C4C9DE",
+                  padding: 0,
+                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
                 <X size={13} strokeWidth={2} />
               </button>
@@ -124,22 +139,23 @@ export function SubscriptionCTASection({ course, plans, onPay }: SubscriptionCTA
             <label
               key={plan.id}
               style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 16, cursor: "pointer",
+                display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12, padding: "14px 16px", borderRadius: 16, cursor: "pointer",
                 border: `2px solid ${selectedPlanId === plan.id ? PRIMARY : "rgba(78,91,146,0.12)"}`,
                 background: selectedPlanId === plan.id ? "rgba(78,91,146,0.06)" : "#FFFFFF",
                 transition: "all 0.15s",
                 boxShadow: selectedPlanId === plan.id ? "0 0 0 3px rgba(78,91,146,0.10)" : "none",
+                minHeight: 56,
               }}
             >
               <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${selectedPlanId === plan.id ? PRIMARY : "rgba(78,91,146,0.22)"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 {selectedPlanId === plan.id && <div style={{ width: 10, height: 10, borderRadius: "50%", background: PRIMARY }} />}
               </div>
               <input type="radio" name="sub-plan" value={plan.id} checked={selectedPlanId === plan.id} onChange={() => setSelectedPlanId(plan.id)} style={{ display: "none" }} />
-              <div style={{ flex: 1 }}>
+              <div className="rs-longform" style={{ flex: "1 1 min(160px, 100%)", minWidth: 0 }}>
                 <div style={{ fontFamily: FONT, fontSize: 14, color: "#1F2937" }}>{plan.name}</div>
                 <div style={{ fontFamily: FONT, fontSize: 12, color: "#9BA3C4" }}>{plan.durationLabel}</div>
               </div>
-              <div style={{ fontFamily: FONT, fontSize: 17, color: PRIMARY, fontWeight: 700 }}>
+              <div style={{ fontFamily: FONT, fontSize: 17, color: PRIMARY, fontWeight: 700, flex: "0 0 auto", marginInlineStart: "auto" }}>
                 {plan.priceLabel}
               </div>
             </label>
@@ -148,10 +164,11 @@ export function SubscriptionCTASection({ course, plans, onPay }: SubscriptionCTA
 
         {/* CTA */}
         <motion.button
+          type="button"
           whileHover={{ scale: 1.015 }} whileTap={{ scale: 0.98 }}
           onClick={() => { setPaymentFailed(false); setShowCheckout(true); }}
           style={{
-            width: "100%", padding: "16px 24px", borderRadius: 16,
+            width: "100%", minHeight: 52, padding: "16px 24px", borderRadius: 16,
             background: `linear-gradient(135deg, ${PRIMARY} 0%, #6B7AB8 100%)`,
             color: "#fff", border: "none", cursor: "pointer",
             fontFamily: FONT, fontSize: 17,
@@ -160,10 +177,10 @@ export function SubscriptionCTASection({ course, plans, onPay }: SubscriptionCTA
           }}
         >
           <Sparkles size={18} strokeWidth={2} />
-          اشترك الآن — {selectedPlan ? selectedPlan.priceLabel : ""}
+          <span className="rs-longform">اشترك الآن — {selectedPlan ? selectedPlan.priceLabel : ""}</span>
         </motion.button>
 
-        <p style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4", textAlign: "center", margin: "12px 0 0" }}>
+        <p className="rs-longform" style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4", textAlign: "center", margin: "12px 0 0" }}>
           دفع آمن · يمكنك تجديد الاشتراك في أي وقت
         </p>
       </motion.div>
