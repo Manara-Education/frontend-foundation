@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { motion } from "motion/react";
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, Loader2, Sparkles } from "lucide-react";
 import { DANGER, FONT, PRIMARY, formatOptionLetter } from "../formatters/quiz-player.formatter";
@@ -51,12 +52,17 @@ export function QuizTaking({
         background: "#fff",
         borderRadius: 20,
         border: "1.5px solid rgba(78,91,146,0.12)",
-        padding: "24px 24px 20px",
+        padding: "clamp(18px, 5vw, 24px) clamp(16px, 5vw, 24px) clamp(16px, 4vw, 20px)",
         boxShadow: "0 4px 20px rgba(78,91,146,0.07)",
+        boxSizing: "border-box",
+        maxWidth: "100%",
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
+      <div
+        className="rs-cluster mb-5"
+        style={{ "--rs-cluster-gap": "8px", justifyContent: "space-between" } as CSSProperties}
+      >
         <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: PRIMARY }}>
           السؤال {currentIndex + 1} من {total}
         </div>
@@ -88,6 +94,7 @@ export function QuizTaking({
 
       {/* Question text */}
       <div
+        className="rs-longform"
         style={{
           fontFamily: FONT,
           fontSize: 16,
@@ -107,12 +114,14 @@ export function QuizTaking({
           return (
             <motion.button
               key={opt.id}
+              type="button"
               whileHover={{ scale: 1.005 }}
               whileTap={{ scale: 0.995 }}
               onClick={() => onAnswer(question.id, opt.id)}
               disabled={isSubmitting}
               style={{
                 width: "100%",
+                minHeight: 44,
                 padding: "14px 16px",
                 borderRadius: 14,
                 background: isSelected ? "rgba(78,91,146,0.08)" : "rgba(78,91,146,0.025)",
@@ -120,10 +129,12 @@ export function QuizTaking({
                 cursor: isSubmitting ? "not-allowed" : "pointer",
                 textAlign: "right",
                 display: "flex",
-                alignItems: "center",
+                alignItems: "flex-start",
                 gap: 12,
                 transition: "all 0.15s",
                 boxShadow: isSelected ? "0 0 0 3px rgba(78,91,146,0.08)" : "none",
+                boxSizing: "border-box",
+                maxWidth: "100%",
               }}
             >
               <div
@@ -150,12 +161,14 @@ export function QuizTaking({
               </div>
 
               <span
+                className="rs-longform"
                 style={{
                   fontFamily: FONT,
                   fontSize: 14,
                   color: isSelected ? "#1E2340" : "#3D4466",
                   fontWeight: isSelected ? 600 : 400,
                   flex: 1,
+                  minWidth: 0,
                   lineHeight: 1.5,
                 }}
               >
@@ -179,6 +192,7 @@ export function QuizTaking({
                 borderRadius: 14,
                 background: "rgba(99,114,172,0.05)",
                 border: "1px solid rgba(78,91,146,0.15)",
+                minWidth: 0,
               }}
             >
               <Loader2
@@ -188,29 +202,34 @@ export function QuizTaking({
                 className="animate-spin"
                 style={{ flexShrink: 0 }}
               />
-              <span style={{ fontFamily: FONT, fontSize: 13, color: "#717182" }}>
+              <span className="rs-longform" style={{ fontFamily: FONT, fontSize: 13, color: "#717182", minWidth: 0 }}>
                 جارٍ إعداد التلميح بواسطة الذكاء الاصطناعي...
               </span>
             </div>
           ) : hintState.errorQuestionId === question.id ? (
             <div
-              className="flex items-center justify-between gap-3"
+              className="rs-cluster"
               style={{
+                "--rs-cluster-gap": "10px",
                 padding: "12px 16px",
                 borderRadius: 14,
                 background: "rgba(212,24,61,0.04)",
                 border: "1px solid rgba(212,24,61,0.15)",
-              }}
+              } as CSSProperties}
             >
-              <span style={{ fontFamily: FONT, fontSize: 13, color: "#B91C1C" }}>
+              <span
+                className="rs-longform"
+                style={{ fontFamily: FONT, fontSize: 13, color: "#B91C1C", flex: "1 1 170px" }}
+              >
                 تعذر إنشاء التلميح بواسطة الذكاء الاصطناعي الآن.
               </span>
               <button
+                type="button"
                 onClick={() => onRequestHint(question.id)}
                 style={{
-                  height: 32,
-                  paddingLeft: 14,
-                  paddingRight: 14,
+                  minHeight: 44,
+                  paddingInline: 14,
+                  paddingBlock: 10,
                   borderRadius: 9,
                   background: "rgba(212,24,61,0.09)",
                   border: "none",
@@ -219,8 +238,7 @@ export function QuizTaking({
                   fontSize: 12,
                   color: "#B91C1C",
                   fontWeight: 600,
-                  flexShrink: 0,
-                  whiteSpace: "nowrap",
+                  flex: "0 1 auto",
                 }}
               >
                 إعادة المحاولة
@@ -228,12 +246,13 @@ export function QuizTaking({
             </div>
           ) : (
             <button
+              type="button"
               onClick={() => onRequestHint(question.id)}
               className="flex items-center gap-2"
               style={{
-                height: 40,
-                paddingLeft: 18,
-                paddingRight: 18,
+                minHeight: 44,
+                paddingInline: 18,
+                paddingBlock: 10,
                 borderRadius: 12,
                 background: "rgba(99,114,172,0.06)",
                 border: "1.5px solid rgba(78,91,146,0.18)",
@@ -243,6 +262,8 @@ export function QuizTaking({
                 color: PRIMARY,
                 fontWeight: 600,
                 transition: "all 0.15s",
+                maxWidth: "100%",
+                boxSizing: "border-box",
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = "rgba(78,91,146,0.12)";
@@ -253,22 +274,26 @@ export function QuizTaking({
                 e.currentTarget.style.borderColor = "rgba(78,91,146,0.18)";
               }}
             >
-              <Sparkles size={14} strokeWidth={1.8} />
-              اطلب تلميحًا بواسطة الذكاء الاصطناعي
+              <Sparkles size={14} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+              <span className="rs-longform" style={{ minWidth: 0 }}>اطلب تلميحًا بواسطة الذكاء الاصطناعي</span>
             </button>
           )}
         </div>
       )}
 
       {/* Navigation */}
-      <div className="flex items-center justify-between gap-3">
+      <div
+        className="rs-cluster rs-cluster--stretch"
+        style={{ "--rs-cluster-gap": "12px", justifyContent: "space-between" } as CSSProperties}
+      >
         <button
+          type="button"
           onClick={onPrev}
           disabled={currentIndex === 0}
           style={{
-            height: 42,
-            paddingLeft: 18,
-            paddingRight: 18,
+            minHeight: 44,
+            paddingInline: 18,
+            paddingBlock: 10,
             borderRadius: 12,
             background: "rgba(78,91,146,0.06)",
             border: "1.5px solid rgba(78,91,146,0.13)",
@@ -279,9 +304,12 @@ export function QuizTaking({
             color: currentIndex === 0 ? "#C4C9DC" : PRIMARY,
             display: "flex",
             alignItems: "center",
+            justifyContent: "center",
             gap: 5,
             transition: "all 0.15s",
             opacity: currentIndex === 0 ? 0.5 : 1,
+            flex: "1 1 120px",
+            boxSizing: "border-box",
           }}
         >
           <ArrowRight size={15} /> السابق
@@ -289,13 +317,14 @@ export function QuizTaking({
 
         {isLast ? (
           <motion.button
+            type="button"
             whileHover={canSubmit ? { scale: 1.03 } : {}}
             whileTap={canSubmit ? { scale: 0.97 } : {}}
             onClick={canSubmit ? onSubmit : undefined}
             style={{
-              height: 42,
-              paddingLeft: 22,
-              paddingRight: 22,
+              minHeight: 44,
+              paddingInline: 22,
+              paddingBlock: 10,
               borderRadius: 12,
               background: canSubmit
                 ? `linear-gradient(135deg, ${PRIMARY} 0%, #6172AC 100%)`
@@ -308,21 +337,25 @@ export function QuizTaking({
               color: canSubmit ? "#fff" : "#9BA3C4",
               display: "flex",
               alignItems: "center",
+              justifyContent: "center",
               gap: 6,
               boxShadow: canSubmit ? "0 4px 14px rgba(78,91,146,0.28)" : "none",
               transition: "all 0.15s",
+              flex: "1 1 140px",
+              boxSizing: "border-box",
             }}
           >
-            {isSubmitting && <Loader2 size={15} strokeWidth={2.2} className="animate-spin" />}
-            {isSubmitting ? "جارٍ التسليم..." : "تسليم الاختبار"}
+            {isSubmitting && <Loader2 size={15} strokeWidth={2.2} className="animate-spin" style={{ flexShrink: 0 }} />}
+            <span className="rs-longform" style={{ minWidth: 0 }}>{isSubmitting ? "جارٍ التسليم..." : "تسليم الاختبار"}</span>
           </motion.button>
         ) : (
           <button
+            type="button"
             onClick={onNext}
             style={{
-              height: 42,
-              paddingLeft: 22,
-              paddingRight: 22,
+              minHeight: 44,
+              paddingInline: 22,
+              paddingBlock: 10,
               borderRadius: 12,
               background: `linear-gradient(135deg, ${PRIMARY} 0%, #6172AC 100%)`,
               border: "none",
@@ -333,12 +366,15 @@ export function QuizTaking({
               color: "#fff",
               display: "flex",
               alignItems: "center",
+              justifyContent: "center",
               gap: 6,
               boxShadow: "0 4px 14px rgba(78,91,146,0.22)",
               transition: "all 0.15s",
+              flex: "1 1 120px",
+              boxSizing: "border-box",
             }}
           >
-            التالي <ArrowLeft size={15} />
+            التالي <ArrowLeft size={15} style={{ flexShrink: 0 }} />
           </button>
         )}
       </div>
@@ -348,7 +384,7 @@ export function QuizTaking({
         <motion.div
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-2 mt-3"
+          className="flex items-start gap-2 mt-3"
           style={{
             padding: "10px 14px",
             borderRadius: 10,
@@ -356,8 +392,8 @@ export function QuizTaking({
             border: "1px solid rgba(234,179,8,0.2)",
           }}
         >
-          <AlertTriangle size={13} color="#CA8A04" />
-          <span style={{ fontFamily: FONT, fontSize: 12, color: "#A16207" }}>
+          <AlertTriangle size={13} color="#CA8A04" style={{ flexShrink: 0, marginTop: 2 }} />
+          <span className="rs-longform" style={{ fontFamily: FONT, fontSize: 12, color: "#A16207", minWidth: 0 }}>
             أجب على جميع الأسئلة ({total - answeredCount} متبقية) قبل التسليم
           </span>
         </motion.div>
@@ -368,7 +404,7 @@ export function QuizTaking({
         <motion.div
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-2 mt-3"
+          className="flex items-start gap-2 mt-3"
           style={{
             padding: "10px 14px",
             borderRadius: 10,
@@ -376,8 +412,8 @@ export function QuizTaking({
             border: "1px solid rgba(212,24,61,0.15)",
           }}
         >
-          <AlertTriangle size={13} color={DANGER} />
-          <span style={{ fontFamily: FONT, fontSize: 12, color: "#B91C1C" }}>{submitError}</span>
+          <AlertTriangle size={13} color={DANGER} style={{ flexShrink: 0, marginTop: 2 }} />
+          <span className="rs-longform" style={{ fontFamily: FONT, fontSize: 12, color: "#B91C1C", minWidth: 0 }}>{submitError}</span>
         </motion.div>
       )}
     </motion.div>

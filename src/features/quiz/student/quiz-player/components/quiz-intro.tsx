@@ -20,11 +20,13 @@ export function QuizIntro({ quiz, onStart }: QuizIntroProps) {
         background: "#fff",
         borderRadius: 20,
         border: "1.5px solid rgba(78,91,146,0.12)",
-        padding: "28px 28px 24px",
+        padding: "clamp(22px, 7vw, 28px) clamp(16px, 6vw, 28px) clamp(20px, 6vw, 24px)",
         boxShadow: "0 4px 20px rgba(78,91,146,0.07)",
+        boxSizing: "border-box",
+        maxWidth: "100%",
       }}
     >
-      <div className="flex flex-col items-center gap-5 text-center">
+      <div className="flex flex-col items-center gap-5 text-center" style={{ minWidth: 0 }}>
         <motion.div
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -41,11 +43,12 @@ export function QuizIntro({ quiz, onStart }: QuizIntroProps) {
         </motion.div>
 
         <div>
-          <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 20, color: "#1E2340" }}>
+          <div className="rs-longform" style={{ fontFamily: FONT, fontWeight: 700, fontSize: 20, color: "#1E2340" }}>
             {quiz.title}
           </div>
           {quiz.instructions && (
             <div
+              className="rs-longform"
               style={{
                 fontFamily: FONT,
                 fontSize: 13.5,
@@ -70,6 +73,7 @@ export function QuizIntro({ quiz, onStart }: QuizIntroProps) {
             border: "1px solid rgba(78,91,146,0.09)",
             width: "100%",
             maxWidth: 400,
+            boxSizing: "border-box",
           }}
         >
           <div className="flex flex-col items-center gap-1">
@@ -88,13 +92,14 @@ export function QuizIntro({ quiz, onStart }: QuizIntroProps) {
         </div>
 
         <motion.button
+          type="button"
           whileHover={{ scale: 1.03, y: -2 }}
           whileTap={{ scale: 0.97 }}
           onClick={onStart}
           style={{
-            height: 50,
-            paddingLeft: 36,
-            paddingRight: 36,
+            minHeight: 50,
+            paddingBlock: 12,
+            paddingInline: 28,
             borderRadius: 14,
             background: `linear-gradient(135deg, ${PRIMARY} 0%, #6172AC 100%)`,
             color: "#fff",
@@ -105,12 +110,15 @@ export function QuizIntro({ quiz, onStart }: QuizIntroProps) {
             fontSize: 15,
             display: "flex",
             alignItems: "center",
+            justifyContent: "center",
             gap: 8,
             boxShadow: "0 6px 22px rgba(78,91,146,0.3)",
+            maxWidth: "100%",
+            boxSizing: "border-box",
           }}
         >
-          بدء الاختبار
-          <ArrowLeft size={16} />
+          <span className="rs-longform" style={{ minWidth: 0 }}>بدء الاختبار</span>
+          <ArrowLeft size={16} style={{ flexShrink: 0 }} />
         </motion.button>
       </div>
     </motion.div>

@@ -25,7 +25,9 @@ export function QuizLocked({ title, subtitle }: QuizLockedProps) {
         background: "rgba(196,201,222,0.06)",
         borderRadius: 18,
         border: "1.5px solid rgba(196,201,222,0.28)",
-        padding: "18px 20px",
+        padding: "clamp(16px, 5vw, 18px) clamp(14px, 5vw, 20px)",
+        boxSizing: "border-box",
+        maxWidth: "100%",
       }}
     >
       <div className="flex items-center gap-4 flex-wrap">
@@ -36,10 +38,10 @@ export function QuizLocked({ title, subtitle }: QuizLockedProps) {
           <Lock size={20} strokeWidth={1.8} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 15, color: "#9BA3C4" }}>
+          <div className="rs-longform" style={{ fontFamily: FONT, fontWeight: 700, fontSize: 15, color: "#9BA3C4" }}>
             {title}
           </div>
-          <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#B0B7D4", marginTop: 3 }}>
+          <div className="rs-longform" style={{ fontFamily: FONT, fontSize: 12.5, color: "#B0B7D4", marginTop: 3, lineHeight: 1.6 }}>
             {subtitle}
           </div>
         </div>

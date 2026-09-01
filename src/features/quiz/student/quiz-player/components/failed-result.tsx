@@ -1,7 +1,9 @@
-import { motion } from "motion/react";
+import { useState, type CSSProperties } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { RefreshCw, XCircle } from "lucide-react";
 import { DANGER, FONT, PRIMARY } from "../formatters/quiz-player.formatter";
 import type { QuizResultView } from "../types/quiz-player.types";
+import { ResultReviewList } from "./result-review-list";
 
 interface FailedResultProps {
   result: QuizResultView;
@@ -18,6 +20,9 @@ export function FailedResult({
   onRetry,
   onReturn,
 }: FailedResultProps) {
+  const [showExplanations, setShowExplanations] = useState(false);
+  const hasReview = result.answers.length > 0;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12, scale: 0.98 }}
@@ -28,11 +33,13 @@ export function FailedResult({
         background: "#fff",
         borderRadius: 20,
         border: "1.5px solid rgba(212,24,61,0.15)",
-        padding: "32px 28px",
+        padding: "clamp(22px, 7vw, 32px) clamp(16px, 6vw, 28px)",
         boxShadow: "0 4px 24px rgba(212,24,61,0.07)",
+        boxSizing: "border-box",
+        maxWidth: "100%",
       }}
     >
-      <div className="flex flex-col items-center gap-5 text-center">
+      <div className="flex flex-col items-center gap-5 text-center" style={{ minWidth: 0 }}>
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
@@ -44,10 +51,11 @@ export function FailedResult({
         </motion.div>
 
         <div>
-          <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 22, color: "#1E2340" }}>
+          <div className="rs-longform" style={{ fontFamily: FONT, fontWeight: 700, fontSize: 22, color: "#1E2340" }}>
             لم تجتز الاختبار بعد
           </div>
           <div
+            className="rs-longform"
             style={{
               fontFamily: FONT,
               fontSize: 14,
@@ -67,26 +75,28 @@ export function FailedResult({
             background: "rgba(212,24,61,0.04)",
             borderRadius: 16,
             border: "1px solid rgba(212,24,61,0.12)",
-            padding: "18px 24px",
+            padding: "clamp(16px, 5vw, 18px) clamp(14px, 5vw, 24px)",
             width: "100%",
             maxWidth: 380,
+            boxSizing: "border-box",
           }}
         >
-          <div className="flex justify-around gap-4 flex-wrap">
+          <div
+            className="rs-grid"
+            style={{ "--rs-grid-min": "92px", "--rs-grid-gap": "14px" } as CSSProperties}
+          >
             <div className="flex flex-col items-center gap-1">
               <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 28, color: DANGER, lineHeight: 1 }}>
                 {result.score}%
               </div>
               <div style={{ fontFamily: FONT, fontSize: 12, color: "#9BA3C4" }}>نتيجتك</div>
             </div>
-            <div style={{ width: 1, background: "rgba(212,24,61,0.12)", alignSelf: "stretch" }} />
             <div className="flex flex-col items-center gap-1">
               <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 28, color: "#717182", lineHeight: 1 }}>
                 {result.passingScore}%
               </div>
               <div style={{ fontFamily: FONT, fontSize: 12, color: "#9BA3C4" }}>درجة النجاح المطلوبة</div>
             </div>
-            <div style={{ width: 1, background: "rgba(212,24,61,0.12)", alignSelf: "stretch" }} />
             <div className="flex flex-col items-center gap-1">
               <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 28, color: "#1E2340", lineHeight: 1 }}>
                 {result.correctCount}/{result.totalQuestions}
@@ -96,16 +106,53 @@ export function FailedResult({
           </div>
         </div>
 
+        {hasReview && (
+          <button
+            onClick={() => setShowExplanations((v) => !v)}
+            style={{
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              fontFamily: FONT,
+              fontSize: 13,
+              color: PRIMARY,
+              textDecoration: "underline",
+              fontWeight: 500,
+              minHeight: 44,
+              paddingInline: 8,
+            }}
+          >
+            {showExplanations ? "إخفاء التوضيحات" : "عرض توضيحات الإجابات"}
+          </button>
+        )}
+
+        <AnimatePresence>
+          {showExplanations && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              style={{ overflow: "hidden", width: "100%" }}
+            >
+              <ResultReviewList answers={result.answers} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Actions */}
-        <div className="flex gap-3 flex-wrap justify-center">
+        <div
+          className="rs-cluster rs-cluster--stretch"
+          style={{ "--rs-cluster-gap": "12px", width: "100%", maxWidth: 420 } as CSSProperties}
+        >
           <motion.button
+            type="button"
             whileHover={{ scale: 1.03, y: -1 }}
             whileTap={{ scale: 0.97 }}
             onClick={onRetry}
             style={{
-              height: 48,
-              paddingLeft: 28,
-              paddingRight: 28,
+              minHeight: 48,
+              paddingBlock: 12,
+              paddingInline: 22,
               borderRadius: 13,
               background: `linear-gradient(135deg, ${PRIMARY} 0%, #6172AC 100%)`,
               color: "#fff",
@@ -116,19 +163,23 @@ export function FailedResult({
               fontSize: 14,
               display: "flex",
               alignItems: "center",
+              justifyContent: "center",
               gap: 7,
               boxShadow: "0 4px 16px rgba(78,91,146,0.28)",
+              flex: "1 1 150px",
+              boxSizing: "border-box",
             }}
           >
-            <RefreshCw size={15} />
-            إعادة الاختبار
+            <RefreshCw size={15} style={{ flexShrink: 0 }} />
+            <span className="rs-longform" style={{ minWidth: 0 }}>إعادة الاختبار</span>
           </motion.button>
           <button
+            type="button"
             onClick={onReturn}
             style={{
-              height: 48,
-              paddingLeft: 24,
-              paddingRight: 24,
+              minHeight: 48,
+              paddingBlock: 12,
+              paddingInline: 20,
               borderRadius: 13,
               background: "transparent",
               color: "#717182",
@@ -138,6 +189,8 @@ export function FailedResult({
               fontWeight: 600,
               fontSize: 14,
               transition: "all 0.15s",
+              flex: "1 1 150px",
+              boxSizing: "border-box",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = "rgba(78,91,146,0.3)";
@@ -148,7 +201,7 @@ export function FailedResult({
               e.currentTarget.style.color = "#717182";
             }}
           >
-            {returnLabel}
+            <span className="rs-longform">{returnLabel}</span>
           </button>
         </div>
       </div>
