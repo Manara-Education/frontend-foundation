@@ -50,16 +50,16 @@ export function QuizPlayer({
   const isAnswering = state.status === "ANSWERING" || state.status === "SUBMITTING";
 
   return (
-    <div dir="rtl" style={{ fontFamily: FONT }}>
+    <div dir="rtl" style={{ fontFamily: FONT, maxWidth: "100%", minWidth: 0 }}>
       {/* Section header */}
-      <div className="flex items-center gap-2 mb-4" style={{ marginBottom: 16 }}>
+      <div className="rs-cluster mb-4" style={{ marginBottom: 16 }}>
         <div
           className="rounded-xl flex items-center justify-center"
-          style={{ width: 28, height: 28, background: "rgba(78,91,146,0.09)", color: PRIMARY }}
+          style={{ width: 28, height: 28, background: "rgba(78,91,146,0.09)", color: PRIMARY, flexShrink: 0 }}
         >
           <ClipboardList size={14} strokeWidth={1.8} />
         </div>
-        <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 15, color: "#1E2340" }}>
+        <span className="rs-longform" style={{ fontFamily: FONT, fontWeight: 700, fontSize: 15, color: "#1E2340", minWidth: 0 }}>
           {copy.sectionTitle}
         </span>
       </div>
