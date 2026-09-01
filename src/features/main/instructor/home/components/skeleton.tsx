@@ -1,4 +1,5 @@
 import { BORDER } from "./theme";
+import type { CSSProperties } from "react";
 
 const SHIMMER_CSS = `
   @keyframes ihv-sh {
@@ -21,15 +22,28 @@ function Sk({
   w?: number | string;
   h: number | string;
   r?: number;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
 }) {
   return (
     <div
       className="ihv-sk"
-      style={{ width: w ?? "100%", height: h, borderRadius: r, flexShrink: 0, ...style }}
+      style={{
+        width: w ?? "100%",
+        maxInlineSize: "100%",
+        minInlineSize: 0,
+        height: h,
+        borderRadius: r,
+        flexShrink: 0,
+        ...style,
+      }}
     />
   );
 }
+
+const skeletonGridStyle = {
+  "--rs-grid-min": "260px",
+  "--rs-grid-gap": "16px",
+} as CSSProperties;
 
 export function PageSkeleton() {
   return (
@@ -44,12 +58,17 @@ export function PageSkeleton() {
       </div>
 
       {/* Analytics */}
-      <div className="grid grid-cols-2 gap-4 mb-10">
+      <div className="rs-grid mb-10" style={skeletonGridStyle}>
         {[0, 1].map((i) => (
           <div
             key={i}
             className="rounded-3xl p-7"
-            style={{ background: "#fff", border: `1px solid ${BORDER}` }}
+            style={{
+              background: "#fff",
+              border: `1px solid ${BORDER}`,
+              minInlineSize: 0,
+              maxInlineSize: "100%",
+            }}
           >
             <Sk h={44} w={44} r={14} style={{ marginBottom: 20 }} />
             <Sk h={48} w="55%" r={12} style={{ marginBottom: 10 }} />
@@ -69,10 +88,16 @@ export function PageSkeleton() {
           <div
             key={i}
             className="flex overflow-hidden"
-            style={{ background: "#fff", borderRadius: 20, border: `1.5px solid ${BORDER}` }}
+            style={{
+              background: "#fff",
+              borderRadius: 20,
+              border: `1.5px solid ${BORDER}`,
+              minInlineSize: 0,
+              maxInlineSize: "100%",
+            }}
           >
             <Sk w={128} h={92} r={0} />
-            <div className="flex flex-col gap-2.5 justify-center p-5 flex-1">
+            <div className="flex flex-col gap-2.5 justify-center p-5 flex-1" style={{ minInlineSize: 0 }}>
               <Sk h={17} w="62%" r={7} />
               <Sk h={12} w="42%" r={5} />
               <Sk h={22} w={58} r={8} />

@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CourseLessonEditorState, CourseModuleEditorState } from "@/shared/courses";
+import { FlatCurriculumSection } from "./flat-curriculum-section";
 import { ModuleCurriculumSection } from "./module-curriculum-section";
 
 /**
@@ -146,6 +147,52 @@ describe("dragging a module", () => {
   });
 });
 
+describe("moving a module without drag", () => {
+  it("reorders locally and commits through the module order command", async () => {
+    const user = userEvent.setup();
+    const props = renderSection();
+
+    await user.click(screen.getByRole("button", { name: "نقل الوحدة الثانية لأعلى" }));
+
+    expect(props.onReorderModules).toHaveBeenCalledWith([MODULES[1], MODULES[0], MODULES[2]]);
+    expect(props.onReorderModulesCommit).toHaveBeenCalledTimes(1);
+    expect(props.onReorderModuleLessonsCommit).not.toHaveBeenCalled();
+  });
+
+  it("disables movement beyond the ends of the list", () => {
+    renderSection();
+
+    expect(screen.getByRole("button", { name: "نقل الوحدة الأولى لأعلى" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "نقل الوحدة الثالثة لأسفل" })).toBeDisabled();
+  });
+});
+
+describe("moving a flat lesson without drag", () => {
+  it("reorders locally and commits through the root lesson order command", async () => {
+    const user = userEvent.setup();
+    const lessons = [lessonState(11, "الأول"), lessonState(12, "الثاني"), lessonState(13, "الثالث")];
+    const props = {
+      lessons,
+      formOpen: false,
+      editKey: null,
+      variant: "tabs" as const,
+      onOpenAdd: vi.fn(),
+      onOpenEdit: vi.fn(),
+      onCloseForm: vi.fn(),
+      onSaveLesson: vi.fn(),
+      onDeleteLesson: vi.fn(),
+      onReorder: vi.fn(),
+      onReorderCommit: vi.fn(),
+    };
+
+    render(<FlatCurriculumSection {...props} />);
+    await user.click(screen.getByRole("button", { name: "نقل الدرس 2 لأعلى" }));
+
+    expect(props.onReorder).toHaveBeenCalledWith([lessons[1], lessons[0], lessons[2]]);
+    expect(props.onReorderCommit).toHaveBeenCalledTimes(1);
+  });
+});
+
 /**
  * The `tabs` variant is the course editor screen — the surface an instructor opens to edit
  * a course that is already live. Nothing here is conditional on publication state, which
@@ -247,6 +294,20 @@ describe("dragging a lesson inside a module", () => {
     lessonRows[0].onDragEnd?.();
 
     // The regression, stated directly: a lesson drag must not persist a module order.
+    expect(props.onReorderModulesCommit).not.toHaveBeenCalled();
+  });
+
+  it("has a non-drag reorder path that commits the owning module's lesson order", async () => {
+    const user = userEvent.setup();
+    const props = await renderExpanded(0);
+
+    await user.click(screen.getByRole("button", { name: "نقل الدرس 2 لأعلى" }));
+
+    expect(props.onReorderModuleLessons).toHaveBeenCalledWith(
+      "m1",
+      [WITH_LESSONS[0].lessons[1], WITH_LESSONS[0].lessons[0]],
+    );
+    expect(props.onReorderModuleLessonsCommit).toHaveBeenCalledWith("m1");
     expect(props.onReorderModulesCommit).not.toHaveBeenCalled();
   });
 });

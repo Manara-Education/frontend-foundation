@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Check, Clock, CreditCard, Pencil, Plus, Trash2 } from "lucide-react";
 import type { SubscriptionPlanEditorState, SubscriptionUnit } from "@/shared/courses";
@@ -30,22 +30,23 @@ export function PurchasePricing({
   return (
     <div className="flex flex-col gap-4">
       <Field label="سعر الدورة" required error={error}>
-        <div className="flex items-center gap-3">
+        <div className="rs-cluster" style={{ "--rs-cluster-gap": "12px" } as CSSProperties}>
           <input
             type="number"
             min="1"
             value={price}
             onChange={(e) => onPriceChange(e.target.value)}
             placeholder="مثال: 500"
-            style={{ ...inputStyle(!!price, !!error), direction: "ltr", maxWidth: 200 }}
+            style={{ ...inputStyle(!!price, !!error), direction: "ltr", maxWidth: 200, flex: "1 1 min(200px, 100%)" }}
           />
-          <span style={{ fontFamily: FONT, fontSize: 13, color: "#9BA3C4" }}>جنيه مصري (ج.م)</span>
+          <span className="rs-longform" style={{ fontFamily: FONT, fontSize: 13, color: "#9BA3C4" }}>جنيه مصري (ج.م)</span>
         </div>
       </Field>
       <div
         style={{
           display: "flex",
           alignItems: "center",
+          flexWrap: "wrap",
           gap: 8,
           padding: "10px 14px",
           borderRadius: 12,
@@ -54,7 +55,7 @@ export function PurchasePricing({
         }}
       >
         <Check size={14} color={PRIMARY} />
-        <span style={{ fontFamily: FONT, fontSize: 12, color: "#717182" }}>
+        <span className="rs-longform" style={{ fontFamily: FONT, fontSize: 12, color: "#717182", minWidth: 0 }}>
           وصول دائم — يدفع الطالب مرة واحدة فقط
         </span>
       </div>
@@ -78,16 +79,16 @@ function PlanRow({
       layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
+      className="rs-cluster"
       style={{
-        display: "flex",
         alignItems: "center",
-        gap: 12,
+        "--rs-cluster-gap": "12px",
         padding: "14px 16px",
         borderRadius: 14,
         background: "#fff",
         border: "1.5px solid rgba(78,91,146,0.10)",
         marginBottom: 8,
-      }}
+      } as CSSProperties}
     >
       <div
         className="rounded-xl flex items-center justify-center flex-shrink-0"
@@ -95,7 +96,7 @@ function PlanRow({
       >
         <Clock size={16} />
       </div>
-      <div style={{ flex: 1 }}>
+      <div className="rs-longform" style={{ flex: "1 1 min(170px, 100%)", minWidth: 0 }}>
         <div style={{ fontFamily: FONT, fontSize: 14, color: "#1E2340" }}>
           {plan.name || `${plan.duration} ${formatSubscriptionUnitLabel(plan.unit)}`}
         </div>
@@ -104,9 +105,11 @@ function PlanRow({
         </div>
       </div>
       <button
+        type="button"
         onClick={onEdit}
         style={{
-          padding: "5px 12px",
+          minHeight: 44,
+          padding: "5px 14px",
           borderRadius: 10,
           background: "rgba(78,91,146,0.07)",
           border: "none",
@@ -121,10 +124,12 @@ function PlanRow({
         تعديل
       </button>
       <button
+        type="button"
+        aria-label="حذف خطة الاشتراك"
         onClick={onDelete}
         style={{
-          width: 30,
-          height: 30,
+          width: 44,
+          height: 44,
           borderRadius: 9,
           background: "rgba(212,24,61,0.07)",
           border: "none",
@@ -154,16 +159,16 @@ function CompactPlanRow({
 }) {
   return (
     <div
+      className="rs-cluster"
       style={{
-        display: "flex",
         alignItems: "center",
-        gap: 10,
+        "--rs-cluster-gap": "10px",
         padding: "10px 12px",
         borderRadius: 12,
         background: "#FAFBFD",
         border: "1.5px solid rgba(78,91,146,0.1)",
         marginBottom: 6,
-      }}
+      } as CSSProperties}
     >
       <div
         style={{
@@ -179,25 +184,27 @@ function CompactPlanRow({
       >
         <CreditCard size={13} style={{ color: PRIMARY }} />
       </div>
-      <div style={{ flex: 1 }}>
+      <div className="rs-longform" style={{ flex: "1 1 min(150px, 100%)", minWidth: 0 }}>
         <div style={{ fontFamily: FONT, fontSize: 13, color: "#1E2340" }}>{plan.name}</div>
         <div style={{ fontFamily: FONT, fontSize: 11, color: "#9BA3C4" }}>
           {formatPlanSummary(plan.duration, plan.unit, plan.price)}
         </div>
       </div>
-      <div style={{ display: "flex", gap: 4 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginInlineStart: "auto" }}>
         {(
           [
-            { fn: onEdit, ic: Pencil, hc: PRIMARY },
-            { fn: onDelete, ic: Trash2, hc: "#D4183D" },
+            { fn: onEdit, ic: Pencil, hc: PRIMARY, label: "تعديل خطة الاشتراك" },
+            { fn: onDelete, ic: Trash2, hc: "#D4183D", label: "حذف خطة الاشتراك" },
           ] as const
-        ).map(({ fn, ic: Ic, hc }, idx) => (
+        ).map(({ fn, ic: Ic, hc, label }, idx) => (
           <button
             key={idx}
+            type="button"
+            aria-label={label}
             onClick={fn}
             style={{
-              width: 28,
-              height: 28,
+              width: 44,
+              height: 44,
               borderRadius: 8,
               background: "none",
               border: "none",
@@ -268,7 +275,7 @@ function InlinePlanForm({
         style={{
           border: "1.5px solid rgba(78,91,146,0.18)",
           borderRadius: 18,
-          padding: "22px 22px 20px",
+          padding: "clamp(16px, 5vw, 22px) clamp(16px, 5vw, 22px) 20px",
           marginTop: 4,
           background: "rgba(78,91,146,0.02)",
         }}
@@ -287,7 +294,7 @@ function InlinePlanForm({
           </Field>
 
           <Field label="مدة الوصول">
-            <div className="flex items-center gap-3">
+            <div className="rs-cluster" style={{ "--rs-cluster-gap": "12px" } as CSSProperties}>
               <input
                 type="number"
                 min="1"
@@ -295,12 +302,14 @@ function InlinePlanForm({
                 onChange={(e) => setDuration(e.target.value)}
                 style={{ ...inputStyle(!!duration), width: 100, direction: "ltr" }}
               />
-              <div className="flex gap-2">
+              <div className="rs-cluster" style={{ "--rs-cluster-gap": "8px" } as CSSProperties}>
                 {UNIT_OPTIONS.map(({ value: v, label }) => (
                   <button
                     key={v}
+                    type="button"
                     onClick={() => setUnit(v)}
                     style={{
+                      minHeight: 44,
                       padding: "8px 14px",
                       borderRadius: 10,
                       border: `1.5px solid ${unit === v ? PRIMARY : "rgba(78,91,146,0.14)"}`,
@@ -320,7 +329,7 @@ function InlinePlanForm({
           </Field>
 
           <Field label="السعر" required error={priceErr}>
-            <div className="flex items-center gap-3">
+            <div className="rs-cluster" style={{ "--rs-cluster-gap": "12px" } as CSSProperties}>
               <input
                 type="number"
                 min="1"
@@ -330,19 +339,19 @@ function InlinePlanForm({
                   setPriceErr("");
                 }}
                 placeholder="مثال: 250"
-                style={{ ...inputStyle(!!price, !!priceErr), direction: "ltr", width: "100%" }}
+                style={{ ...inputStyle(!!price, !!priceErr), direction: "ltr", flex: "1 1 min(160px, 100%)" }}
               />
               <span style={{ fontFamily: FONT, fontSize: 13, color: "#9BA3C4", flexShrink: 0 }}>ج.م</span>
             </div>
           </Field>
         </div>
-        <div className="flex items-center gap-3 mt-5">
+        <div className="rs-cluster mt-5" style={{ "--rs-cluster-gap": "12px" } as CSSProperties}>
           <button
+            type="button"
             onClick={handleSave}
             style={{
-              height: 40,
-              paddingLeft: 22,
-              paddingRight: 22,
+              minHeight: 44,
+              paddingInline: 22,
               borderRadius: 12,
               background: PRIMARY,
               color: "#fff",
@@ -356,11 +365,11 @@ function InlinePlanForm({
             {initialData ? "حفظ التعديلات" : "إضافة الخطة"}
           </button>
           <button
+            type="button"
             onClick={onClose}
             style={{
-              height: 40,
-              paddingLeft: 18,
-              paddingRight: 18,
+              minHeight: 44,
+              paddingInline: 18,
               borderRadius: 12,
               background: "transparent",
               color: "#717182",
@@ -473,12 +482,13 @@ export function SubscriptionPlansSection({
 
       {!formOpen && canAdd && (
         <button
+          type="button"
           onClick={openAdd}
           style={
             isTabs
               ? {
                   width: "100%",
-                  height: 38,
+                  minHeight: 44,
                   borderRadius: 11,
                   border: "1.5px dashed rgba(78,91,146,0.2)",
                   background: "transparent",
@@ -497,6 +507,7 @@ export function SubscriptionPlansSection({
                   alignItems: "center",
                   gap: 8,
                   marginTop: 4,
+                  minHeight: 44,
                   padding: "10px 18px",
                   borderRadius: 14,
                   border: "1.5px dashed rgba(78,91,146,0.25)",

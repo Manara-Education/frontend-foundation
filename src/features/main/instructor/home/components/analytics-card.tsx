@@ -24,12 +24,15 @@ export function AnalyticsCard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay, ease: "easeOut" }}
+      className="rs-longform"
       style={{
         background: "#ffffff",
         borderRadius: 24,
-        padding: "28px 28px 26px",
+        padding: "clamp(22px, 4vw, 28px) clamp(20px, 4vw, 28px) clamp(21px, 4vw, 26px)",
         border: `1.5px solid ${BORDER}`,
         boxShadow: "0 2px 20px rgba(78,91,146,0.05)",
+        minInlineSize: 0,
+        maxInlineSize: "100%",
       }}
     >
       {/* Icon */}
@@ -54,7 +57,8 @@ export function AnalyticsCard({
           fontSize: 46,
           color: TEXT_DARK,
           lineHeight: 1,
-          letterSpacing: -1,
+          letterSpacing: 0,
+          maxInlineSize: "100%",
         }}
       >
         {count}
@@ -69,6 +73,7 @@ export function AnalyticsCard({
           color: TEXT_MUTE,
           marginTop: 10,
           lineHeight: 1.5,
+          minInlineSize: 0,
         }}
       >
         {label}

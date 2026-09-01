@@ -20,22 +20,25 @@ export function SectionCard({ icon: Icon, title, subtitle, children, delay = 0 }
       style={{
         background: "#ffffff",
         borderRadius: 24,
-        padding: "28px 32px 32px",
+        padding: "clamp(18px, 5vw, 28px) clamp(16px, 5vw, 32px) clamp(20px, 5vw, 32px)",
         border: "1.5px solid rgba(78,91,146,0.09)",
         boxShadow: "0 4px 32px rgba(78,91,146,0.08)",
+        minInlineSize: 0,
+        maxInlineSize: "100%",
+        boxSizing: "border-box",
       }}
     >
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-6" style={{ minWidth: 0 }}>
         <div
           className="rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ width: 40, height: 40, background: "rgba(78,91,146,0.1)", color: PRIMARY }}
+          style={{ width: 44, height: 44, background: "rgba(78,91,146,0.1)", color: PRIMARY }}
         >
           <Icon size={18} />
         </div>
-        <div>
-          <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 16, color: "#1E2340" }}>{title}</div>
+        <div className="rs-longform" style={{ minWidth: 0 }}>
+          <div className="rs-longform" style={{ fontFamily: FONT, fontWeight: 700, fontSize: 16, color: "#1E2340" }}>{title}</div>
           {subtitle && (
-            <div style={{ fontFamily: FONT, fontSize: 12, color: "#9BA3C4", marginTop: 2 }}>{subtitle}</div>
+            <div className="rs-longform" style={{ fontFamily: FONT, fontSize: 12, color: "#9BA3C4", marginTop: 2 }}>{subtitle}</div>
           )}
         </div>
       </div>
@@ -59,17 +62,20 @@ export function ModalSection({ title, subtitle, icon: Icon, children }: ModalSec
         borderRadius: 18,
         background: "#fff",
         border: "1.5px solid rgba(78,91,146,0.1)",
-        padding: "20px 22px",
+        padding: "clamp(16px, 4vw, 20px) clamp(16px, 4vw, 22px)",
         display: "flex",
         flexDirection: "column",
         gap: 14,
+        minInlineSize: 0,
+        maxInlineSize: "100%",
+        boxSizing: "border-box",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
         <div
           style={{
-            width: 36,
-            height: 36,
+            width: 44,
+            height: 44,
             borderRadius: 11,
             background: "rgba(78,91,146,0.09)",
             display: "flex",
@@ -81,10 +87,10 @@ export function ModalSection({ title, subtitle, icon: Icon, children }: ModalSec
         >
           <Icon size={16} strokeWidth={1.9} />
         </div>
-        <div>
-          <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 14.5, color: "#1E2340" }}>{title}</div>
+        <div className="rs-longform" style={{ minWidth: 0 }}>
+          <div className="rs-longform" style={{ fontFamily: FONT, fontWeight: 700, fontSize: 14.5, color: "#1E2340" }}>{title}</div>
           {subtitle && (
-            <div style={{ fontFamily: FONT, fontSize: 11.5, color: "#9BA3C4", marginTop: 1 }}>{subtitle}</div>
+            <div className="rs-longform" style={{ fontFamily: FONT, fontSize: 11.5, color: "#9BA3C4", marginTop: 1 }}>{subtitle}</div>
           )}
         </div>
       </div>

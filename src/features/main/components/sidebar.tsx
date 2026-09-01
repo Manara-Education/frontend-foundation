@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { LogOut } from "lucide-react";
 import { ManaraLogoIcon } from "@/shared/components/ManaraLogo";
 import { isInstructorRole } from "@/shared/auth/roles";
+import { towardInlineEnd, useDirection } from "@/shared/direction";
 import type { NavSectionId } from "@/shared/navigation/paths";
 import { getNavSectionsForRole } from "./nav-sections";
 
@@ -20,24 +21,66 @@ interface SidebarProps {
   onLogout: () => void;
   role?: string;
   fullName?: string;
+  /**
+   * How the sidebar is being presented.
+   *
+   * `persistent` is the column beside the content, which is the only thing that fits from
+   * `md` up. `drawer` is the same navigation slid over the content on a phone, where 280px
+   * of the 375 available cannot be spent on a permanent column.
+   *
+   * The entries, their order and their active state are identical in both — this changes
+   * where the navigation sits, not what it is.
+   */
+  variant?: "persistent" | "drawer";
+  /** Called when an entry is chosen, so a drawer can shut behind it. */
+  onNavigate?: () => void;
 }
 
-export function Sidebar({ activeSection, onLogout, role, fullName }: SidebarProps) {
+export function Sidebar({
+  activeSection,
+  onLogout,
+  role,
+  fullName,
+  variant = "persistent",
+  onNavigate,
+}: SidebarProps) {
   const navSections = getNavSectionsForRole(role);
+  const isDrawer = variant === "drawer";
+  /*
+    The side the navigation is on is a property of the layout, not of the copy. Everything
+    below that cannot be said with a logical CSS property is derived from this.
+  */
+  const direction = useDirection();
   return (
     <aside
-      dir="rtl"
+      dir={direction}
       style={{
-        width: 280,
-        minWidth: 280,
-        height: "100vh",
-        position: "sticky",
-        top: 0,
+        /*
+          As a column, 280px that must not be squeezed by the content beside it. As a
+          drawer, whatever width the overlay was given — which is capped against the
+          viewport, so a `min-inline-size: 280px` here would defeat the cap and push the
+          panel off the edge on a very narrow screen.
+        */
+        inlineSize: isDrawer ? "100%" : 280,
+        minInlineSize: isDrawer ? 0 : 280,
+        /*
+          `100%` rather than `100vh`: as a drawer this is inside a fixed overlay that has
+          already been sized against `dvh`, and as a persistent column its parent is the
+          shell row. `100vh` measured the viewport with the mobile browser's chrome
+          retracted, so the logout button sat under the address bar.
+        */
+        height: "100%",
         display: "flex",
         flexDirection: "column",
         background: "#FFFFFF",
-        borderLeft: "1px solid rgba(78,91,146,0.1)",
-        boxShadow: "-4px 0 24px rgba(78,91,146,0.05)",
+        /* The edge facing the content, whichever side that is. */
+        borderInlineEnd: "1px solid rgba(78,91,146,0.1)",
+        boxShadow: isDrawer
+          /* Modal: lifted off the page on every side, so it needs no direction. */
+          ? "0 0 60px rgba(30,35,64,0.28)"
+          /* Column: falls across the content, which is towards inline-end. `box-shadow`
+             takes a physical x-offset, so the sign has to come from the direction. */
+          : `${towardInlineEnd(direction, 4)}px 0 24px rgba(78,91,146,0.05)`,
         fontFamily: "'Cairo', sans-serif",
         zIndex: 10,
         overflowY: "auto",
@@ -100,7 +143,7 @@ export function Sidebar({ activeSection, onLogout, role, fullName }: SidebarProp
         </div>
         {/* Online dot */}
         <div
-          className="rounded-full flex-shrink-0 mr-auto"
+          className="rounded-full flex-shrink-0 ms-auto"
           style={{ width: 8, height: 8, background: "#27AE60", boxShadow: "0 0 0 2px rgba(39,174,96,0.2)" }}
         />
       </div>
@@ -125,6 +168,7 @@ export function Sidebar({ activeSection, onLogout, role, fullName }: SidebarProp
                 <Link
                   key={id}
                   to={to}
+                  onClick={onNavigate}
                   aria-current={isActive ? "page" : undefined}
                   style={{
                     display: "flex",
@@ -132,8 +176,7 @@ export function Sidebar({ activeSection, onLogout, role, fullName }: SidebarProp
                     gap: 12,
                     width: "100%",
                     height: 52,
-                    paddingRight: 12,
-                    paddingLeft: 12,
+                    paddingInline: 12,
                     borderRadius: 14,
                     background: isActive ? "rgba(78,91,146,0.09)" : "transparent",
                     border: "none",
@@ -142,7 +185,7 @@ export function Sidebar({ activeSection, onLogout, role, fullName }: SidebarProp
                     fontFamily: "'Cairo', sans-serif",
                     fontWeight: isActive ? 600 : 500,
                     fontSize: 14,
-                    textAlign: "right",
+                    textAlign: "start",
                     textDecoration: "none",
                     flexShrink: 0,
                     position: "relative",
@@ -162,17 +205,23 @@ export function Sidebar({ activeSection, onLogout, role, fullName }: SidebarProp
                     }
                   }}
                 >
-                  {/* Active indicator — left edge (inner edge facing content) */}
+                  {/* Active indicator, on the entry's inline-end edge — the inner one,
+                      facing the content: the left in Arabic, the right in English. */}
                   {isActive && (
                     <div
                       style={{
                         position: "absolute",
-                        left: 0,
+                        insetInlineEnd: 0,
                         top: "50%",
+                        /* Centring on the block axis is the same operation either way, so
+                           this transform is deliberately physical. */
                         transform: "translateY(-50%)",
-                        width: 3,
-                        height: 28,
-                        borderRadius: "0 3px 3px 0",
+                        inlineSize: 3,
+                        blockSize: 28,
+                        /* Rounded on the side that faces into the entry, flat against the
+                           edge it is pinned to. */
+                        borderStartStartRadius: 3,
+                        borderEndStartRadius: 3,
                         background: PRIMARY,
                       }}
                     />
@@ -225,8 +274,7 @@ export function Sidebar({ activeSection, onLogout, role, fullName }: SidebarProp
             gap: 12,
             width: "100%",
             height: 48,
-            paddingRight: 12,
-            paddingLeft: 12,
+            paddingInline: 12,
             borderRadius: 14,
             background: "transparent",
             border: "none",
@@ -235,7 +283,7 @@ export function Sidebar({ activeSection, onLogout, role, fullName }: SidebarProp
             fontFamily: "'Cairo', sans-serif",
             fontWeight: 500,
             fontSize: 14,
-            textAlign: "right",
+            textAlign: "start",
             transition: "background 0.15s",
             outline: "none",
           }}

@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { AnimatePresence, Reorder, motion } from "motion/react";
 import { AlertTriangle, BarChart2, Megaphone, Plus } from "lucide-react";
 import type { BannerStatus } from "@/features/banner/types/banner.types";
@@ -59,7 +60,8 @@ export function BannersList({
           <div
             key={i}
             style={{
-              height: 140,
+              minHeight: 120,
+              aspectRatio: "7 / 1",
               borderRadius: 18,
               background: "linear-gradient(90deg, #F2F3F9 0%, #E8EAF2 50%, #F2F3F9 100%)",
               backgroundSize: "200% 100%",
@@ -70,6 +72,17 @@ export function BannersList({
       </div>
     );
   }
+
+  const moveBanner = (bannerId: number, offset: -1 | 1) => {
+    const from = banners.findIndex((banner) => banner.id === bannerId);
+    const to = from + offset;
+    if (from < 0 || to < 0 || to >= banners.length) return;
+
+    const next = [...banners];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    onReorder(next);
+  };
 
   return (
     <div dir="rtl" style={{ fontFamily: FONT }}>
@@ -104,9 +117,8 @@ export function BannersList({
         <button
           onClick={onCreateBanner}
           style={{
-            height: 44,
-            paddingLeft: 22,
-            paddingRight: 22,
+            minHeight: 44,
+            paddingInline: 22,
             borderRadius: 13,
             background: `linear-gradient(135deg, ${PRIMARY} 0%, #6172AC 100%)`,
             color: "#fff",
@@ -131,27 +143,29 @@ export function BannersList({
         <motion.div
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between gap-3"
+          className="rs-cluster"
           style={{
+            "--rs-cluster-gap": "12px",
             marginBottom: 20,
             padding: "12px 16px",
             borderRadius: 14,
             background: "rgba(212,24,61,0.06)",
             border: "1px solid rgba(212,24,61,0.16)",
-          }}
+            justifyContent: "space-between",
+          } as CSSProperties}
         >
           <span
-            className="flex items-center gap-2"
-            style={{ fontFamily: FONT, fontSize: 13, color: "#B91C1C", fontWeight: 600 }}
+            className="flex items-center gap-2 rs-longform"
+            style={{ fontFamily: FONT, fontSize: 13, color: "#B91C1C", fontWeight: 600, minWidth: 0 }}
           >
             <AlertTriangle size={15} strokeWidth={1.9} /> {error}
           </span>
           <button
+            className="rs-touch"
             onClick={onRetry}
             style={{
-              height: 32,
-              paddingLeft: 14,
-              paddingRight: 14,
+              minHeight: 44,
+              paddingInline: 14,
               borderRadius: 9,
               background: "transparent",
               border: "1px solid rgba(212,24,61,0.24)",
@@ -193,7 +207,7 @@ export function BannersList({
                 background: "rgba(78,91,146,0.06)",
                 borderRadius: 5,
                 padding: "1px 8px",
-                marginRight: 4,
+                marginInlineStart: 4,
               }}
             >
               تجريبي
@@ -213,7 +227,7 @@ export function BannersList({
 
       {/* Summary stats */}
       {banners.length > 0 && (
-        <div className="flex gap-3 mb-6 flex-wrap">
+        <div className="rs-cluster mb-6" style={{ "--rs-cluster-gap": "12px" } as CSSProperties}>
           {BANNER_STATUSES.map((status: BannerStatus) => {
             const count = banners.filter((b) => b.status === status).length;
             if (!count) return null;
@@ -259,6 +273,7 @@ export function BannersList({
               لا توجد إعلانات بعد
             </div>
             <p
+              className="rs-longform"
               style={{
                 fontFamily: FONT,
                 fontSize: 13,
@@ -274,9 +289,8 @@ export function BannersList({
           <button
             onClick={onCreateBanner}
             style={{
-              height: 44,
-              paddingLeft: 24,
-              paddingRight: 24,
+              minHeight: 44,
+              paddingInline: 24,
               borderRadius: 13,
               background: `linear-gradient(135deg, ${PRIMARY} 0%, #6172AC 100%)`,
               color: "#fff",
@@ -301,15 +315,19 @@ export function BannersList({
           onReorder={onReorder}
           style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}
         >
-          {banners.map((banner) => (
+          {banners.map((banner, index) => (
             <BannerListItem
               key={banner.id}
               banner={banner}
               pending={pendingId === banner.id}
+              canMoveUp={index > 0}
+              canMoveDown={index < banners.length - 1}
               onEdit={() => onEditBanner(banner)}
               onDuplicate={() => onDuplicate(banner)}
               onToggleEnabled={() => onToggleEnabled(banner)}
               onDelete={() => onRequestDelete(banner.id)}
+              onMoveUp={() => moveBanner(banner.id, -1)}
+              onMoveDown={() => moveBanner(banner.id, 1)}
             />
           ))}
         </Reorder.Group>

@@ -19,7 +19,9 @@ export function PreviouslyPassed({ quiz, onReview }: PreviouslyPassedProps) {
         background: "rgba(34,197,94,0.04)",
         borderRadius: 18,
         border: "1.5px solid rgba(34,197,94,0.2)",
-        padding: "18px 20px",
+        padding: "clamp(16px, 5vw, 18px) clamp(14px, 5vw, 20px)",
+        boxSizing: "border-box",
+        maxWidth: "100%",
       }}
     >
       <div className="flex items-center gap-4 flex-wrap">
@@ -30,19 +32,20 @@ export function PreviouslyPassed({ quiz, onReview }: PreviouslyPassedProps) {
           <CheckCircle2 size={22} strokeWidth={1.8} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 15, color: "#15803D" }}>
+          <div className="rs-longform" style={{ fontFamily: FONT, fontWeight: 700, fontSize: 15, color: "#15803D" }}>
             تم اجتياز الاختبار
           </div>
-          <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#6B7280", marginTop: 3 }}>
+          <div className="rs-longform" style={{ fontFamily: FONT, fontSize: 12.5, color: "#6B7280", marginTop: 3, lineHeight: 1.6 }}>
             {quiz.title} · نتيجتك: {quiz.bestScore ?? 0}%
           </div>
         </div>
         <button
+          type="button"
           onClick={onReview}
           style={{
-            height: 36,
-            paddingLeft: 16,
-            paddingRight: 16,
+            minHeight: 44,
+            paddingBlock: 10,
+            paddingInline: 16,
             borderRadius: 10,
             background: "rgba(34,197,94,0.1)",
             border: "1px solid rgba(34,197,94,0.2)",
@@ -52,6 +55,7 @@ export function PreviouslyPassed({ quiz, onReview }: PreviouslyPassedProps) {
             color: "#15803D",
             fontWeight: 600,
             transition: "background 0.15s",
+            boxSizing: "border-box",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = "rgba(34,197,94,0.16)";

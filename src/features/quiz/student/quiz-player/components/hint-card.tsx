@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronUp, Sparkles } from "lucide-react";
 import { FONT, PRIMARY } from "../formatters/quiz-player.formatter";
@@ -20,16 +20,17 @@ export function HintCard({ hint }: HintCardProps) {
         border: "1.5px solid rgba(99,114,172,0.2)",
         background: "linear-gradient(135deg, rgba(78,91,146,0.04) 0%, rgba(99,114,172,0.06) 100%)",
         overflow: "hidden",
+        maxWidth: "100%",
       }}
     >
       <div
-        className="flex items-center justify-between gap-3 cursor-pointer"
-        style={{ padding: "12px 14px" }}
+        className="rs-cluster cursor-pointer"
+        style={{ "--rs-cluster-gap": "10px", padding: "12px 14px", justifyContent: "space-between" } as CSSProperties}
         onClick={() => setCollapsed((v) => !v)}
       >
-        <div className="flex items-center gap-2">
-          <Sparkles size={14} strokeWidth={1.8} color={PRIMARY} />
-          <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: PRIMARY }}>
+        <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
+          <Sparkles size={14} strokeWidth={1.8} color={PRIMARY} style={{ flexShrink: 0 }} />
+          <span className="rs-longform" style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: PRIMARY }}>
             تلميح بواسطة الذكاء الاصطناعي
           </span>
         </div>
@@ -76,10 +77,10 @@ export function HintCard({ hint }: HintCardProps) {
                 paddingTop: 12,
               }}
             >
-              <p style={{ fontFamily: FONT, fontSize: 13.5, color: "#1E2340", lineHeight: 1.75, margin: 0 }}>
+              <p className="rs-longform" style={{ fontFamily: FONT, fontSize: 13.5, color: "#1E2340", lineHeight: 1.75, margin: 0 }}>
                 {hint}
               </p>
-              <p style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4", marginTop: 8, lineHeight: 1.5 }}>
+              <p className="rs-longform" style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4", marginTop: 8, lineHeight: 1.5 }}>
                 تم إنشاء هذا التلميح بواسطة الذكاء الاصطناعي وقد لا يكون دقيقًا دائمًا.
               </p>
             </div>

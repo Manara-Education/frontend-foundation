@@ -3,10 +3,10 @@ import { PRIMARY, FONT, TEXT, TEXT_MUTED, TEXT_LIGHT, BORDER } from "./theme";
 
 export function ProgressMockup() {
   return (
-    <div style={{ background: "#fff", borderRadius: 24, border: `1px solid ${BORDER}`, boxShadow: "0 8px 40px rgba(78,91,146,0.1)", padding: "28px", fontFamily: FONT, direction: "rtl" }}>
+    <div className="rs-longform" style={{ background: "#fff", borderRadius: 24, border: `1px solid ${BORDER}`, boxShadow: "0 8px 40px rgba(78,91,146,0.1)", padding: "clamp(22px, 7vw, 28px)", fontFamily: FONT, direction: "rtl" }}>
       <div style={{ textAlign: "center", marginBottom: 28 }}>
-        <div style={{ position: "relative", width: 120, height: 120, margin: "0 auto 16px" }}>
-          <svg viewBox="0 0 120 120" style={{ transform: "rotate(-90deg)" }}>
+        <div style={{ position: "relative", inlineSize: "min(120px, 46vw)", maxInlineSize: "100%", aspectRatio: "1 / 1", margin: "0 auto 16px" }}>
+          <svg viewBox="0 0 120 120" style={{ inlineSize: "100%", blockSize: "100%", transform: "rotate(-90deg)" }}>
             <circle cx="60" cy="60" r="52" fill="none" stroke={`${PRIMARY}15`} strokeWidth="10" />
             <circle cx="60" cy="60" r="52" fill="none" stroke={PRIMARY} strokeWidth="10" strokeDasharray="326.7" strokeDashoffset="91.5" strokeLinecap="round" />
           </svg>
@@ -23,12 +23,12 @@ export function ProgressMockup() {
         { label: "جارٍ الآن", icon: <Play size={13} />, text: "إدارة الحالة", color: PRIMARY },
         { label: "التالي", icon: <ArrowLeft size={13} />, text: "الهندسة المعمارية", color: TEXT_LIGHT },
       ].map(({ label, icon, text, color }) => (
-        <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderTop: `1px solid rgba(78,91,146,0.07)` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "4px 12px", flexWrap: "wrap", padding: "10px 0", borderTop: `1px solid rgba(78,91,146,0.07)` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, minInlineSize: 0 }}>
             <div style={{ color, display: "flex" }}>{icon}</div>
             <span style={{ fontSize: 13, fontWeight: 600, color }}>{label}</span>
           </div>
-          <span style={{ fontSize: 12.5, color: TEXT_MUTED }}>{text}</span>
+          <span style={{ fontSize: 12.5, color: TEXT_MUTED, minInlineSize: 0 }}>{text}</span>
         </div>
       ))}
     </div>

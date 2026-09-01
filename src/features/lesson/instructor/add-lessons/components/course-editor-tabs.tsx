@@ -87,7 +87,7 @@ export function CourseEditorTabs({
   }
 
   return (
-    <div dir="rtl" style={{ fontFamily: FONT }}>
+    <div dir="rtl" style={{ fontFamily: FONT, minInlineSize: 0, maxInlineSize: "100%" }}>
       {/* ── COURSE HEADER ─────────────────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -100,11 +100,22 @@ export function CourseEditorTabs({
           overflow: "hidden",
           marginBottom: 20,
           boxShadow: "0 4px 24px rgba(78,91,146,0.06)",
+          minInlineSize: 0,
+          maxInlineSize: "100%",
         }}
       >
-        <div style={{ display: "flex", alignItems: "stretch", gap: 0 }}>
+        <div style={{ display: "flex", alignItems: "stretch", flexWrap: "wrap", gap: 0, minWidth: 0 }}>
           {/* Cover thumbnail */}
-          <div style={{ width: 90, minHeight: 80, flexShrink: 0, position: "relative", overflow: "hidden" }}>
+          <div
+            style={{
+              width: "clamp(72px, 24vw, 90px)",
+              aspectRatio: "1 / 1",
+              minHeight: 72,
+              flexShrink: 0,
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
             {coverImage ? (
               <img
                 src={coverImage}
@@ -134,23 +145,23 @@ export function CourseEditorTabs({
             style={{
               flex: 1,
               minWidth: 0,
-              padding: "14px 18px",
+              padding: "14px clamp(14px, 4vw, 18px)",
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
               gap: 4,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, minWidth: 0 }}>
               <div
+                className="rs-longform"
                 style={{
                   fontFamily: FONT,
                   fontWeight: 700,
                   fontSize: 16,
                   color: "#1E2340",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
+                  lineHeight: 1.45,
+                  minWidth: 0,
                 }}
               >
                 {state.title}
@@ -172,7 +183,7 @@ export function CourseEditorTabs({
                 {isPublished ? "منشورة" : "مسودة"}
               </div>
             </div>
-            <div style={{ fontFamily: FONT, fontSize: 11.5, color: "#9BA3C4" }}>
+            <div className="rs-longform" style={{ fontFamily: FONT, fontSize: 11.5, color: "#9BA3C4", minWidth: 0 }}>
               {totalLessons} درس
               {state.description &&
                 ` · ${state.description.slice(0, 60)}${state.description.length > 60 ? "..." : ""}`}
@@ -180,9 +191,17 @@ export function CourseEditorTabs({
           </div>
 
           {/* Actions */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 16px", flexShrink: 0 }}>
+          <div
+            className="rs-cluster"
+            style={{
+              "--rs-cluster-gap": "8px",
+              padding: "10px clamp(12px, 4vw, 16px)",
+              flex: "1 1 220px",
+              justifyContent: "flex-end",
+            } as React.CSSProperties}
+          >
             {publishError && (
-              <div style={{ fontFamily: FONT, fontSize: 11.5, color: "#D4183D", maxWidth: 180, lineHeight: 1.4 }}>
+              <div className="rs-longform" style={{ fontFamily: FONT, fontSize: 11.5, color: "#D4183D", maxWidth: 180, lineHeight: 1.4 }}>
                 {publishError}
               </div>
             )}
@@ -192,9 +211,8 @@ export function CourseEditorTabs({
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
                 style={{
-                  height: 38,
-                  paddingLeft: 18,
-                  paddingRight: 18,
+                  minHeight: 44,
+                  paddingInline: 18,
                   borderRadius: 12,
                   background: `linear-gradient(135deg, ${PRIMARY} 0%, #6172AC 100%)`,
                   color: "#fff",
@@ -217,9 +235,8 @@ export function CourseEditorTabs({
                 onClick={unpublish}
                 whileHover={{ y: -1 }}
                 style={{
-                  height: 38,
-                  paddingLeft: 16,
-                  paddingRight: 16,
+                  minHeight: 44,
+                  paddingInline: 16,
                   borderRadius: 12,
                   background: "transparent",
                   color: "#9BA3C4",
@@ -240,9 +257,8 @@ export function CourseEditorTabs({
             <button
               onClick={onFinish}
               style={{
-                height: 38,
-                paddingLeft: 14,
-                paddingRight: 14,
+                minHeight: 44,
+                paddingInline: 14,
                 borderRadius: 12,
                 background: "rgba(78,91,146,0.06)",
                 color: PRIMARY,
@@ -264,7 +280,7 @@ export function CourseEditorTabs({
       </motion.div>
 
       {/* ── TABS ──────────────────────────────────────────────────────────── */}
-      <div style={{ display: "flex", gap: 4, marginBottom: 20, overflowX: "auto", paddingBottom: 2 }}>
+      <div className="rs-scroll-x" style={{ display: "flex", gap: 4, marginBottom: 20, overflowX: "auto", paddingBottom: 2 }}>
         {TABS.map(({ id, label, icon: Icon }) => {
           const isActive = activeTab === id;
           return (
@@ -275,9 +291,8 @@ export function CourseEditorTabs({
                 display: "flex",
                 alignItems: "center",
                 gap: 7,
-                height: 40,
-                paddingLeft: 16,
-                paddingRight: 16,
+                minHeight: 44,
+                paddingInline: 16,
                 borderRadius: 12,
                 border: "none",
                 background: isActive ? PRIMARY : "rgba(78,91,146,0.06)",
@@ -315,10 +330,13 @@ export function CourseEditorTabs({
                 background: "#fff",
                 borderRadius: 20,
                 border: "1.5px solid rgba(78,91,146,0.09)",
-                padding: "24px 28px",
+                padding: "clamp(18px, 5vw, 24px) clamp(16px, 5vw, 28px)",
                 display: "flex",
                 flexDirection: "column",
                 gap: 20,
+                minInlineSize: 0,
+                maxInlineSize: "100%",
+                boxSizing: "border-box",
               }}
             >
               <div
@@ -329,13 +347,16 @@ export function CourseEditorTabs({
                   color: "#1E2340",
                   display: "flex",
                   alignItems: "center",
+                  flexWrap: "wrap",
                   gap: 8,
+                  minWidth: 0,
                 }}
               >
                 <div
                   style={{
-                    width: 32,
-                    height: 32,
+                    width: 44,
+                    minHeight: 44,
+                    minWidth: 44,
                     borderRadius: 10,
                     background: "rgba(78,91,146,0.09)",
                     display: "flex",
@@ -345,12 +366,12 @@ export function CourseEditorTabs({
                 >
                   <BookOpen size={14} style={{ color: PRIMARY }} />
                 </div>
-                معلومات الدورة
+                <span className="rs-longform">معلومات الدورة</span>
               </div>
 
               {/* Title */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <label style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: "#1E2340" }}>
+              <div className="rs-longform" style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+                <label className="rs-longform" style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: "#1E2340" }}>
                   عنوان الدورة <span style={{ color: "#D4183D" }}>*</span>
                 </label>
                 <input
@@ -358,13 +379,13 @@ export function CourseEditorTabs({
                   value={state.title}
                   onChange={(e) => editor.setTitle(e.target.value)}
                   placeholder="أدخل عنوان الدورة..."
-                  style={{ ...TAB_INPUT_BASE, height: 46, paddingRight: 13, paddingLeft: 13 }}
+                  style={{ ...TAB_INPUT_BASE, height: 46, paddingInline: 13 }}
                 />
               </div>
 
               {/* Description */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <label style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: "#1E2340" }}>
+              <div className="rs-longform" style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+                <label className="rs-longform" style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: "#1E2340" }}>
                   وصف الدورة
                 </label>
                 <textarea
@@ -384,21 +405,21 @@ export function CourseEditorTabs({
               </div>
 
               {/* Image */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <label style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: "#1E2340" }}>
+              <div className="rs-longform" style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+                <label className="rs-longform" style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: "#1E2340" }}>
                   صورة الغلاف
                 </label>
                 {coverImage ? (
-                  <div style={{ borderRadius: 14, overflow: "hidden", height: 160, position: "relative" }}>
+                  <div style={{ borderRadius: 14, overflow: "hidden", aspectRatio: "16 / 7", minHeight: 120, position: "relative" }}>
                     <img src={coverImage} alt="غلاف" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     <button
                       onClick={editor.clearImage}
                       style={{
                         position: "absolute",
                         top: 10,
-                        left: 10,
-                        width: 30,
-                        height: 30,
+                        insetInlineEnd: 10,
+                        width: 44,
+                        height: 44,
                         borderRadius: 8,
                         background: "rgba(212,24,61,0.85)",
                         color: "#fff",
@@ -426,7 +447,7 @@ export function CourseEditorTabs({
                       pickImage(e.dataTransfer.files[0]);
                     }}
                     style={{
-                      height: 120,
+                      minHeight: 120,
                       borderRadius: 14,
                       border: `2px dashed ${imgDragging ? PRIMARY : "rgba(78,91,146,0.2)"}`,
                       background: imgDragging ? "rgba(78,91,146,0.04)" : "#FAFBFD",
@@ -436,6 +457,8 @@ export function CourseEditorTabs({
                       justifyContent: "center",
                       gap: 8,
                       cursor: "pointer",
+                      padding: 16,
+                      boxSizing: "border-box",
                     }}
                   >
                     <ImageIcon size={20} style={{ color: imgDragging ? PRIMARY : "#C4C9DC" }} />
@@ -445,6 +468,7 @@ export function CourseEditorTabs({
                         fontSize: 12.5,
                         color: imgDragging ? PRIMARY : "#9BA3C4",
                         fontWeight: 600,
+                        textAlign: "center",
                       }}
                     >
                       {imgDragging ? "أفلت الصورة هنا" : "ارفع صورة الغلاف"}
@@ -461,8 +485,8 @@ export function CourseEditorTabs({
               </div>
 
               {/* Structure */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <label style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: "#1E2340" }}>
+              <div className="rs-longform" style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
+                <label className="rs-longform" style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: "#1E2340" }}>
                   هيكل الدورة
                 </label>
                 <StructureRadioRow value={state.structure} onChange={editor.setStructure} />
@@ -478,12 +502,12 @@ export function CourseEditorTabs({
                 `setVisibility` — so an instructor who turns a course private and navigates
                 away has actually turned it private.
               */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <label style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: "#1E2340" }}>
+              <div className="rs-longform" style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
+                <label className="rs-longform" style={{ fontFamily: FONT, fontWeight: 600, fontSize: 12.5, color: "#1E2340" }}>
                   ظهور الدورة
                 </label>
                 <VisibilityRadioRow value={state.visibility} onChange={editor.setVisibility} />
-                <div style={{ fontFamily: FONT, fontSize: 11.5, color: "#9BA3C4", lineHeight: 1.7 }}>
+                <div className="rs-longform" style={{ fontFamily: FONT, fontSize: 11.5, color: "#9BA3C4", lineHeight: 1.7 }}>
                   {state.visibility === "PRIVATE"
                     ? "الدورة غير ظاهرة في الاستكشاف أو البحث. الطلاب المشتركون فيها يحتفظون بوصولهم وتقدمهم كاملاً."
                     : "الدورة متاحة للاكتشاف من كل الطلاب حسب حالة نشرها."}
@@ -491,15 +515,14 @@ export function CourseEditorTabs({
               </div>
 
               {/* Save button */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div className="rs-cluster" style={{ "--rs-cluster-gap": "10px" } as React.CSSProperties}>
                 <motion.button
                   onClick={saveOverview}
                   whileHover={{ y: -1 }}
                   whileTap={{ scale: 0.97 }}
                   style={{
-                    height: 42,
-                    paddingLeft: 22,
-                    paddingRight: 22,
+                    minHeight: 44,
+                    paddingInline: 22,
                     borderRadius: 12,
                     background: `linear-gradient(135deg, ${PRIMARY} 0%, #6172AC 100%)`,
                     color: "#fff",
@@ -526,6 +549,7 @@ export function CourseEditorTabs({
                       style={{
                         display: "flex",
                         alignItems: "center",
+                        flexWrap: "wrap",
                         gap: 5,
                         fontFamily: FONT,
                         fontSize: 12,
@@ -551,10 +575,18 @@ export function CourseEditorTabs({
             transition={{ duration: 0.22 }}
           >
             {/* Header */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <div>
-                <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 16, color: "#1E2340" }}>محتوى الدورة</div>
-                <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#9BA3C4", marginTop: 2 }}>
+            <div
+              className="rs-cluster"
+              style={{
+                "--rs-cluster-gap": "12px",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                marginBottom: 16,
+              } as React.CSSProperties}
+            >
+              <div className="rs-longform" style={{ flex: "1 1 min(240px, 100%)", minWidth: 0 }}>
+                <div className="rs-longform" style={{ fontFamily: FONT, fontWeight: 700, fontSize: 16, color: "#1E2340" }}>محتوى الدورة</div>
+                <div className="rs-longform" style={{ fontFamily: FONT, fontSize: 12.5, color: "#9BA3C4", marginTop: 2 }}>
                   {state.structure === "FLAT"
                     ? state.lessons.length === 0
                       ? "أضف دروسك — كل درس مرتبط بفيديو من يوتيوب أو فيميو"
@@ -657,7 +689,9 @@ export function CourseEditorTabs({
                   background: "#fff",
                   borderRadius: 20,
                   border: "1.5px solid rgba(78,91,146,0.09)",
-                  padding: "22px 26px",
+                  padding: "clamp(18px, 5vw, 22px) clamp(16px, 5vw, 26px)",
+                  minInlineSize: 0,
+                  boxSizing: "border-box",
                 }}
               >
                 <div
@@ -669,13 +703,16 @@ export function CourseEditorTabs({
                     marginBottom: 16,
                     display: "flex",
                     alignItems: "center",
+                    flexWrap: "wrap",
                     gap: 8,
+                    minWidth: 0,
                   }}
                 >
                   <div
                     style={{
-                      width: 32,
-                      height: 32,
+                      width: 44,
+                      minWidth: 44,
+                      minHeight: 44,
                       borderRadius: 10,
                       background: "rgba(78,91,146,0.09)",
                       display: "flex",
@@ -685,7 +722,7 @@ export function CourseEditorTabs({
                   >
                     <CheckCircle size={14} style={{ color: PRIMARY }} />
                   </div>
-                  نوع الوصول
+                  <span className="rs-longform">نوع الوصول</span>
                 </div>
                 <AccessTypeRow value={state.accessType} onChange={setAccessType} />
               </div>
@@ -706,7 +743,9 @@ export function CourseEditorTabs({
                         background: "#fff",
                         borderRadius: 20,
                         border: "1.5px solid rgba(78,91,146,0.09)",
-                        padding: "22px 26px",
+                        padding: "clamp(18px, 5vw, 22px) clamp(16px, 5vw, 26px)",
+                        minInlineSize: 0,
+                        boxSizing: "border-box",
                       }}
                     >
                       <div
@@ -718,13 +757,16 @@ export function CourseEditorTabs({
                           marginBottom: 14,
                           display: "flex",
                           alignItems: "center",
+                          flexWrap: "wrap",
                           gap: 8,
+                          minWidth: 0,
                         }}
                       >
                         <div
                           style={{
-                            width: 32,
-                            height: 32,
+                            width: 44,
+                            minWidth: 44,
+                            minHeight: 44,
                             borderRadius: 10,
                             background: "rgba(78,91,146,0.09)",
                             display: "flex",
@@ -734,9 +776,9 @@ export function CourseEditorTabs({
                         >
                           <CreditCard size={14} style={{ color: PRIMARY }} />
                         </div>
-                        سعر الدورة
+                        <span className="rs-longform">سعر الدورة</span>
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                         <input
                           type="number"
                           min="0"
@@ -744,14 +786,14 @@ export function CourseEditorTabs({
                           value={purchasePriceInput}
                           onChange={(e) => setPurchasePrice(e.target.value)}
                           placeholder="مثال: 299"
-                          style={{ ...TAB_INPUT_BASE, height: 46, paddingRight: 13, paddingLeft: 13, flex: 1 }}
+                          style={{ ...TAB_INPUT_BASE, height: 46, paddingInline: 13, flex: 1 }}
                         />
                         <div style={{ fontFamily: FONT, fontSize: 13, color: "#9BA3C4", whiteSpace: "nowrap" }}>
                           ج.م
                         </div>
                       </div>
                       {pricingError && (
-                        <p style={{ fontFamily: FONT, fontSize: 11.5, color: "#D4183D", marginTop: 6 }}>
+                        <p className="rs-longform" style={{ fontFamily: FONT, fontSize: 11.5, color: "#D4183D", marginTop: 6 }}>
                           {pricingError}
                         </p>
                       )}
@@ -786,15 +828,14 @@ export function CourseEditorTabs({
               </AnimatePresence>
 
               {/* Save */}
-              <div style={{ display: "flex", gap: 10 }}>
+              <div className="rs-cluster" style={{ "--rs-cluster-gap": "10px" } as React.CSSProperties}>
                 <motion.button
                   whileHover={{ y: -1 }}
                   whileTap={{ scale: 0.97 }}
                   onClick={savePricing}
                   style={{
-                    height: 42,
-                    paddingLeft: 22,
-                    paddingRight: 22,
+                    minHeight: 44,
+                    paddingInline: 22,
                     borderRadius: 12,
                     background: `linear-gradient(135deg, ${PRIMARY} 0%, #6172AC 100%)`,
                     color: "#fff",

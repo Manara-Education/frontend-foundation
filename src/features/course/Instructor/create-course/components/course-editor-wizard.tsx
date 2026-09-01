@@ -3,6 +3,8 @@ import {
   AlignLeft,
   Award,
   BookOpen,
+  ChevronLeft,
+  ChevronRight,
   CreditCard,
   DollarSign,
   FileText,
@@ -34,6 +36,175 @@ import { SuccessOverlay } from "./success-overlay";
 
 type CreateCourseController = ReturnType<typeof useCreateCourse>;
 
+const CREATE_COURSE_RESPONSIVE_CSS = `
+  .ccw {
+    inline-size: 100%;
+    max-inline-size: 100%;
+    min-inline-size: 0;
+  }
+
+  .ccw,
+  .ccw * {
+    box-sizing: border-box;
+  }
+
+  .ccw :where(input, textarea, select, button) {
+    max-inline-size: 100%;
+  }
+
+  .ccw :where(input, textarea, select) {
+    min-inline-size: 0;
+  }
+
+  .ccw :where(p, span, label, h1, h2, h3, div) {
+    overflow-wrap: anywhere;
+  }
+
+  .ccw :where(button) {
+    touch-action: manipulation;
+  }
+
+  .ccw-step-panel,
+  .ccw-step-panel > *,
+  .ccw-card-shell,
+  .ccw-card-shell > * {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  .ccw-card-shell > [style] {
+    padding: clamp(18px, 5vw, 32px) !important;
+    border-radius: clamp(16px, 4vw, 24px) !important;
+  }
+
+  .ccw-card-shell > [style] > .flex:first-child {
+    align-items: flex-start;
+    min-inline-size: 0;
+  }
+
+  .ccw-card-shell > [style] > .flex:first-child > div:last-child {
+    min-inline-size: 0;
+  }
+
+  .ccw-stackable-control > .flex {
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .ccw-stackable-control > .flex > button {
+    flex: 1 1 min(240px, 100%) !important;
+    min-inline-size: min(240px, 100%);
+  }
+
+  .ccw-stackable-control > .flex > button > .flex,
+  .ccw-stackable-control > .flex > button > .flex > div:last-child {
+    min-inline-size: 0;
+  }
+
+  .ccw-curriculum-surface [style*="display: flex"][style*="align-items: center"],
+  .ccw-access-surface [style*="display: flex"][style*="align-items: center"],
+  .ccw-pricing-surface [style*="display: flex"][style*="align-items: center"],
+  .ccw-quiz-surface [style*="display: flex"][style*="align-items: center"] {
+    flex-wrap: wrap;
+    min-inline-size: 0;
+  }
+
+  .ccw-curriculum-surface .items-stretch {
+    flex-wrap: wrap;
+  }
+
+  .ccw-curriculum-surface .items-stretch > .flex-1 {
+    flex: 1 1 min(180px, 100%) !important;
+    min-inline-size: 0;
+  }
+
+  .ccw-access-surface [style*="flex: 1"],
+  .ccw-pricing-surface [style*="flex: 1"],
+  .ccw-quiz-surface [style*="flex: 1"] {
+    min-inline-size: 0;
+  }
+
+  .ccw-curriculum-surface [style*="padding: 28px 28px 24px"],
+  .ccw-curriculum-surface [style*="padding: 22px 22px 20px"],
+  .ccw-pricing-surface [style*="padding: 22px 22px 20px"],
+  .ccw-quiz-surface [style*="padding: 24px"],
+  .ccw-quiz-surface [style*="padding: 20px 22px"] {
+    padding: clamp(16px, 5vw, 24px) !important;
+  }
+
+  .ccw-curriculum-surface [style*="width: 112px"] {
+    inline-size: min(112px, 42vw) !important;
+  }
+
+  .ccw-curriculum-surface [style*="height: 68px"] {
+    block-size: auto;
+    aspect-ratio: 112 / 68;
+  }
+
+  .ccw-pricing-surface .flex.items-center,
+  .ccw-pricing-surface .flex.gap-2,
+  .ccw-quiz-surface .justify-between,
+  .ccw-quiz-surface .items-end,
+  .ccw-quiz-surface .items-start {
+    flex-wrap: wrap;
+  }
+
+  .ccw-quiz-surface .items-end {
+    align-items: flex-start;
+  }
+
+  .ccw-pricing-surface input {
+    flex: 1 1 min(180px, 100%);
+  }
+
+  .ccw-pricing-surface [style*="width: 100px"] {
+    inline-size: min(100px, 100%) !important;
+  }
+
+  .ccw-pricing-surface [style*="max-width: 200px"],
+  .ccw-quiz-surface [style*="max-width: 180px"] {
+    max-inline-size: 100% !important;
+  }
+
+  .ccw-quiz-surface [style*="max-width: 180px"] {
+    flex: 1 1 min(180px, 100%);
+  }
+
+  .ccw-image-field .absolute.bottom-3 {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  @media (pointer: coarse) {
+    .ccw button {
+      position: relative;
+    }
+
+    .ccw button::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      translate: -50% -50%;
+      inline-size: 100%;
+      block-size: 100%;
+      min-inline-size: 44px;
+      min-block-size: 44px;
+    }
+  }
+`;
+
+function WizardSection({
+  className,
+  ...props
+}: React.ComponentProps<typeof SectionCard> & { className?: string }) {
+  return (
+    <div className={["ccw-card-shell", className].filter(Boolean).join(" ")}>
+      <SectionCard {...props} />
+    </div>
+  );
+}
+
 /**
  * The six-step create wizard, exactly as the reference draws it. Every section is a
  * shared course-editor component, so the same content, exam and pricing surfaces
@@ -61,7 +232,9 @@ export function CourseEditorWizard({
   const coverPreview = imagePreview ?? (state.image || null);
 
   return (
-    <div dir="rtl" style={{ fontFamily: FONT }}>
+    <div dir="rtl" className="ccw rs-longform" style={{ fontFamily: FONT }}>
+      <style>{CREATE_COURSE_RESPONSIVE_CSS}</style>
+
       {/* ── STEPPER ── */}
       <StepIndicator current={step} onGoTo={goToStep} />
 
@@ -81,6 +254,8 @@ export function CourseEditorWizard({
               fontFamily: FONT,
               fontSize: 12.5,
               color: "#D4183D",
+              overflowWrap: "anywhere",
+              minInlineSize: 0,
             }}
           >
             {errors.step}
@@ -98,8 +273,9 @@ export function CourseEditorWizard({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.22 }}
+            className="ccw-step-panel"
           >
-            <SectionCard icon={BookOpen} title="معلومات الدورة" subtitle="البيانات الأساسية التي يراها الطلاب">
+            <WizardSection icon={BookOpen} title="معلومات الدورة" subtitle="البيانات الأساسية التي يراها الطلاب">
               <div className="flex flex-col gap-6">
                 <Field label="اسم الدورة" required error={errors.title}>
                   <div className="relative">
@@ -108,13 +284,19 @@ export function CourseEditorWizard({
                       value={state.title}
                       onChange={(e) => editor.setTitle(e.target.value)}
                       placeholder="مثال: أساسيات البرمجة"
-                      style={{ ...inputStyle(!!state.title, !!errors.title), height: 50, paddingRight: 46 }}
+                      style={{
+                        ...inputStyle(!!state.title, !!errors.title),
+                        height: 50,
+                        paddingInlineStart: 46,
+                        paddingInlineEnd: 14,
+                      }}
                     />
                     <div
-                      className="absolute top-1/2 right-3.5 flex items-center justify-center"
+                      className="absolute top-1/2 flex items-center justify-center"
                       style={{
                         transform: "translateY(-50%)",
                         color: errors.title ? "#D4183D" : state.title ? PRIMARY : "#C4C9DC",
+                        insetInlineStart: 14,
                       }}
                     >
                       <BookOpen size={16} />
@@ -137,15 +319,17 @@ export function CourseEditorWizard({
                     }}
                   />
                 </Field>
-                <ImageUpload
-                  value={imageFile}
-                  preview={coverPreview}
-                  onChange={(file, preview) =>
-                    file ? editor.setImage(file, preview) : editor.clearImage()
-                  }
-                />
+                <div className="ccw-image-field">
+                  <ImageUpload
+                    value={imageFile}
+                    preview={coverPreview}
+                    onChange={(file, preview) =>
+                      file ? editor.setImage(file, preview) : editor.clearImage()
+                    }
+                  />
+                </div>
               </div>
-            </SectionCard>
+            </WizardSection>
           </motion.div>
         )}
 
@@ -157,10 +341,13 @@ export function CourseEditorWizard({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.22 }}
+            className="ccw-step-panel"
           >
-            <SectionCard icon={Layers} title="تنظيم المحتوى" subtitle="كيف تريد تنظيم محتوى دورتك؟">
-              <StructureSection value={state.structure} onChange={editor.setStructure} />
-            </SectionCard>
+            <WizardSection icon={Layers} title="تنظيم المحتوى" subtitle="كيف تريد تنظيم محتوى دورتك؟">
+              <div className="ccw-stackable-control">
+                <StructureSection value={state.structure} onChange={editor.setStructure} />
+              </div>
+            </WizardSection>
 
             {/*
               Visibility, offered here at creation and editable afterwards from the course
@@ -171,14 +358,16 @@ export function CourseEditorWizard({
               says nothing about is a course on offer to everyone, exactly as every course
               on the platform was before this existed.
             */}
-            <SectionCard
+            <WizardSection
               icon={Lock}
               title="ظهور الدورة"
               subtitle="من يمكنه اكتشاف هذه الدورة؟"
               delay={0.06}
             >
-              <VisibilitySection value={state.visibility} onChange={editor.setVisibility} />
-            </SectionCard>
+              <div className="ccw-stackable-control">
+                <VisibilitySection value={state.visibility} onChange={editor.setVisibility} />
+              </div>
+            </WizardSection>
           </motion.div>
         )}
 
@@ -190,8 +379,10 @@ export function CourseEditorWizard({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.22 }}
+            className="ccw-step-panel"
           >
-            <SectionCard
+            <WizardSection
+              className="ccw-curriculum-surface"
               icon={AlignLeft}
               title="محتوى الدورة"
               subtitle={
@@ -243,7 +434,7 @@ export function CourseEditorWizard({
                   </motion.div>
                 )}
               </AnimatePresence>
-            </SectionCard>
+            </WizardSection>
           </motion.div>
         )}
 
@@ -255,8 +446,14 @@ export function CourseEditorWizard({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.22 }}
+            className="ccw-step-panel"
           >
-            <SectionCard icon={Award} title="الاختبارات" subtitle="أضف اختبارات للدروس والوحدات والاختبار النهائي">
+            <WizardSection
+              className="ccw-quiz-surface"
+              icon={Award}
+              title="الاختبارات"
+              subtitle="أضف اختبارات للدروس والوحدات والاختبار النهائي"
+            >
               <CourseExamsEditor
                 structure={state.structure}
                 lessons={state.lessons}
@@ -267,7 +464,7 @@ export function CourseEditorWizard({
                 onModuleLessonQuizChange={editor.setModuleLessonQuiz}
                 onFinalQuizChange={editor.setFinalQuiz}
               />
-            </SectionCard>
+            </WizardSection>
           </motion.div>
         )}
 
@@ -279,10 +476,16 @@ export function CourseEditorWizard({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.22 }}
+            className="ccw-step-panel"
           >
-            <SectionCard icon={CreditCard} title="طريقة الوصول إلى الدورة" subtitle="حدّد كيف يصل الطلاب إلى دورتك">
+            <WizardSection
+              className="ccw-access-surface"
+              icon={CreditCard}
+              title="طريقة الوصول إلى الدورة"
+              subtitle="حدّد كيف يصل الطلاب إلى دورتك"
+            >
               <AccessTypeSection value={state.accessType} onChange={editor.setAccessType} />
-            </SectionCard>
+            </WizardSection>
             <AnimatePresence>
               {state.accessType !== "FREE" && (
                 <motion.div
@@ -292,7 +495,8 @@ export function CourseEditorWizard({
                   transition={{ duration: 0.25 }}
                   style={{ overflow: "hidden" }}
                 >
-                  <SectionCard
+                  <WizardSection
+                    className="ccw-pricing-surface"
                     icon={DollarSign}
                     title={state.accessType === "PURCHASE" ? "التسعير" : "خطط الاشتراك"}
                     subtitle={
@@ -316,7 +520,7 @@ export function CourseEditorWizard({
                         error={errors.subscriptionPlans}
                       />
                     )}
-                  </SectionCard>
+                  </WizardSection>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -331,6 +535,7 @@ export function CourseEditorWizard({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.22 }}
+            className="ccw-step-panel"
           >
             <ReviewSection
               state={state}
@@ -343,14 +548,17 @@ export function CourseEditorWizard({
       </AnimatePresence>
 
       {/* ── NAV BUTTONS ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 24, paddingBottom: 16 }}>
+      <div
+        className="rs-cluster ccw-nav-actions"
+        style={{ "--rs-cluster-gap": "10px", marginTop: 24, paddingBlockEnd: 16 } as React.CSSProperties}
+      >
         {step > 1 && (
           <button
             onClick={goPrev}
+            className="rs-touch"
             style={{
-              height: 48,
-              paddingLeft: 22,
-              paddingRight: 22,
+              minHeight: 48,
+              paddingInline: 22,
               borderRadius: 14,
               background: "transparent",
               color: "#717182",
@@ -363,6 +571,9 @@ export function CourseEditorWizard({
               alignItems: "center",
               gap: 7,
               transition: "all 0.15s",
+              flex: "0 1 auto",
+              minInlineSize: "min(108px, 100%)",
+              justifyContent: "center",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = PRIMARY;
@@ -373,9 +584,7 @@ export function CourseEditorWizard({
               e.currentTarget.style.borderColor = "rgba(78,91,146,0.2)";
             }}
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M5 10l4-3-4-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <ChevronRight size={15} />
             السابق
           </button>
         )}
@@ -383,12 +592,12 @@ export function CourseEditorWizard({
         {step < 6 ? (
           <motion.button
             onClick={goNext}
+            className="rs-touch"
             whileHover={{ y: -2 }}
             whileTap={{ scale: 0.97 }}
             style={{
-              height: 48,
-              paddingLeft: 28,
-              paddingRight: 28,
+              minHeight: 48,
+              paddingInline: 28,
               borderRadius: 14,
               background: `linear-gradient(135deg, ${PRIMARY} 0%, #6172AC 100%)`,
               color: "#fff",
@@ -400,25 +609,29 @@ export function CourseEditorWizard({
               boxShadow: "0 4px 14px rgba(78,91,146,0.28)",
               display: "flex",
               alignItems: "center",
+              justifyContent: "center",
               gap: 8,
+              flex: "0 1 auto",
+              minInlineSize: "min(118px, 100%)",
             }}
           >
             التالي
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M9 4l-4 3 4 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <ChevronLeft size={15} />
           </motion.button>
         ) : (
-          <div style={{ display: "flex", gap: 10 }}>
+          <div
+            className="rs-cluster"
+            style={{ "--rs-cluster-gap": "10px", flex: "1 1 300px", minInlineSize: 0 } as React.CSSProperties}
+          >
             <motion.button
               onClick={publish}
               disabled={isSaving}
+              className="rs-touch"
               whileHover={!isSaving ? { y: -2 } : {}}
               whileTap={!isSaving ? { scale: 0.97 } : {}}
               style={{
-                height: 48,
-                paddingLeft: 28,
-                paddingRight: 28,
+                minHeight: 48,
+                paddingInline: 28,
                 borderRadius: 14,
                 background: isSaving ? "rgba(78,91,146,0.5)" : `linear-gradient(135deg, ${PRIMARY} 0%, #6172AC 100%)`,
                 color: "#fff",
@@ -430,7 +643,10 @@ export function CourseEditorWizard({
                 boxShadow: "0 4px 16px rgba(78,91,146,0.32)",
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: 8,
+                flex: "1 1 140px",
+                minInlineSize: "min(140px, 100%)",
               }}
             >
               {isSaving ? (
@@ -451,11 +667,11 @@ export function CourseEditorWizard({
             <motion.button
               onClick={saveDraft}
               disabled={isSaving}
+              className="rs-touch"
               whileHover={!isSaving ? { y: -1 } : {}}
               style={{
-                height: 48,
-                paddingLeft: 20,
-                paddingRight: 20,
+                minHeight: 48,
+                paddingInline: 20,
                 borderRadius: 14,
                 background: "transparent",
                 color: "#717182",
@@ -466,7 +682,10 @@ export function CourseEditorWizard({
                 fontSize: 13,
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: 7,
+                flex: "1 1 128px",
+                minInlineSize: "min(128px, 100%)",
               }}
             >
               <FileText size={14} /> حفظ كمسودة
@@ -476,10 +695,10 @@ export function CourseEditorWizard({
 
         <button
           onClick={handleCancel}
+          className="rs-touch"
           style={{
-            height: 48,
-            paddingLeft: 18,
-            paddingRight: 18,
+            minHeight: 48,
+            paddingInline: 18,
             borderRadius: 14,
             background: "transparent",
             color: "#9BA3C4",
@@ -487,7 +706,9 @@ export function CourseEditorWizard({
             cursor: "pointer",
             fontFamily: FONT,
             fontSize: 13,
-            marginRight: "auto",
+            marginInlineStart: "auto",
+            flex: "0 1 auto",
+            minInlineSize: "min(82px, 100%)",
           }}
         >
           إلغاء

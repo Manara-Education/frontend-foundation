@@ -11,8 +11,9 @@ interface FieldProps {
 
 export function Field({ label, required, error, children }: FieldProps) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5 rs-longform" style={{ minWidth: 0 }}>
       <label
+        className="rs-longform"
         style={{
           fontFamily: FONT,
           fontWeight: 600,
@@ -20,7 +21,9 @@ export function Field({ label, required, error, children }: FieldProps) {
           color: "#1E2340",
           display: "flex",
           alignItems: "center",
+          flexWrap: "wrap",
           gap: 4,
+          minWidth: 0,
         }}
       >
         {label}
@@ -32,6 +35,7 @@ export function Field({ label, required, error, children }: FieldProps) {
       <AnimatePresence>
         {error && (
           <motion.p
+            className="rs-longform"
             initial={{ opacity: 0, y: -4, height: 0 }}
             animate={{ opacity: 1, y: 0, height: "auto" }}
             exit={{ opacity: 0, y: -4, height: 0 }}

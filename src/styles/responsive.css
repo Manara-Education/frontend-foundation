@@ -1,0 +1,186 @@
+/*
+  Shared responsive primitives.
+
+  These exist because ~93% of this application's layout is written as inline `style={{}}`
+  objects — 1,635 of them — and an inline style cannot hold a media query. Every responsive
+  fix made before this file had to smuggle one in through a `<style>` tag containing a
+  hand-written CSS string, which is how four different breakpoints (900, 1024, 820, 640)
+  ended up in feature code without ever referring to each other.
+
+  So this is the escape hatch, made once and shared, rather than re-invented per feature.
+
+  Two rules for what belongs here:
+
+  1. It must be something an inline style genuinely cannot do — a media query, a
+     pseudo-element, a container-relative unit. Anything a component can express inline
+     should stay inline; this file is not a general utility dump.
+  2. It must already have at least two call sites and a named defect in RESPONSIVE_AUDIT.md.
+     Every class below names the finding it closes. When a class stops being used, delete it.
+
+  Prefer the classes that reflow *continuously* — `.rs-grid`, `.rs-cluster` — over anything
+  keyed to a breakpoint. A layout that reflows continuously is correct between the
+  validation widths as well as at them, which is the actual requirement; matching at 320,
+  375 and 768 while breaking at 400 is not responsive, it is three lucky guesses.
+
+  Logical properties throughout (`padding-inline`, `inset-inline-start`). The application is
+  Arabic-first and `<html dir="rtl">`, so `left` and `right` mean the wrong things here more
+  often than they mean the right ones.
+*/
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   .rs-page — the page gutter
+
+   Closes: P0-1. The shell hard-coded `padding: 28px 32px 80px`. At 375px that spent 64
+   of 375 pixels on empty margin before content got a say.
+
+   `clamp` rather than a breakpoint: the gutter should grow with the viewport, not jump at
+   768px. 4vw keeps the proportion steady between the bounds.
+   ────────────────────────────────────────────────────────────────────────────── */
+.rs-page {
+  padding-inline: clamp(16px, 4vw, 32px);
+  padding-block-start: clamp(16px, 3vw, 28px);
+  /* Bottom room for the last element to clear a mobile browser's chrome. */
+  padding-block-end: clamp(48px, 10vw, 80px);
+  /* A page is never the reason the viewport scrolls sideways. */
+  max-inline-size: 100%;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   .rs-grid — a card grid that cannot overflow
+
+   Closes: P1. Ten grids use `repeat(auto-fit, minmax(300px, 1fr))` and similar. `minmax()`
+   will not shrink below its floor, so a 300px minimum overflows every viewport under
+   ~364px no matter what `auto-fit` would prefer. `min(floor, 100%)` lets the floor give
+   way when the container is narrower than it — which is the whole fix, and is already the
+   idiom used in explore-form.tsx.
+
+   Set the floor per use: `style={{ "--rs-grid-min": "260px" }}`.
+   ────────────────────────────────────────────────────────────────────────────── */
+.rs-grid {
+  display: grid;
+  gap: var(--rs-grid-gap, 20px);
+  grid-template-columns: repeat(auto-fit, minmax(min(var(--rs-grid-min, 260px), 100%), 1fr));
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   .rs-cluster — an action group that wraps
+
+   Closes: P0-2. The landing navbar's three actions are 272px wide and did not wrap, so at
+   320px the menu button rendered at `right: -31px` — entirely outside the viewport and
+   unreachable. Buttons in a row is the single most common shape in this codebase and the
+   single most common thing to run off the edge.
+   ────────────────────────────────────────────────────────────────────────────── */
+.rs-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rs-cluster-gap, 10px);
+  min-inline-size: 0;
+}
+
+/* Actions that should span the width once they have wrapped onto their own line. */
+.rs-cluster--stretch > * {
+  flex: 1 1 auto;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   .rs-longform — text that must not break the page
+
+   Closes: P1. Course titles, lesson bodies and banner copy are instructor-authored. A
+   single unbroken token — a URL, or an Arabic compound with no spaces — overflows any
+   container that has not been told otherwise. `reset.css` set `overflow-wrap` on `p` and
+   the headings, but that file is imported by nothing, so the rule has never applied.
+
+   `anywhere` rather than `break-word`: `break-word` leaves the element's intrinsic
+   min-content width at the length of the longest word, which still blows out a grid track.
+   ────────────────────────────────────────────────────────────────────────────── */
+.rs-longform {
+  overflow-wrap: anywhere;
+  /* Keeps normal Arabic and Latin prose breaking at spaces; only over-long tokens split. */
+  word-break: normal;
+  min-inline-size: 0;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   .rs-sheet — an overlay that fits the screen it is on
+
+   Closes: P1. Four hand-rolled dialogs size themselves but set no maximum height and no
+   internal scroll. Taller-than-viewport content is clipped at both ends with no way to
+   reach it — which on a phone is the normal case the moment the keyboard opens and takes
+   half the screen, and the thing it hides is the submit button.
+
+   `dvh` not `vh`: `vh` is the viewport with browser chrome *retracted*, so a `90vh` panel
+   is taller than the screen for as long as the address bar is showing.
+   ────────────────────────────────────────────────────────────────────────────── */
+.rs-sheet {
+  inline-size: 100%;
+  max-inline-size: var(--rs-sheet-max, 440px);
+  /* Never taller than the screen, minus the overlay's own padding. */
+  max-block-size: min(88dvh, 100dvh - 32px);
+  display: flex;
+  flex-direction: column;
+  /* The panel itself does not scroll; its body does. Header and footer stay put. */
+  overflow: hidden;
+}
+
+.rs-sheet__body {
+  overflow-y: auto;
+  /* A dialog scrolled to its end must not then start scrolling the page behind it. */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Actions pinned below the scrolling body, clear of the home indicator. */
+.rs-sheet__footer {
+  flex-shrink: 0;
+  padding-block-end: max(var(--rs-sheet-footer-pad, 0px), env(safe-area-inset-bottom));
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   .rs-touch — a target a finger can hit
+
+   Closes: P2. 30–38px controls appear throughout. The visual size is often deliberately
+   small, so this grows the *hit area* with a pseudo-element rather than the box, leaving
+   the design as drawn.
+   ────────────────────────────────────────────────────────────────────────────── */
+.rs-touch {
+  position: relative;
+}
+
+.rs-touch::after {
+  content: "";
+  position: absolute;
+  /* Physical properties on purpose: centring on the element is the same operation in
+     both directions, and `inset-inline` here would resolve against `dir` and shift it. */
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  inline-size: 100%;
+  block-size: 100%;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+}
+
+@media (pointer: fine) {
+  /* A mouse does not need the padding, and an invisible 44px box can shadow a neighbour. */
+  .rs-touch::after {
+    content: none;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   .rs-scroll-x — a region that scrolls sideways on purpose
+
+   For the cases where horizontal scroll is the right answer and not a defect — a tab
+   strip, a wide data table. Named so that a reviewer can tell the deliberate ones from
+   `overflow-x: hidden` used to bury something, and so a grep finds every one of them.
+   ────────────────────────────────────────────────────────────────────────────── */
+.rs-scroll-x {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+.rs-scroll-x > * {
+  flex-shrink: 0;
+}

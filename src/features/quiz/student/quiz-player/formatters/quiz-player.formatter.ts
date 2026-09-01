@@ -62,9 +62,11 @@ export function getQuizKindCopy(kind: QuizKind): QuizKindCopy {
   return QUIZ_KIND_COPY[kind];
 }
 
-/** A, B, C… beside each option, exactly as the reference labels them. */
+const ARABIC_OPTION_LETTERS = ["أ", "ب", "ج", "د", "هـ"] as const;
+
+/** Arabic option letters beside each option, so the marker reads naturally in RTL. */
 export function formatOptionLetter(index: number): string {
-  return String.fromCharCode(0x0041 + index);
+  return ARABIC_OPTION_LETTERS[index] ?? String(index + 1);
 }
 
 export function formatScorePercent(score: number): string {

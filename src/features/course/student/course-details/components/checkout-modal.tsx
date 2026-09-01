@@ -1,5 +1,6 @@
+import { useEffect, useId, useRef, type CSSProperties } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Lock, X, CheckCircle2, ShieldCheck } from "lucide-react";
+import { Lock, X, CheckCircle2 } from "lucide-react";
 import { FONT, PRIMARY } from "../formatters/course-details.formatter";
 import { useCheckout } from "../hooks/use-checkout";
 import type { CheckoutKind, CourseDetailData } from "../types/course-details.types";
@@ -22,6 +23,22 @@ interface CheckoutModalProps {
   onCancel: () => void;
 }
 
+const FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "textarea:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(",");
+
+const sheetStyle = {
+  "--rs-sheet-max": "440px",
+  borderRadius: 24,
+  background: "#FFFFFF",
+  boxShadow: "0 40px 100px rgba(10,13,40,0.30), 0 8px 32px rgba(10,13,40,0.14)",
+} as CSSProperties;
+
 export function CheckoutModal({
   course,
   kind,
@@ -37,6 +54,71 @@ export function CheckoutModal({
     step, form, canPay,
     setName, handlePay,
   } = useCheckout({ courseId: course.id, kind, planId, onSuccess, onFailure });
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const onCancelRef = useRef(onCancel);
+  const stepRef = useRef(step);
+  const titleId = useId();
+  const courseTitleId = useId();
+
+  useEffect(() => {
+    onCancelRef.current = onCancel;
+  }, [onCancel]);
+
+  useEffect(() => {
+    stepRef.current = step;
+  }, [step]);
+
+  useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusFrame = window.requestAnimationFrame(() => {
+      (closeRef.current ?? dialogRef.current)?.focus({ preventScroll: true });
+    });
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        if (stepRef.current === "form") {
+          event.preventDefault();
+          onCancelRef.current();
+        }
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialog.focus({ preventScroll: true });
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      if (!(active instanceof HTMLElement) || !dialog.contains(active)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus({ preventScroll: true });
+      } else if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus({ preventScroll: true });
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus({ preventScroll: true });
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      document.removeEventListener("keydown", onKeyDown);
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+    };
+  }, []);
 
   return (
     <motion.div
@@ -57,118 +139,110 @@ export function CheckoutModal({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: 20,
+        padding: 16,
+        boxSizing: "border-box",
       }}
     >
       <motion.div
+        ref={dialogRef}
         initial={{ opacity: 0, scale: 0.93, y: 24 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 12 }}
         transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
         dir="rtl"
-        style={{
-          width: "100%",
-          maxWidth: 440,
-          borderRadius: 24,
-          background: "#FFFFFF",
-          boxShadow: "0 40px 100px rgba(10,13,40,0.30), 0 8px 32px rgba(10,13,40,0.14)",
-          overflow: "hidden",
-        }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={courseTitleId}
+        tabIndex={-1}
+        className="rs-sheet"
+        style={sheetStyle}
       >
-        <div style={{ background: `linear-gradient(135deg, ${PRIMARY} 0%, #6B7AB8 100%)`, padding: "22px 24px 20px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
-              <div style={{ width: 38, height: 38, borderRadius: 12, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Lock size={16} color="#fff" strokeWidth={2} />
-              </div>
-              <div>
-                <div style={{ fontFamily: FONT, fontSize: 11, color: "rgba(255,255,255,0.70)", marginBottom: 2 }}>تأكيد الاشتراك</div>
-                <div style={{ fontFamily: FONT, fontSize: 14, color: "#fff", lineHeight: 1.35 }}>{course.title}</div>
-              </div>
-            </div>
+        <div
+          style={{
+            background: `linear-gradient(135deg, ${PRIMARY} 0%, #6B7AB8 100%)`,
+            padding: "clamp(16px, 5vw, 22px) clamp(18px, 6vw, 24px) clamp(16px, 5vw, 20px)",
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
             {step === "form" && (
               <motion.button
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.94 }}
+                ref={closeRef}
+                type="button"
+                aria-label="إغلاق نافذة الدفع"
+                className="rs-touch"
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
                 onClick={onCancel}
                 style={{
-                  width: 32, height: 32, borderRadius: "50%",
+                  width: 44, height: 44, borderRadius: "50%",
                   border: "none", background: "rgba(255,255,255,0.16)",
                   cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff",
                   flexShrink: 0,
                 }}
               >
-                <X size={14} strokeWidth={2.5} />
+                <X size={16} strokeWidth={2.5} />
               </motion.button>
             )}
+            <div style={{ display: "flex", alignItems: "center", gap: 11, flex: 1, minWidth: 0 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 12, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Lock size={16} color="#fff" strokeWidth={2} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontFamily: FONT, fontSize: 11, color: "rgba(255,255,255,0.70)", marginBottom: 2 }}>
+                  نافذة دفع آمنة
+                </div>
+                <div id={titleId} style={{ fontFamily: FONT, fontSize: 15, color: "#fff", lineHeight: 1.35, fontWeight: 700 }}>
+                  تأكيد الاشتراك
+                </div>
+              </div>
+            </div>
           </div>
-          <div style={{ marginTop: 18, display: "flex", alignItems: "baseline", gap: 6 }}>
-            <span style={{ fontFamily: FONT, fontSize: 38, color: "#fff", lineHeight: 1 }}>
+          <div style={{ marginTop: 18, display: "flex", alignItems: "baseline", flexWrap: "wrap", gap: 6, minWidth: 0 }}>
+            <span style={{ fontFamily: FONT, fontSize: "clamp(30px, 10vw, 38px)", color: "#fff", lineHeight: 1 }}>
               {amountLabel}
             </span>
             {!isFree && (
-              <span style={{ fontFamily: FONT, fontSize: 13, color: "rgba(255,255,255,0.62)" }}>{termsLabel}</span>
+              <span
+                className="rs-longform"
+                style={{ fontFamily: FONT, fontSize: 13, color: "rgba(255,255,255,0.62)", minWidth: 0 }}
+              >
+                {termsLabel}
+              </span>
             )}
           </div>
         </div>
 
-        <div style={{ padding: "24px 24px 20px" }}>
+        <div
+          className="rs-sheet__body"
+          style={{
+            flex: "1 1 auto",
+            minBlockSize: 0,
+            padding: "clamp(18px, 6vw, 24px) clamp(18px, 6vw, 24px) 12px",
+          }}
+        >
+          <div
+            id={courseTitleId}
+            className="rs-longform"
+            style={{ fontFamily: FONT, fontSize: 13, color: "#6B7280", lineHeight: 1.65, marginBottom: 14 }}
+          >
+            {course.title}
+          </div>
+
           <AnimatePresence mode="wait">
             {step === "form" && (
               <motion.div key="form" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.22 }}>
                 {isFree ? (
                   <div style={{ textAlign: "center", padding: "12px 0 20px" }}>
                     <div style={{ fontFamily: FONT, fontSize: 15, color: "#1F2937", marginBottom: 8 }}>دورة مجانية بالكامل</div>
-                    <p style={{ fontFamily: FONT, fontSize: 13, color: "#9BA3C4", lineHeight: 1.7, margin: 0 }}>
+                    <p className="rs-longform" style={{ fontFamily: FONT, fontSize: 13, color: "#9BA3C4", lineHeight: 1.7, margin: 0 }}>
                       انقر أدناه للحصول على وصول فوري ومجاني لجميع الدروس
                     </p>
                   </div>
                 ) : (
                   <CheckoutField label="الاسم الكامل" placeholder="اسمك الكامل" value={form.name} onChange={setName} fieldDir="rtl" />
                 )}
-
-                <motion.button
-                  whileHover={canPay ? { scale: 1.015 } : {}}
-                  whileTap={canPay ? { scale: 0.98 } : {}}
-                  onClick={canPay ? handlePay : undefined}
-                  style={{
-                    width: "100%",
-                    padding: "15px 20px",
-                    borderRadius: 14,
-                    background: canPay
-                      ? `linear-gradient(135deg, ${PRIMARY} 0%, #6B7AB8 100%)`
-                      : "rgba(78,91,146,0.25)",
-                    color: "#fff",
-                    border: "none",
-                    cursor: canPay ? "pointer" : "not-allowed",
-                    fontFamily: FONT,
-                    fontSize: 16,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 9,
-                    boxShadow: canPay ? "0 6px 24px rgba(78,91,146,0.32)" : "none",
-                    transition: "background 0.2s, box-shadow 0.2s",
-                    marginTop: isFree ? 0 : 4,
-                  }}
-                >
-                  <Lock size={15} strokeWidth={2} />
-                  {isFree ? "ابدأ التعلم مجاناً" : `ادفع ${amountLabel} وابدأ التعلم`}
-                </motion.button>
-
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginTop: 14 }}>
-                  <button
-                    onClick={onCancel}
-                    style={{ fontFamily: FONT, fontSize: 12, color: "#9BA3C4", background: "none", border: "none", cursor: "pointer", padding: 0 }}
-                  >
-                    إلغاء
-                  </button>
-                  <div style={{ width: 3, height: 3, borderRadius: "50%", background: "#D1D5DB" }} />
-                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <ShieldCheck size={12} color="#B0B7D4" strokeWidth={2} />
-                    <span style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4" }}>اتصال مشفّر</span>
-                  </div>
-                </div>
               </motion.div>
             )}
 
@@ -222,6 +296,47 @@ export function CheckoutModal({
             )}
           </AnimatePresence>
         </div>
+
+        {step === "form" && (
+          <div
+            className="rs-sheet__footer"
+            style={{
+              paddingInline: "clamp(18px, 6vw, 24px)",
+              paddingBlockStart: 0,
+              "--rs-sheet-footer-pad": "clamp(18px, 6vw, 20px)",
+            } as CSSProperties}
+          >
+            <motion.button
+              type="button"
+              whileHover={canPay ? { scale: 1.015 } : {}}
+              whileTap={canPay ? { scale: 0.98 } : {}}
+              onClick={canPay ? handlePay : undefined}
+              style={{
+                width: "100%",
+                minHeight: 48,
+                padding: "13px 20px",
+                borderRadius: 14,
+                background: canPay
+                  ? `linear-gradient(135deg, ${PRIMARY} 0%, #6B7AB8 100%)`
+                  : "rgba(78,91,146,0.25)",
+                color: "#fff",
+                border: "none",
+                cursor: canPay ? "pointer" : "not-allowed",
+                fontFamily: FONT,
+                fontSize: 16,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 9,
+                boxShadow: canPay ? "0 6px 24px rgba(78,91,146,0.32)" : "none",
+                transition: "background 0.2s, box-shadow 0.2s",
+              }}
+            >
+              <Lock size={15} strokeWidth={2} />
+              <span className="rs-longform">{isFree ? "ابدأ التعلم مجاناً" : `ادفع ${amountLabel} وابدأ التعلم`}</span>
+            </motion.button>
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );

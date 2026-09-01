@@ -209,6 +209,7 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
     outline: "none",
     transition: "border-color 0.18s, box-shadow 0.18s",
     boxSizing: "border-box",
+    minWidth: 0,
   };
 
   return (
@@ -222,30 +223,33 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
         borderRadius: 22,
         border: `1.5px solid ${PRIMARY}28`,
         boxShadow: `0 0 0 4px ${PRIMARY}08, 0 8px 32px rgba(78,91,146,0.1)`,
-        padding: "28px 28px 24px",
+        padding: "clamp(18px, 5vw, 28px) clamp(16px, 5vw, 28px) clamp(18px, 5vw, 24px)",
         marginBottom: 16,
+        minInlineSize: 0,
+        maxInlineSize: "100%",
+        boxSizing: "border-box",
       }}
     >
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6" dir="rtl">
+      <div className="flex items-center gap-3 mb-6" dir="rtl" style={{ minWidth: 0 }}>
         <div
           className="rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ width: 38, height: 38, background: "rgba(78,91,146,0.1)", color: PRIMARY }}
+          style={{ width: 44, height: 44, background: "rgba(78,91,146,0.1)", color: PRIMARY }}
         >
           <span style={{ fontWeight: 700, fontSize: 15 }}>{lessonNumber}</span>
         </div>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 15, color: "#1E2340", fontFamily: FONT }}>
+        <div className="rs-longform" style={{ minWidth: 0 }}>
+          <div className="rs-longform" style={{ fontWeight: 700, fontSize: 15, color: "#1E2340", fontFamily: FONT }}>
             {initial ? "تعديل الدرس" : "درس جديد"}
           </div>
-          <div style={{ fontSize: 12, color: "#9BA3C4", fontFamily: FONT }}>
+          <div className="rs-longform" style={{ fontSize: 12, color: "#9BA3C4", fontFamily: FONT }}>
             {isVideo ? "أدخل تفاصيل الدرس وأضف رابط الفيديو" : "أدخل تفاصيل الدرس واكتب محتواه"}
           </div>
         </div>
         <button
           onClick={onCancel}
-          className="mr-auto rounded-xl flex items-center justify-center transition-colors"
-          style={{ width: 34, height: 34, background: "rgba(78,91,146,0.06)", border: "none", cursor: "pointer", color: "#9BA3C4" }}
+          className="rounded-xl flex items-center justify-center transition-colors"
+          style={{ width: 44, height: 44, marginInlineStart: "auto", background: "rgba(78,91,146,0.06)", border: "none", cursor: "pointer", color: "#9BA3C4", flexShrink: 0 }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = "rgba(212,24,61,0.08)";
             e.currentTarget.style.color = "#D4183D";
@@ -261,9 +265,10 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
 
       <div className="flex flex-col gap-5" dir="rtl">
         {/* Title */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 rs-longform" style={{ minWidth: 0 }}>
           <label
-            style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: "#1E2340", display: "flex", alignItems: "center", gap: 4 }}
+            className="rs-longform"
+            style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: "#1E2340", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 4, minWidth: 0 }}
           >
             <BookOpen size={13} style={{ color: PRIMARY }} />
             عنوان الدرس
@@ -281,8 +286,7 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
             style={{
               ...inputBase,
               height: 48,
-              paddingRight: 14,
-              paddingLeft: 14,
+              paddingInline: 14,
               border: `1.5px solid ${errors.title ? "#D4183D" : lessonTitle ? PRIMARY : "rgba(78,91,146,0.16)"}`,
               boxShadow: errors.title
                 ? "0 0 0 3px rgba(212,24,61,0.07)"
@@ -310,6 +314,7 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.15 }}
+                className="rs-longform"
                 style={{ fontFamily: FONT, fontSize: 12, color: "#D4183D" }}
               >
                 {errors.title}
@@ -319,9 +324,10 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
         </div>
 
         {/* Description */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 rs-longform" style={{ minWidth: 0 }}>
           <label
-            style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: "#1E2340", display: "flex", alignItems: "center", gap: 4 }}
+            className="rs-longform"
+            style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: "#1E2340", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 4, minWidth: 0 }}
           >
             <AlignLeft size={13} style={{ color: "#9BA3C4" }} />
             وصف الدرس
@@ -350,9 +356,10 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
           decides which editor is shown — and, on the student's side, whether there is a player at
           all. Nothing about it is inferred from whether a video URL happens to be filled in.
         */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 rs-longform" style={{ minWidth: 0 }}>
           <label
-            style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: "#1E2340", display: "flex", alignItems: "center", gap: 4 }}
+            className="rs-longform"
+            style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: "#1E2340", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 4, minWidth: 0 }}
           >
             نوع الدرس
             <span style={{ color: "#D4183D" }}>*</span>
@@ -361,6 +368,7 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
             role="radiogroup"
             aria-label="نوع الدرس"
             className="flex gap-2 flex-wrap"
+            style={{ minWidth: 0 }}
           >
             {CONTENT_TYPES.map(({ value, label, hint, Icon }) => {
               const selected = contentType === value;
@@ -383,6 +391,7 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
                     cursor: "pointer",
                     textAlign: "start",
                     fontFamily: FONT,
+                    minWidth: 0,
                     background: selected ? "rgba(78,91,146,0.07)" : "#FAFBFD",
                     border: `1.5px solid ${selected ? PRIMARY : "rgba(78,91,146,0.16)"}`,
                     boxShadow: selected ? "0 0 0 3px rgba(78,91,146,0.08)" : "none",
@@ -390,11 +399,11 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
                   }}
                 >
                   <Icon size={17} style={{ color: selected ? PRIMARY : "#9BA3C4", flexShrink: 0 }} />
-                  <span style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-                    <span style={{ fontWeight: 700, fontSize: 13.5, color: selected ? PRIMARY : "#1E2340" }}>
+                  <span className="rs-longform" style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                    <span className="rs-longform" style={{ fontWeight: 700, fontSize: 13.5, color: selected ? PRIMARY : "#1E2340" }}>
                       {label}
                     </span>
-                    <span style={{ fontSize: 11, color: "#9BA3C4", lineHeight: 1.5 }}>{hint}</span>
+                    <span className="rs-longform" style={{ fontSize: 11, color: "#9BA3C4", lineHeight: 1.5 }}>{hint}</span>
                   </span>
                 </button>
               );
@@ -415,18 +424,18 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
                 transition={{ duration: 0.15 }}
                 role="alertdialog"
                 aria-label="تأكيد تغيير نوع الدرس"
+                className="rs-cluster"
                 style={{
-                  display: "flex",
-                  flexWrap: "wrap",
                   alignItems: "center",
-                  gap: 10,
+                  "--rs-cluster-gap": "10px",
                   padding: "12px 14px",
                   borderRadius: 13,
                   background: "rgba(245,158,11,0.07)",
                   border: "1.5px solid rgba(245,158,11,0.3)",
-                }}
+                  minWidth: 0,
+                } as React.CSSProperties}
               >
-                <span style={{ fontFamily: FONT, fontSize: 12.5, color: "#92400E", flex: "1 1 220px", lineHeight: 1.7 }}>
+                <span className="rs-longform" style={{ fontFamily: FONT, fontSize: 12.5, color: "#92400E", flex: "1 1 min(220px, 100%)", lineHeight: 1.7 }}>
                   {pendingType === "RICH_CONTENT"
                     ? "سيتم إخفاء فيديو الدرس واستبداله بالمحتوى المكتوب. يمكنك الرجوع لنوع الفيديو لاحقًا ولن يُفقد الرابط."
                     : "سيتم إخفاء المحتوى المكتوب واستبداله بالفيديو. يمكنك الرجوع لنوع المحتوى لاحقًا ولن يُفقد ما كتبته."}
@@ -435,7 +444,7 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
                   type="button"
                   onClick={() => applyTypeChange(pendingType)}
                   style={{
-                    height: 36, padding: "0 16px", borderRadius: 10, border: "none", cursor: "pointer",
+                    minHeight: 44, paddingInline: 16, borderRadius: 10, border: "none", cursor: "pointer",
                     background: PRIMARY, color: "#fff", fontFamily: FONT, fontWeight: 700, fontSize: 12.5,
                   }}
                 >
@@ -445,7 +454,7 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
                   type="button"
                   onClick={() => setPendingType(null)}
                   style={{
-                    height: 36, padding: "0 16px", borderRadius: 10, cursor: "pointer",
+                    minHeight: 44, paddingInline: 16, borderRadius: 10, cursor: "pointer",
                     background: "transparent", color: "#717182",
                     border: "1.5px solid rgba(78,91,146,0.16)", fontFamily: FONT, fontWeight: 600, fontSize: 12.5,
                   }}
@@ -463,15 +472,16 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
           disabled video field on a content lesson and no empty editor on a video one.
         */}
         {isVideo ? (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 rs-longform" style={{ minWidth: 0 }}>
           <label
-            style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: "#1E2340", display: "flex", alignItems: "center", gap: 4 }}
+            className="rs-longform"
+            style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: "#1E2340", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 4, minWidth: 0 }}
           >
             <PlayCircle size={13} style={{ color: "#FF0000" }} />
             رابط الفيديو
             <span style={{ color: "#D4183D" }}>*</span>
           </label>
-          <div className="relative">
+          <div className="relative" dir="ltr" style={{ minWidth: 0 }}>
             <input
               type="url"
               value={videoUrl}
@@ -481,8 +491,8 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
               style={{
                 ...inputBase,
                 height: 48,
-                paddingRight: 14,
-                paddingLeft: video && !errors.url ? 44 : 14,
+                paddingInlineEnd: 14,
+                paddingInlineStart: video && !errors.url ? 44 : 14,
                 textAlign: "left",
                 border: `1.5px solid ${errors.url ? "#D4183D" : video ? "#27AE60" : videoUrl ? PRIMARY : "rgba(78,91,146,0.16)"}`,
                 boxShadow: errors.url
@@ -506,7 +516,7 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
                 }
               }}
             />
-            <div className="absolute top-1/2 left-3 flex items-center justify-center" style={{ transform: "translateY(-50%)" }}>
+            <div className="absolute top-1/2 flex items-center justify-center" style={{ insetInlineStart: 12, transform: "translateY(-50%)" }}>
               <AnimatePresence mode="wait">
                 {video && !errors.url ? (
                   <motion.div
@@ -533,6 +543,7 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.15 }}
+                className="rs-longform"
                 style={{ fontFamily: FONT, fontSize: 12, color: "#D4183D" }}
               >
                 {errors.url}
@@ -542,9 +553,10 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
           <AnimatePresence>{video && !errors.url && <VideoPreview source={video} />}</AnimatePresence>
         </div>
         ) : (
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 rs-longform" style={{ minWidth: 0 }}>
             <label
-              style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: "#1E2340", display: "flex", alignItems: "center", gap: 4 }}
+              className="rs-longform"
+              style={{ fontFamily: FONT, fontWeight: 600, fontSize: 13, color: "#1E2340", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 4, minWidth: 0 }}
             >
               <FileText size={13} style={{ color: PRIMARY }} />
               محتوى الدرس
@@ -564,6 +576,9 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
                     fontFamily: FONT,
                     fontSize: 13,
                     color: "#9BA3C4",
+                    padding: 16,
+                    textAlign: "center",
+                    boxSizing: "border-box",
                   }}
                 >
                   جارٍ تحميل المحرر…
@@ -586,6 +601,7 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.15 }}
+                  className="rs-longform"
                   style={{ fontFamily: FONT, fontSize: 12, color: "#D4183D" }}
                 >
                   {errors.richContent}
@@ -602,16 +618,15 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-3 mt-6" dir="rtl">
+      <div className="rs-cluster mt-6" dir="rtl" style={{ "--rs-cluster-gap": "12px" } as React.CSSProperties}>
         <motion.button
           onClick={handleSave}
           whileHover={{ y: -2 }}
           whileTap={{ scale: 0.97 }}
           transition={{ duration: 0.14 }}
           style={{
-            height: 46,
-            paddingLeft: 26,
-            paddingRight: 26,
+            minHeight: 46,
+            paddingInline: 26,
             borderRadius: 13,
             background: `linear-gradient(135deg, ${PRIMARY} 0%, #6172AC 100%)`,
             color: "#fff",
@@ -631,9 +646,8 @@ export function LessonForm({ initial, lessonNumber, onSave, onCancel }: LessonFo
         <button
           onClick={onCancel}
           style={{
-            height: 46,
-            paddingLeft: 22,
-            paddingRight: 22,
+            minHeight: 46,
+            paddingInline: 22,
             borderRadius: 13,
             background: "transparent",
             color: "#717182",

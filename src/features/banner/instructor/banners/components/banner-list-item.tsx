@@ -1,6 +1,8 @@
-import { useState, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { AnimatePresence, Reorder, motion, useDragControls } from "motion/react";
 import {
+  ArrowDown,
+  ArrowUp,
   Copy,
   Eye,
   GripVertical,
@@ -19,36 +21,50 @@ import { BannerStatusBadge } from "./banner-status-badge";
 interface BannerListItemProps {
   banner: InstructorBanner;
   pending: boolean;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
   onEdit: () => void;
   onDuplicate: () => void;
   onToggleEnabled: () => void;
   onDelete: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
 }
+
+const actionGroupStyle = {
+  "--rs-cluster-gap": "8px",
+} as CSSProperties;
 
 export function BannerListItem({
   banner,
   pending,
+  canMoveUp,
+  canMoveDown,
   onEdit,
   onDuplicate,
   onToggleEnabled,
   onDelete,
+  onMoveUp,
+  onMoveDown,
 }: BannerListItemProps) {
   const [showPreview, setShowPreview] = useState(false);
   const dragControls = useDragControls();
 
-  const actionBtn = (icon: ReactNode, label: string, onClick: () => void, danger = false) => (
+  const actionBtn = (icon: ReactNode, label: string, onClick: () => void, danger = false, disabled = false) => {
+    const isDisabled = pending || disabled;
+    return (
     <button
+      className="rs-touch"
       onClick={onClick}
-      disabled={pending}
+      disabled={isDisabled}
       title={label}
       style={{
-        height: 32,
-        paddingLeft: 10,
-        paddingRight: 10,
+        minHeight: 44,
+        paddingInline: 10,
         borderRadius: 9,
         background: "transparent",
         border: "1px solid rgba(78,91,146,0.13)",
-        cursor: pending ? "default" : "pointer",
+        cursor: isDisabled ? "default" : "pointer",
         fontFamily: FONT,
         fontSize: 12,
         color: danger ? "#D4183D" : PRIMARY,
@@ -57,21 +73,31 @@ export function BannerListItem({
         alignItems: "center",
         gap: 5,
         transition: "all 0.15s",
-        opacity: pending ? 0.55 : 1,
+        opacity: isDisabled ? 0.45 : 1,
+        boxSizing: "border-box",
+        whiteSpace: "nowrap",
       }}
       onMouseEnter={(e) => {
+        if (isDisabled) return;
         e.currentTarget.style.background = danger ? "rgba(212,24,61,0.07)" : "rgba(78,91,146,0.07)";
       }}
       onMouseLeave={(e) => {
+        if (isDisabled) return;
         e.currentTarget.style.background = "transparent";
       }}
     >
       {icon} {label}
     </button>
-  );
+    );
+  };
 
   return (
-    <Reorder.Item value={banner} dragControls={dragControls} dragListener={false} style={{ listStyle: "none" }}>
+    <Reorder.Item
+      value={banner}
+      dragControls={dragControls}
+      dragListener={false}
+      style={{ listStyle: "none", minWidth: 0 }}
+    >
       <div
         dir="rtl"
         style={{
@@ -83,23 +109,25 @@ export function BannerListItem({
         }}
       >
         {/* Thumbnail + main info */}
-        <div style={{ display: "flex", gap: 0, alignItems: "stretch" }}>
+        <div style={{ display: "flex", gap: 0, alignItems: "stretch", minWidth: 0 }}>
           {/* Drag handle */}
           <div
+            className="rs-touch"
             onPointerDown={(e) => {
               e.stopPropagation();
               dragControls.start(e);
             }}
             style={{
-              width: 36,
+              width: 44,
               flexShrink: 0,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               cursor: "grab",
               color: "#C4C9DC",
-              borderLeft: "1px solid rgba(78,91,146,0.07)",
+              borderInlineEnd: "1px solid rgba(78,91,146,0.07)",
               transition: "color 0.15s",
+              touchAction: "none",
             }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLDivElement).style.color = PRIMARY;
@@ -113,7 +141,15 @@ export function BannerListItem({
           </div>
 
           {/* Thumbnail */}
-          <div style={{ width: 110, flexShrink: 0, position: "relative", overflow: "hidden", background: "#1E2340" }}>
+          <div
+            style={{
+              width: "clamp(72px, 24vw, 110px)",
+              flexShrink: 0,
+              position: "relative",
+              overflow: "hidden",
+              background: "#1E2340",
+            }}
+          >
             {banner.imageUrl ? (
               <ImageWithFallback
                 src={banner.imageUrl}
@@ -128,23 +164,38 @@ export function BannerListItem({
           </div>
 
           {/* Content */}
-          <div style={{ flex: 1, padding: "16px 20px" }}>
-            <div className="flex items-start justify-between gap-4 mb-2">
-              <div>
-                <div style={{ fontFamily: FONT, fontSize: 11.5, color: "#9BA3C4", marginBottom: 3 }}>
+          <div style={{ flex: "1 1 0", minWidth: 0, padding: "16px clamp(14px, 4vw, 20px)" }}>
+            <div className="flex items-start justify-between gap-4 mb-2" style={{ flexWrap: "wrap", minWidth: 0 }}>
+              <div style={{ flex: "1 1 180px", minWidth: 0 }}>
+                <div
+                  className="rs-longform"
+                  style={{
+                    fontFamily: FONT,
+                    fontSize: 11.5,
+                    color: "#9BA3C4",
+                    marginBottom: 3,
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 6,
+                    alignItems: "center",
+                    minWidth: 0,
+                  }}
+                >
                   <span
+                    className="rs-longform"
                     style={{
                       background: "rgba(78,91,146,0.07)",
                       borderRadius: 5,
                       padding: "1px 7px",
                       color: "#717182",
+                      display: "inline-block",
+                      maxInlineSize: "100%",
                     }}
                   >
                     {banner.internalName}
                   </span>
                   <span
                     style={{
-                      marginRight: 6,
                       background: "rgba(78,91,146,0.05)",
                       borderRadius: 5,
                       padding: "1px 7px",
@@ -154,7 +205,10 @@ export function BannerListItem({
                     #{banner.priority}
                   </span>
                 </div>
-                <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 15, color: "#1E2340", lineHeight: 1.4 }}>
+                <div
+                  className="rs-longform"
+                  style={{ fontFamily: FONT, fontWeight: 700, fontSize: 15, color: "#1E2340", lineHeight: 1.4 }}
+                >
                   {banner.title}
                 </div>
               </div>
@@ -163,6 +217,7 @@ export function BannerListItem({
 
             {banner.description && (
               <p
+                className="rs-longform"
                 style={{
                   fontFamily: FONT,
                   fontSize: 12.5,
@@ -186,7 +241,7 @@ export function BannerListItem({
                 { label: "الانتهاء", val: banner.endAtLabel },
                 { label: "آخر تحديث", val: banner.updatedAtLabel },
               ].map(({ label, val }) => (
-                <div key={label}>
+                <div key={label} className="rs-longform" style={{ minWidth: 0 }}>
                   <span style={{ fontFamily: FONT, fontSize: 10.5, color: "#B0B7D4" }}>{label}: </span>
                   <span style={{ fontFamily: FONT, fontSize: 11, color: "#717182", fontWeight: 500 }}>{val}</span>
                 </div>
@@ -194,16 +249,18 @@ export function BannerListItem({
             </div>
 
             {/* Actions */}
-            <div className="flex flex-wrap gap-2">
-              {actionBtn(<Eye size={12} />, "معاينة", () => setShowPreview((v) => !v))}
-              {actionBtn(<Pencil size={12} />, "تعديل", onEdit)}
-              {actionBtn(<Copy size={12} />, "نسخ", onDuplicate)}
+            <div className="rs-cluster" style={actionGroupStyle}>
+              {actionBtn(<Pencil size={14} />, "تعديل", onEdit)}
+              {actionBtn(<Eye size={14} />, "معاينة", () => setShowPreview((v) => !v))}
+              {actionBtn(<Copy size={14} />, "نسخ", onDuplicate)}
               {actionBtn(
-                banner.isEnabled ? <ToggleRight size={12} /> : <ToggleLeft size={12} />,
+                banner.isEnabled ? <ToggleRight size={14} /> : <ToggleLeft size={14} />,
                 banner.isEnabled ? "تعطيل" : "تفعيل",
                 onToggleEnabled,
               )}
-              {actionBtn(<Trash2 size={12} />, "حذف", onDelete, true)}
+              {actionBtn(<ArrowUp size={14} />, "أعلى", onMoveUp, false, !canMoveUp)}
+              {actionBtn(<ArrowDown size={14} />, "أسفل", onMoveDown, false, !canMoveDown)}
+              {actionBtn(<Trash2 size={14} />, "حذف", onDelete, true)}
             </div>
           </div>
         </div>
