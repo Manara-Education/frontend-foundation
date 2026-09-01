@@ -29,7 +29,7 @@ export function VideoPreview({ source }: VideoPreviewProps) {
       exit={{ opacity: 0, y: 4, scale: 0.96 }}
       transition={{ duration: 0.22 }}
       className="relative overflow-hidden"
-      style={{ borderRadius: 14, border: "1.5px solid rgba(78,91,146,0.12)" }}
+      style={{ borderRadius: 14, border: "1.5px solid rgba(78,91,146,0.12)", maxInlineSize: "100%", minInlineSize: 0 }}
     >
       <div
         style={{
@@ -75,8 +75,9 @@ export function VideoPreview({ source }: VideoPreviewProps) {
 
         {/* The platform, read from the URL — the instructor's confirmation that it was understood. */}
         <div
-          className="absolute bottom-2.5 right-3"
-          style={{ fontFamily: FONT, fontSize: 11, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}
+          className="absolute bottom-2.5"
+          dir="rtl"
+          style={{ insetInlineStart: 12, fontFamily: FONT, fontSize: 11, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}
         >
           {formatVideoProviderLabel(source.provider)}
         </div>
