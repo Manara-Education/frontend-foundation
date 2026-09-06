@@ -83,10 +83,11 @@ fi
 # ------------------------------------------------------- 2. tag -> commit SHA
 
 # ^{commit} peels an annotated tag object through to the commit it points at,
-# and is a no-op for a lightweight tag. Both kinds exist in this repository, and
-# not in a tidy pattern: v1.0.0, v1.0.1, v1.0.2 and v1.1.0 are annotated tag
-# objects, while v1.1.1 is lightweight. Whoever cuts the next release could
-# produce either, so neither form can be assumed.
+# and is a no-op for a lightweight tag. Both kinds exist across Manara's
+# repositories, and not in a tidy pattern — some releases were cut with
+# `git tag -a` and some with a plain `git tag`, sometimes alternating between
+# consecutive versions. Whoever cuts the next one could produce either, so
+# neither form can be assumed.
 #
 # Anchored at refs/tags/ so that a *branch* called v9.9.9 cannot answer this
 # question. That is not hypothetical: creating such a branch is exactly how
