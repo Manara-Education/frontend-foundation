@@ -5,6 +5,7 @@ import { RegisterPage } from "@/features/auth/register/pages/register-page";
 import { ForgotPasswordPage } from "@/features/auth/forgot-password/pages/forgot-password-page";
 import { OtpPage } from "@/features/auth/otp/pages/otp-page";
 import { ResetPasswordPage } from "@/features/auth/reset-password/pages/reset-password-page";
+import { TermsPage } from "@/features/legal/terms/pages/terms-page";
 import { ProfileView } from "@/features/profile/pages/profile-view";
 import { AccessDeniedPage } from "@/features/session/access-denied/pages/access-denied-page";
 import { ProtectedRoute, PublicOnlyRoute, RoleRoute, ROLES } from "@/shared/auth";
@@ -82,6 +83,17 @@ export const router = createBrowserRouter([
       {
         path: "/",
         Component: LandingPage,
+      },
+
+      // The published terms and conditions. Ungated in both directions on purpose: a
+      // visitor reads them from the sign-up form before they have an account, and a
+      // signed-in user must still be able to open them afterwards — so this sits under
+      // neither `PublicOnlyRoute` (which would turn the second away) nor `ProtectedRoute`
+      // (which would turn the first away).
+      {
+        path: "terms",
+        Component: TermsPage,
+        handle: handle({ title: "الشروط والأحكام" }),
       },
 
       // ── AUTHENTICATION ────────────────────────────────────────────────────

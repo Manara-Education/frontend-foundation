@@ -12,7 +12,12 @@ export function RegisterPage() {
     loading,
     errors,
     setField,
+    setTermsAccepted,
     handleSubmit,
+    termsOutdated,
+    termsLoadFailed,
+    retryTerms,
+    canSubmit,
   } = useRegister();
 
   return (
@@ -23,8 +28,13 @@ export function RegisterPage() {
         loading={loading}
         errors={errors}
         onChange={setField}
+        onTermsAcceptedChange={setTermsAccepted}
         onSubmit={handleSubmit}
         onLoginClick={() => navigate(paths.login)}
+        termsOutdated={termsOutdated}
+        termsLoadFailed={termsLoadFailed}
+        onRetryTerms={retryTerms}
+        canSubmit={canSubmit}
       />
     </AuthLayout>
   );

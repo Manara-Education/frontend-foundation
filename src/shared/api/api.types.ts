@@ -23,6 +23,14 @@ export const ApiErrorCode = {
   INVALID_LESSON_POSITION: "INVALID_LESSON_POSITION",
   /** The subscription plan is no longer offered; existing subscribers keep their term. */
   SUBSCRIPTION_PLAN_RETIRED: "SUBSCRIPTION_PLAN_RETIRED",
+  /**
+   * The terms version the request consented to is not the one in force — either unknown to
+   * the server or superseded. Nothing was created. The two cases collapse into one code
+   * because the remedy is identical: read the current text and accept it again.
+   */
+  TERMS_VERSION_OUTDATED: "TERMS_VERSION_OUTDATED",
+  /** The server could not determine which terms version is current, so it refused to proceed. */
+  TERMS_UNAVAILABLE: "TERMS_UNAVAILABLE",
 } as const;
 
 export type ApiErrorCode = (typeof ApiErrorCode)[keyof typeof ApiErrorCode];
