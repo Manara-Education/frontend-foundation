@@ -21,6 +21,15 @@ export function isCourseEditorTab(value: string | undefined): value is CourseEdi
 export const paths = {
   landing: "/",
 
+  /**
+   * The published terms and conditions.
+   *
+   * Deliberately ungated. A visitor has to be able to read them before they have an account
+   * — the sign-up form links here — and a signed-in user has to be able to re-read them, so
+   * this address sits under neither `PublicOnlyRoute` nor `ProtectedRoute`.
+   */
+  terms: "/terms",
+
   login: "/login",
   register: "/register",
   forgotPassword: "/forgot-password",
