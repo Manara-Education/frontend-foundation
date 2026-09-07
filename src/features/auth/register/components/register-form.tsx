@@ -2,6 +2,7 @@ import { Mail, Lock, User } from "lucide-react";
 import { AuthCard } from "@/features/auth/components/AuthCard";
 import { FormField, PrimaryButton, LinkButton, Divider } from "@/features/auth/components/FormField";
 import type { RegisterErrors, RegisterFormState, PasswordStrength } from "../types/register.types";
+import { TermsConsentField } from "./terms-consent-field";
 import * as React from "react";
 
 interface RegisterFormProps {
@@ -10,8 +11,16 @@ interface RegisterFormProps {
   loading: boolean;
   errors: RegisterErrors;
   onChange: (k: keyof RegisterFormState) => (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onTermsAcceptedChange: (accepted: boolean) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onLoginClick: () => void;
+  /** The server refused the last attempt: the terms changed while this form was open. */
+  termsOutdated: boolean;
+  /** The current terms version could not be fetched, so no consent can be recorded. */
+  termsLoadFailed: boolean;
+  onRetryTerms: () => void;
+  /** Whether the form has everything it needs — consent given, and a version to give it for. */
+  canSubmit: boolean;
 }
 
 export function RegisterForm({
@@ -20,8 +29,13 @@ export function RegisterForm({
   loading,
   errors,
   onChange,
+  onTermsAcceptedChange,
   onSubmit,
   onLoginClick,
+  termsOutdated,
+  termsLoadFailed,
+  onRetryTerms,
+  canSubmit,
 }: RegisterFormProps) {
   return (
     <AuthCard
@@ -108,9 +122,22 @@ export function RegisterForm({
           icon={<Lock size={17} />}
         />
 
+        <TermsConsentField
+          accepted={form.termsAccepted}
+          onAcceptedChange={onTermsAcceptedChange}
+          error={errors.terms}
+          outdated={termsOutdated}
+          loadFailed={termsLoadFailed}
+          onRetryTerms={onRetryTerms}
+        />
 
         <div className="mt-1">
-          <PrimaryButton type="submit" loading={loading}>
+          {/*
+            Disabled until the box is ticked *and* we know which version is being agreed to.
+            This is the affordance, not the enforcement — the submit handler re-checks both,
+            because a disabled button is trivial to route around.
+          */}
+          <PrimaryButton type="submit" loading={loading} disabled={!canSubmit}>
             إنشاء الحساب
           </PrimaryButton>
         </div>
