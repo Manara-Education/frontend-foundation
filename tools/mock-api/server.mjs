@@ -58,6 +58,11 @@ const routes = [
   ["POST", "/api/v1/auth/verify-otp", () => ok({ message: "تم التحقق", token: "mock-reset-token" })],
   ["POST", "/api/v1/auth/reset-password", () => ok({ message: "تم تغيير كلمة المرور" })],
 
+  // ── terms ──
+  // Public and unauthenticated, like the real endpoint. The sign-up form will not submit
+  // without an answer here, so the registration screen is unusable without it.
+  ["GET", "/api/v1/terms/current", () => ok({ version: "1.0", effectiveDate: "2026-09-07" })],
+
   // ── student ──
   ["GET", "/api/v1/dashboard/student", () => ok(fx.studentDashboard)],
   ["GET", "/api/v1/student/courses", () => ok(fx.catalogue)],
