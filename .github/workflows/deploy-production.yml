@@ -54,6 +54,9 @@ permissions:
   # Reading the image manifest from GHCR to prove the tag exists before the
   # server is touched at all.
   packages: read
+  # The promotion validator reads the check runs on the tagged commit.
+  checks: read
+  actions: read
 
 # One deployment at a time. cancel-in-progress is deliberately false: cancelling
 # a run mid-way could leave .env rewritten with the service half-restarted.
@@ -75,6 +78,11 @@ jobs:
 
     # workflow_run fires on completion whatever the outcome, so a FAILED publish
     # would otherwise deploy. The conclusion has to be checked explicitly.
+    #
+    # The `workflow_dispatch ||` arm short-circuits only this check, which a
+    # manual run has nothing to evaluate against. Everything else below runs
+    # unconditionally: a manual deployment now answers the same questions an
+    # automatic one does. Previously it answered none of them beyond tag syntax.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success'
@@ -102,7 +110,35 @@ jobs:
           echo "Deploying $RAW_TAG"
 
       # ---------------------------------------------------------------------
-      # 2. Prove the image exists BEFORE touching production
+      # 2. Prove the tag deserves to be deployed
+      # ---------------------------------------------------------------------
+      # Tag syntax was previously the only question asked, and on a manual run
+      # not even the release check applied. So any semver-shaped tag, pointing
+      # anywhere, could be deployed by anyone able to dispatch this workflow.
+      #
+      # The same validator the release and publish workflows use: a published,
+      # non-draft release, still pointing at the same commit, on main, with CI
+      # green on that exact commit.
+      - name: Check out the repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate the tag before deploying it
+        id: commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          .github/scripts/validate-promotion.sh \
+            --tag "${{ steps.resolve.outputs.tag }}" \
+            --require-release \
+            --require-checks \
+            --check "Install, type-check and build" \
+            --check "Build the container image"
+
+      # ---------------------------------------------------------------------
+      # 3. Prove the image exists BEFORE touching production
       # ---------------------------------------------------------------------
       # The server pulls this tag in a moment. Resolving it here first means a
       # missing or half-published image fails on the runner, while production is
@@ -114,6 +150,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.resolve.outputs.tag }}
+          SHA: ${{ steps.commit.outputs.sha }}
         run: |
           set -euo pipefail
           IMAGE="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
@@ -136,12 +173,35 @@ jobs:
           done
 
           DIGEST="$(docker buildx imagetools inspect "$IMAGE:$TAG" --format '{{.Manifest.Digest}}')"
+
+          # The tag says which image; it does not say the image came from the
+          # commit that was just approved. Publish tags every image twice — once
+          # with the version and once with :sha-<commit> — so if those two tags
+          # do not resolve to the same digest, the version tag has been re-pushed
+          # over a different build and this deployment is not carrying the code
+          # that was validated.
+          SHA_DIGEST="$(docker buildx imagetools inspect "$IMAGE:sha-$SHA" --format '{{.Manifest.Digest}}')"
+          if [ "$DIGEST" != "$SHA_DIGEST" ]; then
+            echo "::error::$IMAGE:$TAG is $DIGEST but $IMAGE:sha-$SHA is $SHA_DIGEST."
+            echo "::error::The version tag does not point at the build for the approved commit."
+            exit 1
+          fi
+
+          # And the image's own provenance label must agree, independently of
+          # how it was tagged.
+          REVISION="$(docker buildx imagetools inspect "$IMAGE@$DIGEST" \
+                        --format '{{ index .Image.Config.Labels "org.opencontainers.image.revision" }}')"
+          if [ "$REVISION" != "$SHA" ]; then
+            echo "::error::Image $DIGEST claims revision '$REVISION', not the approved $SHA."
+            exit 1
+          fi
+
           echo "image=$IMAGE"   >> "$GITHUB_OUTPUT"
           echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
-          echo "Resolved $IMAGE:$TAG -> $DIGEST"
+          echo "Resolved $IMAGE:$TAG -> $DIGEST (revision $SHA)"
 
       # ---------------------------------------------------------------------
-      # 3. SSH
+      # 4. SSH
       # ---------------------------------------------------------------------
       # The host key is pinned rather than accepted on first sight. `ssh-keyscan`
       # into known_hosts trusts whatever answers on the day, which is the one
@@ -161,7 +221,7 @@ jobs:
           chmod 600 ~/.ssh/known_hosts
 
       # ---------------------------------------------------------------------
-      # 4. Deploy
+      # 5. Deploy
       # ---------------------------------------------------------------------
       # scripts/deploy.sh is the deployment abstraction that lives with the
       # compose file on the server: it pulls the exact tag, rewrites only the
@@ -177,14 +237,23 @@ jobs:
           HOST: ${{ secrets.HETZNER_HOST }}
           USER: ${{ secrets.HETZNER_USER }}
           TAG: ${{ steps.resolve.outputs.tag }}
+          DIGEST: ${{ steps.image.outputs.digest }}
         run: |
           set -euo pipefail
+          # The digest was resolved and then thrown away before: the server was
+          # asked to pull a tag and re-resolved it itself, so what production ran
+          # was whatever the tag meant at pull time rather than what was approved
+          # here. deploy.sh now takes the digest and pins repo:tag@digest.
+          if [[ ! "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::Refusing to deploy without a resolved digest (got '$DIGEST')."
+            exit 1
+          fi
           ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes \
               -o ConnectTimeout=20 "$USER@$HOST" \
-              "cd /opt/manara && ./scripts/deploy.sh frontend '$TAG'"
+              "cd /opt/manara && ./scripts/deploy.sh frontend '$TAG' '$DIGEST'"
 
       # ---------------------------------------------------------------------
-      # 5. Prove it from outside
+      # 6. Prove it from outside
       # ---------------------------------------------------------------------
       # deploy.sh asserts the container reports healthy, but the frontend
       # container's own healthcheck is `caddy validate` — it proves the config

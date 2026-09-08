@@ -36,9 +36,12 @@ on:
       # "v1.2.3-oops".
       - "v[0-9]+.[0-9]+.[0-9]+"
 
-# contents: write is required to create the release. Nothing else is granted.
+# contents: write is required to create the release. checks/actions read let the
+# promotion validator see whether CI actually passed on the tagged commit.
 permissions:
   contents: write
+  checks: read
+  actions: read
 
 # Two pushes of the same tag must never race to create the same release.
 concurrency:
@@ -60,34 +63,24 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Validate the tag
+      # Semver, real-tag resolution, ancestry of main, and green CI on the exact
+      # tagged commit — all in one place, shared with publish.yml and
+      # deploy-production.yml so the three cannot drift apart.
+      #
+      # Deliberately WITHOUT --require-release: this is the workflow that
+      # creates the release, so demanding one already exist would be circular.
+      # The other three questions are still asked, and the CI requirement is
+      # new — a tag on an unreviewed or failing commit previously produced a
+      # GitHub Release, and through publishing, a deployable image.
+      - name: Validate the tag before releasing it
         env:
-          TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
-          if ! printf '%s' "$TAG" | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'; then
-            echo "::error::'$TAG' is not vMAJOR.MINOR.PATCH (for example v1.4.0)."
-            exit 1
-          fi
-          echo "Releasing $TAG"
-
-      # A production release must be reachable from main. Without this check a
-      # tag pushed from a feature branch would produce a GitHub Release — and,
-      # through the publishing workflow, a deployable image — from code that was
-      # never reviewed or merged.
-      - name: Refuse to release a commit that is not on main
-        env:
-          TAG: ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
-          git fetch origin main --quiet
-          if git merge-base --is-ancestor "$TAG" origin/main; then
-            echo "$TAG is on main."
-          else
-            echo "::error::$TAG is not an ancestor of main. Releases are cut from main only:"
-            echo "::error::merge develop into main first, then tag the merge commit."
-            exit 1
-          fi
+          .github/scripts/validate-promotion.sh \
+            --tag "${{ github.ref_name }}" \
+            --require-checks \
+            --check "Install, type-check and build" \
+            --check "Build the container image"
 
       # --generate-notes builds the body from the PRs merged since the previous
       # tag, grouped by the categories in .github/release.yml.
