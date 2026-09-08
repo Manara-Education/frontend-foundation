@@ -59,6 +59,146 @@
 
 		# Nothing here needs a camera, a microphone or a location.
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+
+		# --- Content policy, REPORT-ONLY -----------------------------------
+		#
+		# This header blocks nothing. A browser that reads it evaluates every
+		# script, style, frame, image and connection against the policy, writes
+		# a violation to its console for anything the policy would have
+		# refused — and then loads that resource anyway. Until the header is
+		# renamed (step 4 below), the application is exactly as exposed to
+		# injected content as it was before this line existed. Its only job
+		# right now is to produce evidence.
+		#
+		# `Report-Only` is also the only responsible first move here, because
+		# one of the origins below cannot be seen from this repository at all:
+		# see i.vimeocdn.com under img-src.
+		#
+		# Two things this deliberately does not use. There is no nonce: a nonce
+		# has to be minted per request by whatever renders the page, and this
+		# is a static bundle served off disk — there is no render. And there is
+		# no wildcard host or `unsafe-inline` on script-src; if a page turns out
+		# to need one, that is a defect to fix in the page, not a hole to open
+		# here.
+		#
+		# Every origin was read out of the source and then confirmed in the
+		# built output, because the two can disagree:
+		#
+		#   script-src 'self'
+		#     The built index.html carries no inline <script> whatsoever — the
+		#     entry is one hashed module file and nothing else — so this needs
+		#     neither a hash nor a nonce. Checked in dist/, not assumed: a
+		#     bundler that inlines a preload polyfill would have changed the
+		#     answer.
+		#
+		#   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com
+		#     'unsafe-inline' is the honest ceiling for style, and for style
+		#     only. Fourteen inline <style> blocks ship: the html/body height
+		#     reset in index.html, plus thirteen rendered by components — the
+		#     shimmer keyframes on seven skeleton screens, the rich-content and
+		#     rich-content-editor stylesheets, the create-course responsive
+		#     rules and a spinner keyframe. Hashing them was considered and
+		#     rejected: the list would have to be regenerated whenever any one
+		#     of those strings is edited, and a stale entry fails silently as
+		#     an unstyled screen. Removing them is a real option later, and
+		#     dropping 'unsafe-inline' is the reward for doing it.
+		#     fonts.googleapis.com is where src/styles/fonts.css @imports the
+		#     Cairo stylesheet from; the @import survives into the built CSS.
+		#
+		#   font-src 'self' https://fonts.gstatic.com
+		#     Where that Google stylesheet resolves its font files to. The
+		#     built CSS contains no @font-face and no data: font of its own.
+		#
+		#   img-src 'self' data: blob: https://img.youtube.com https://i.vimeocdn.com
+		#     'self' is the backend's /uploads, which is where course covers
+		#     and banner images live. data: is the inline SVG placeholder in
+		#     ImageWithFallback. blob: is the local preview an instructor sees
+		#     after picking a cover image and before it is uploaded.
+		#     img.youtube.com is the YouTube still the video adapter derives
+		#     from a video id. i.vimeocdn.com appears nowhere in this
+		#     repository: Vimeo stills are addressed by content hash rather
+		#     than by id, so the backend fetches one from Vimeo's oEmbed
+		#     response and stores it on the lesson. A policy derived from the
+		#     frontend alone would have shipped without it and broken every
+		#     Vimeo thumbnail — which is the single best argument for the
+		#     header being report-only first.
+		#
+		#   frame-src https://www.youtube.com https://player.vimeo.com
+		#     The two embed origins the video adapters build. Note what is
+		#     absent: a youtube-nocookie.com link is accepted as INPUT, but the
+		#     adapter always rewrites it to www.youtube.com, so allowing that
+		#     origin would widen the policy for a request nothing makes.
+		#
+		#   connect-src 'self'
+		#     Every request goes through the shared api-client, whose base URL
+		#     is the relative /api. There is no fetch, WebSocket or
+		#     EventSource anywhere in the application.
+		#
+		#   media-src / object-src / worker-src 'none'
+		#     There is no <video>, <audio>, <object>, <embed> or worker in the
+		#     tree. A lesson whose video Manara cannot place renders a
+		#     "cannot play this" panel rather than a media element.
+		#
+		#   base-uri 'self' / form-action 'self'
+		#     No <base> element exists, and every form submits through an
+		#     onSubmit handler rather than an action attribute, so neither is
+		#     a way to redirect the page or its posts elsewhere.
+		#
+		#   frame-ancestors 'none'
+		#     The same statement X-Frame-Options makes above, in the header
+		#     that replaced it. Both are sent, because the older one is what an
+		#     older browser obeys.
+		#
+		# Reports are not collected anywhere. `report-uri`/`report-to` is
+		# deliberately absent: nothing in this stack accepts a violation
+		# report, and pointing the browser at a path that the SPA fallback
+		# answers with index.html would look like collection while discarding
+		# every report. Until an endpoint exists, violations are visible only
+		# in one browser console at a time.
+		#
+		# What has to happen before this protects anything:
+		#   1. Stand up a violation collector and name it in this header, so
+		#      reports arrive from real sessions instead of from someone
+		#      watching a console.
+		#   2. Observe for at least one full release cycle — no less than two
+		#      weeks, and long enough to include one instructor authoring pass
+		#      and one learner run through a course containing a YouTube
+		#      lesson, a Vimeo lesson and a rich-content lesson.
+		#   3. Close out every violation as either a missing origin (added
+		#      here, with the same evidence standard as the list above) or a
+		#      defect in the application (fixed there).
+		#   4. When a week goes by with nothing unresolved, rename this header
+		#      to `Content-Security-Policy`. That one word is the entire
+		#      change; the directives do not move.
+		Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://img.youtube.com https://i.vimeocdn.com; media-src 'none'; object-src 'none'; worker-src 'none'; frame-src https://www.youtube.com https://player.vimeo.com; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+
+		# --- HSTS: prepared, NOT enabled -----------------------------------
+		#
+		# Commented out on purpose, and it must stay that way until someone
+		# with the authority to make the call says otherwise. HSTS is the one
+		# header here that cannot be taken back: once a browser has seen it,
+		# that browser refuses plain HTTP to this host for max-age seconds no
+		# matter what the server sends afterwards. Reverting the line does not
+		# undo it — the instruction is already cached in every visitor's
+		# browser.
+		#
+		# Preconditions, all of which must hold before the line is
+		# uncommented:
+		#   * The site is genuinely reachable over HTTPS on the final,
+		#     canonical hostname, with a certificate that renews.
+		#   * That hostname is settled. Turning HSTS on for a name that is
+		#     later moved or retired strands every browser that saw it.
+		#   * The alternate-hostname redirect block at the bottom of this file
+		#     is serving HTTPS too, since a visitor may arrive there first.
+		#
+		# Then start at one day, confirm nothing broke, and raise it in steps.
+		# Deliberately without `preload`, which is a submission to a list
+		# baked into browser binaries and is slow and painful to reverse, and
+		# deliberately without `includeSubDomains`, which would bind every
+		# present and future subdomain — api., staging., anything — to HTTPS
+		# whether or not it is ready.
+		#
+		# Strict-Transport-Security "max-age=86400"
 	}
 
 	encode zstd gzip
