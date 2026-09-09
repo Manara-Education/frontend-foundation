@@ -132,11 +132,22 @@ else
 fi
 
 # Cross-check from outside the container, so a doctored /proc cannot pass this.
-top_user="$(docker top "$FRONT" -o user,args 2>/dev/null | awk 'NR==2{print $1}')"
-note "docker top reports the server running as: ${top_user:-<unknown>}"
-[ "$top_user" = "1001" ] || [ "$top_user" = "caddy" ] \
-  && ok "docker top agrees the process is non-root" \
-  || bad "docker top reports '${top_user}' — expected 1001/caddy"
+#
+# Plain `docker top` with no ps flags on purpose: `-o user,args` is passed
+# through to the container's ps, and busybox rejects it — which killed this
+# script outright the first time, under `set -e`, after the real check above had
+# already passed. The first column of the default output is the user.
+top_user="$(docker top "$FRONT" 2>/dev/null | awk 'NR==2{print $1}' || true)"
+if [ -z "$top_user" ]; then
+  # Not a pass and not a failure: the authoritative check is /proc/1/status
+  # above, and this one is corroboration. Silence about it would be the only
+  # wrong answer.
+  note "docker top could not report a user; relying on /proc/1/status above"
+elif [ "$top_user" = "1001" ] || [ "$top_user" = "caddy" ]; then
+  ok "docker top agrees the process is non-root (${top_user})"
+else
+  bad "docker top reports '${top_user}' — expected 1001 or caddy"
+fi
 
 # =============================================================================
 head_ "2b. Negative control — the sysctl is load-bearing"
@@ -274,8 +285,14 @@ again="$(docker exec "$FRONT" sh -c 'cat /data/caddy/certificates/keep.pem 2>/de
                              || bad "certificate store did not persist across restart"
 hc="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$FRONT")"
 note "healthcheck status: $hc"
-[ "$hc" = "healthy" ] || [ "$hc" = "starting" ] && ok "healthcheck runs as non-root (status: $hc)" \
-                                                || bad "healthcheck status: $hc"
+# Written as if/elif rather than `[ a ] || [ b ] && ok || bad`, which does not
+# mean what it reads like: && binds to the whole || chain, so the `bad` branch
+# fires on a passing case too.
+if [ "$hc" = "healthy" ] || [ "$hc" = "starting" ]; then
+  ok "healthcheck runs as the non-root user (status: $hc)"
+else
+  bad "healthcheck status is '$hc' — the check cannot run as uid 1001"
+fi
 
 printf '\n\033[1m== Summary ==\033[0m\n  passed: %d\n  failed: %d\n' "$pass" "$fail"
 [ "$fail" -eq 0 ] || exit 1

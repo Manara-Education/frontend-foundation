@@ -95,23 +95,39 @@ WORKDIR /caddy
 # These four modules require each other, so the floor for one raises the floor
 # for the next. Resolved from their published go.mod files:
 #
-#     x/crypto v0.55.0  (CVE-2026-56854, needs >= v0.55.0) requires
-#                       x/net v0.57.0 and x/text v0.41.0
-#     x/net    v0.57.0  (CVE-2026-46600, needs >= v0.56.0) — raised from the
-#                       advisory floor by x/crypto above, not by choice
-#     x/text   v0.41.0  (CVE-2026-56852, needs >= v0.39.0) — likewise
-#     grpc     v1.83.1  (CVE-2026-84304, CVE-2026-84445, GHSA-hrxh-6v49-42gf;
-#                       its own x/net v0.55.0 and x/text v0.37.0 requirements
-#                       are below the versions above, so they lose to them)
+#     x/crypto v0.56.0  requires x/net v0.57.0 and x/text v0.41.0
+#     x/net    v0.57.0  raised from its own advisory floor by x/crypto, not
+#                       by choice
+#     x/text   v0.41.0  likewise
+#     grpc     v1.83.2
 #
-# Newer releases exist (x/crypto v0.57.0, x/net v0.59.0, x/text v0.42.0,
-# grpc v1.83.2) and would be equally safe. This set is preferred because every
-# extra version is API-change risk inside quic-go and Caddy's TLS stack that
-# only a failed build would catch. Raising them is a one-line edit.
-ARG X_CRYPTO=v0.55.0
+# THE VERSIONS THE ORIGINAL REPORT NAMED ARE NOT SUFFICIENT. Both corrections
+# below come from querying OSV for what each proposed version itself carries,
+# rather than from trusting the "fixed version" column of the report:
+#
+#   * grpc: the report said CVE-2026-84445 is fixed in v1.82.2, and it is — on
+#     the 1.82 branch. GHSA-2v4p-qf9q-27wj has three affected ranges, and the
+#     one covering 1.83.x is fixed in v1.83.2. A build pinned to v1.83.1 is
+#     still affected, which the Security Gate duly caught and blocked on.
+#   * x/crypto: v0.55.0 clears CVE-2026-56854, the CRITICAL the report is
+#     about, and carries two further HIGH advisories of its own that the
+#     report never mentions — CVE-2026-78662 and CVE-2026-56855, both fixed
+#     in v0.56.0.
+#
+# One advisory is knowingly left standing. GO-2026-5932 affects every version
+# of x/crypto ever released and has no fix: it says the x/crypto/openpgp
+# package is unmaintained and unsafe by design. It is import-scoped, and Caddy
+# imports no part of openpgp, so it cannot reach this binary. It is recorded
+# here rather than suppressed, because "there is no fixed version" is a fact
+# about the module and not a reason to stop looking at it.
+#
+# Newer releases exist (x/crypto v0.57.0, x/net v0.59.0, x/text v0.42.0). This
+# set is preferred because every extra version is API-change risk inside
+# quic-go and Caddy's TLS stack that only a failed build would catch.
+ARG X_CRYPTO=v0.56.0
 ARG X_NET=v0.57.0
 ARG X_TEXT=v0.41.0
-ARG GRPC=v1.83.1
+ARG GRPC=v1.83.2
 
 # The standard module set is what makes this Caddy equivalent to the official
 # binary: file_server, reverse_proxy, encode, headers, the TLS/ACME stack and
@@ -183,10 +199,13 @@ check() { # module  advisory-minimum
   fi
   echo "  ok  $1 $got (needs >= v$2)"
 }
-check golang.org/x/crypto     0.55.0
+# The floors below are the ADVISORY minimums for the branch this build is on,
+# which is not always the number the advisory headline quotes — see the grpc
+# and x/crypto notes above.
+check golang.org/x/crypto     0.56.0
 check golang.org/x/net        0.56.0
 check golang.org/x/text       0.39.0
-check google.golang.org/grpc  1.83.1
+check google.golang.org/grpc  1.83.2
 SH
 
 # -trimpath keeps build-host paths out of the binary. CGO is off so the result
