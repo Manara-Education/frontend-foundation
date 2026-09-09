@@ -1,0 +1,90 @@
+# Runtime verification for the container this repository ships.
+#
+# The Security Gate scans the image; it cannot tell you whether the image
+# SERVES. Those are different questions, and the change that made Caddy run as
+# uid 1001 is exactly the kind that passes every scan and breaks production:
+# a process that cannot bind port 80, or cannot write the certificate store it
+# inherited from the years it ran as root, fails at run time and nowhere else.
+#
+# This workflow is deliberately NOT the required check. It is evidence, it runs
+# on the same commit, and it is meant to be read alongside the gate — not to
+# become a second gate whose failure modes nobody understands.
+name: Verify container runtime
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-runtime-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  runtime:
+    name: Non-root Caddy, ingress and volumes
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out the assessed revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Read the Node version
+        id: node
+        run: echo "version=$(cat .nvmrc)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      # Built and loaded locally, never pushed. The tag below is what the
+      # verification script exercises, so the bytes under test are the bytes
+      # this commit produces.
+      - name: Build the image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          push: false
+          load: true
+          tags: frontend-foundation:runtime-verify
+          build-args: |
+            NODE_VERSION=${{ steps.node.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Recorded so the runtime evidence and the scan evidence can be tied to
+      # the same image rather than to two builds that merely share a commit.
+      - name: Record the image identity
+        run: |
+          set -euo pipefail
+          {
+            echo "### Image under test"
+            echo
+            echo '```'
+            docker image inspect frontend-foundation:runtime-verify --format '{{println "id:      " .Id}}{{println "created: " .Created}}{{println "arch:    " .Architecture "/" .Os}}{{println "user:    " .Config.User}}{{print "exposed: "}}{{range $p,$_ := .Config.ExposedPorts}}{{$p}} {{end}}'
+            echo
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # No continue-on-error and no `|| true`: a runtime regression must fail
+      # this job. The script exits non-zero if any check fails.
+      - name: Verify the running container
+        run: bash scripts/verify-container-runtime.sh frontend-foundation:runtime-verify
+
+      - name: Publish the result
+        if: always()
+        run: |
+          set -euo pipefail
+          {
+            echo
+            echo "Verified: non-root serving process, privileged-port bind, SPA and deep links,"
+            echo "hashed-asset caching, /api reverse proxy, security headers, admin API not public,"
+            echo "certificate storage on a fresh volume, the root-owned-volume migration, and"
+            echo "persistence across a restart."
+          } >> "$GITHUB_STEP_SUMMARY"
