@@ -316,13 +316,30 @@ jobs:
           cp intel/intelligence-manifest.json "reports/${{ matrix.assess.slug }}/"
           cp intel/kev.json                   "reports/${{ matrix.assess.slug }}/"
 
-      - name: Upload the manifest and the SBOM
+      # TWO uploads, not one with two paths. This is not tidiness.
+      #
+      # upload-artifact roots an artifact at the least common ancestor of the
+      # paths it is given. With a single `reports/` the root IS reports/, so the
+      # artifact contains `<slug>/...` and every scanner's artifact merges into
+      # the same shape. Adding `sbom/` to the same upload moves the ancestor up
+      # to the workspace, and the manifest silently arrives at
+      # `assessment/reports/<slug>/` while the evaluator looks in
+      # `assessment/<slug>/` — which is exactly how the gate came to report
+      # "Intelligence manifest is missing" for a manifest that had been
+      # generated perfectly well.
+      - name: Upload the manifest for the gate
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: report-intelligence-${{ matrix.assess.slug }}
-          path: |
-            reports/
-            sbom/
+          path: reports/
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload the SBOM as the inventory of record
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbom-${{ matrix.assess.slug }}
+          path: sbom/
           retention-days: 30
           if-no-files-found: error
 
