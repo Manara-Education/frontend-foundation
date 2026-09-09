@@ -82,19 +82,35 @@ ARG CADDY_VERSION=v2.11.4
 WORKDIR /caddy
 
 # The module versions are pinned here, in one place, next to the advisory that
-# forced each one. Each is the LOWEST release that satisfies every advisory
-# affecting that module — not the newest available. That is deliberate: newer
-# releases exist (x/crypto v0.57.0, x/net v0.59.0, x/text v0.42.0,
-# grpc v1.83.2), and they would be equally safe, but each extra version is
-# API-change risk in a dependency of quic-go and of Caddy's TLS stack that
-# nothing here would catch except a failed build. The smallest change that
-# closes every reported advisory is the one with the least to go wrong.
+# forced each one. They are the lowest COHERENT set — lowest, but chosen
+# together rather than one at a time.
 #
-# Raising any of these is a one-line edit; the build and the image scan in CI
-# are what prove the result, so a bump is cheap when a future advisory needs it.
+# That distinction is not pedantry; picking them independently fails outright.
+# The first attempt used the bare minimum each advisory named — x/net v0.56.0
+# for CVE-2026-46600 — and the build stopped with:
+#
+#     go: golang.org/x/crypto@v0.55.0 requires golang.org/x/net@v0.57.0,
+#         not golang.org/x/net@v0.56.0
+#
+# These four modules require each other, so the floor for one raises the floor
+# for the next. Resolved from their published go.mod files:
+#
+#     x/crypto v0.55.0  (CVE-2026-56854, needs >= v0.55.0) requires
+#                       x/net v0.57.0 and x/text v0.41.0
+#     x/net    v0.57.0  (CVE-2026-46600, needs >= v0.56.0) — raised from the
+#                       advisory floor by x/crypto above, not by choice
+#     x/text   v0.41.0  (CVE-2026-56852, needs >= v0.39.0) — likewise
+#     grpc     v1.83.1  (CVE-2026-84304, CVE-2026-84445, GHSA-hrxh-6v49-42gf;
+#                       its own x/net v0.55.0 and x/text v0.37.0 requirements
+#                       are below the versions above, so they lose to them)
+#
+# Newer releases exist (x/crypto v0.57.0, x/net v0.59.0, x/text v0.42.0,
+# grpc v1.83.2) and would be equally safe. This set is preferred because every
+# extra version is API-change risk inside quic-go and Caddy's TLS stack that
+# only a failed build would catch. Raising them is a one-line edit.
 ARG X_CRYPTO=v0.55.0
-ARG X_NET=v0.56.0
-ARG X_TEXT=v0.39.0
+ARG X_NET=v0.57.0
+ARG X_TEXT=v0.41.0
 ARG GRPC=v1.83.1
 
 # The standard module set is what makes this Caddy equivalent to the official
@@ -130,6 +146,47 @@ go get \
   "golang.org/x/text@${X_TEXT}" \
   "google.golang.org/grpc@${GRPC}"
 go mod tidy
+
+# ASSERT THE RESULT, DO NOT TRUST THE REQUEST.
+#
+# `go get` states a floor; minimal version selection decides the actual answer
+# from the whole requirement graph, and a transitive requirement can land a
+# module somewhere other than where this file asked. Since the entire point of
+# this stage is which versions end up compiled in, the outcome is checked
+# rather than assumed — and it is checked against the ADVISORY minimum, not
+# against the ARG, so this still catches the case where someone edits an ARG
+# down to a vulnerable version.
+# The comparison is done field by field in awk rather than with `sort -V`,
+# because this runs under busybox and a silently missing -V would make every
+# check pass. awk is doing arithmetic on integers here; there is nothing to
+# misinterpret.
+check() { # module  advisory-minimum
+  # A module that is not in the graph at all cannot carry its advisory into the
+  # binary, so that is a pass and says so — not a build failure, and not a
+  # silent skip either. The image scan is the backstop for both cases.
+  if ! got="$(go list -m -f '{{.Version}}' "$1" 2>/dev/null)" || [ -z "$got" ]; then
+    echo "  --  $1 is not in the module graph; nothing to fix"
+    return 0
+  fi
+  if ! awk -v a="${got#v}" -v b="$2" 'BEGIN{
+        na=split(a,x,"."); nb=split(b,y,".");
+        n = (na>nb ? na : nb);
+        for (i=1; i<=n; i++) {
+          xi = (i<=na ? x[i]+0 : 0); yi = (i<=nb ? y[i]+0 : 0);
+          if (xi > yi) exit 0;      # resolved is newer  -> satisfied
+          if (xi < yi) exit 1;      # resolved is older  -> FAIL
+        }
+        exit 0                      # equal              -> satisfied
+      }'; then
+    echo "FATAL: $1 resolved to $got, below the v$2 that fixes its advisory." >&2
+    exit 1
+  fi
+  echo "  ok  $1 $got (needs >= v$2)"
+}
+check golang.org/x/crypto     0.55.0
+check golang.org/x/net        0.56.0
+check golang.org/x/text       0.39.0
+check google.golang.org/grpc  1.83.1
 SH
 
 # -trimpath keeps build-host paths out of the binary. CGO is off so the result
