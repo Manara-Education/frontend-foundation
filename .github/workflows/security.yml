@@ -1104,6 +1104,13 @@ jobs:
           git -C bootstrap remote add origin "https://github.com/${{ github.repository }}.git"
           git -C bootstrap -c protocol.version=2 fetch -q --depth 1 origin "$PR_HEAD_SHA"
           git -C bootstrap checkout -q FETCH_HEAD -- .github/security
+          # mkdir first. The checkout above asked the base branch for a path it
+          # does not have, so neither .github/security NOR .github exists here,
+          # and GNU cp will not create a missing parent for the destination —
+          # it fails with "cannot create directory". (BSD cp on a developer's
+          # Mac does create it, which is exactly why this passed locally and
+          # failed on the runner.)
+          mkdir -p .github/security
           cp -R bootstrap/.github/security/. .github/security/
           echo "source=pull-request-bootstrap" >> "$GITHUB_OUTPUT"
 
