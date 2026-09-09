@@ -788,15 +788,35 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "reports/$SLUG"
-          # analyze writes <language>.sarif into the output directory. Copy rather
-          # than glob-and-hope, and fail if it is not there — a missing SARIF is a
-          # scanner that did not run, which must not reach the gate as "clean".
-          src="codeql-results/javascript-typescript.sarif"
-          if [ ! -f "$src" ]; then
-            echo "::error::CodeQL produced no SARIF at $src."
+          # The SARIF filename is DISCOVERED, not assumed.
+          #
+          # `analyze` does not name this file after the language you passed to
+          # `init`. Here init gets `javascript-typescript` and the file comes out
+          # as `javascript.sarif` — which is precisely how this step failed on
+          # its first real run. Globbing survives that mismatch and any future
+          # rename; *.quality.sarif is excluded because CodeQL's code-quality
+          # queries are not a reason to block a merge.
+          #
+          # Finding nothing remains a hard failure: a missing SARIF is a scanner
+          # that did not run, and must never reach the gate as "clean".
+          shopt -s nullglob
+          candidates=()
+          for f in codeql-results/*.sarif; do
+            case "$f" in *.quality.sarif) continue ;; esac
+            candidates+=("$f")
+          done
+          if [ "${#candidates[@]}" -eq 0 ]; then
+            echo "::error::CodeQL produced no security SARIF in codeql-results/."
             ls -la codeql-results || true
             exit 1
           fi
+          if [ "${#candidates[@]}" -gt 1 ]; then
+            echo "::error::Expected one security SARIF, found ${#candidates[@]}: ${candidates[*]}"
+            exit 1
+          fi
+          src="${candidates[0]}"
+          echo "Using $src"
+          test -s "$src"
           cp "$src" "reports/$SLUG/sast-codeql.sarif"
 
           python3 -c "

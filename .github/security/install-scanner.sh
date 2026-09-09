@@ -80,9 +80,18 @@ echo "Installing $tool from $base/$asset"
 # --retry covers a flaky runner network. It does NOT cover a wrong file: that is
 # what the digest below is for, and a retry never turns a bad digest into a good
 # one.
-curl --fail --silent --show-error --location --retry 3 --retry-delay 5 \
+#
+# --retry-all-errors is load-bearing, not decoration. On its own, --retry only
+# covers timeouts and a specific set of 5xx responses; a connection reset
+# mid-transfer exits 35 immediately and is NOT retried. That is exactly how this
+# step failed on its first real run — `curl: (35) Recv failure: Connection reset
+# by peer` — turning one dropped TCP connection into a failed security
+# assessment for the whole pull request.
+curl --fail --silent --show-error --location \
+     --retry 3 --retry-delay 5 --retry-all-errors \
      --max-time 300 -o "$workdir/$asset" "$base/$asset"
-curl --fail --silent --show-error --location --retry 3 --retry-delay 5 \
+curl --fail --silent --show-error --location \
+     --retry 3 --retry-delay 5 --retry-all-errors \
      --max-time 60  -o "$workdir/$sums"  "$base/$sums"
 
 # Check 1 — the release's own checksums file must vouch for this exact filename.
