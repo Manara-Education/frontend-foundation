@@ -1,0 +1,239 @@
+# Re-assesses open pull requests against today's vulnerability intelligence.
+#
+# THE PROBLEM
+# -----------
+# A pull request that went green yesterday is not green today if an advisory
+# landed overnight. GitHub has no concept of a check expiring: a required check
+# that once concluded `success` counts as passing forever, however old it is.
+# The daily `Security` scan covers `develop` and `main`, but it does not touch
+# open pull requests, so a stale green Security Gate would let one merge without
+# anyone doing anything wrong.
+#
+# This runs half an hour after the daily scan and asks, for every open PR: has
+# this head commit been assessed within the policy's freshness window? If not,
+# it re-runs the PR's own Security workflow.
+#
+# WHAT IT DOES NOT FIX, and cannot
+# --------------------------------
+# There is still a window between the last assessment and the moment someone
+# clicks merge. This narrows that window to at most one day, or to the moment
+# someone dispatches this workflow by hand. It does not close it, and nothing
+# available in GitHub Actions would. That limitation is written down in
+# docs/security/SECURITY_CI.md rather than glossed over here.
+#
+# WHY THIS DESIGN IS SAFE
+# -----------------------
+# This workflow runs in the TRUSTED default-branch context. It therefore NEVER
+# checks out, builds, installs, or executes pull-request code — not once, not in
+# a sandbox, not "just to read the lockfile". Its entire body is GitHub API
+# calls plus one sparse checkout of this repository's own `.github/security`
+# directory from the branch it is running on.
+#
+# The actual scanning happens when the re-run it triggers executes in the pull
+# request's own ordinary `pull_request` context, which is the untrusted-but-
+# sandboxed context that already exists and already has no secrets and a
+# read-only token. Privileged orchestration here, untrusted execution there,
+# and no path between them. That separation is the whole reason this can hold
+# `actions: write` at all.
+
+name: Security revalidation
+
+on:
+  # Half an hour after the daily `Security` scan at 03:23 UTC, so the intelligence
+  # it re-runs against is the freshly published set rather than yesterday's.
+  schedule:
+    - cron: '53 3 * * *'
+  # For the moment an advisory drops and waiting until tomorrow is not acceptable.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-revalidate
+  cancel-in-progress: false
+
+jobs:
+  revalidate:
+    name: Revalidate open pull requests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      # Reading .github/security/policy.yml from this branch.
+      contents: read
+      # Re-running the Security workflow on a pull request. This is the only
+      # write scope in the file and it is what the trusted/untrusted split above
+      # exists to justify.
+      actions: write
+      # Listing the open pull requests.
+      pull-requests: read
+
+    steps:
+      # Only the policy. Nothing from any pull request is fetched anywhere in
+      # this job.
+      - name: Check out this repository's security policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/security/policy.yml
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      # Read from the policy rather than hardcoded, so raising or lowering the
+      # freshness window in one reviewed place changes this too. A gate whose
+      # revalidation cadence disagreed with its own staleness threshold would
+      # produce exactly the stale-but-passing check this workflow exists to stop.
+      - name: Read the freshness window from the policy
+        id: policy
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet --disable-pip-version-check 'PyYAML==6.0.3'
+          hours="$(python3 -c "
+          import yaml
+          p = yaml.safe_load(open('.github/security/policy.yml'))
+          print(int((p.get('intelligence') or {})['max_age_hours']))")"
+          echo "max_age_hours=$hours" >> "$GITHUB_OUTPUT"
+          echo "Assessments older than ${hours}h are stale."
+
+      - name: Refresh the assessment of every open pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          MAX_AGE_HOURS: ${{ steps.policy.outputs.max_age_hours }}
+          # A safety valve. If something goes wrong upstream — a mass rebase, a
+          # dependency bot opening thirty PRs — this must not turn into a
+          # self-inflicted denial of service against the Actions quota.
+          MAX_RERUNS: '10'
+          # The workflow to re-run, by filename. Matching on the file rather than
+          # the display name means renaming the workflow's `name:` does not
+          # silently stop revalidation.
+          WORKFLOW_FILE: 'security.yml'
+        run: |
+          set -euo pipefail
+
+          # Open PRs targeting a branch this gate guards. A PR into some other
+          # branch is not going to reach production through a path the gate is
+          # responsible for.
+          gh pr list --repo "$REPO" --state open --limit 100 \
+            --json number,headRefOid,baseRefName,title,isDraft \
+            --jq '[.[] | select(.baseRefName == "develop" or .baseRefName == "main")]' \
+            > prs.json
+
+          total="$(jq 'length' prs.json)"
+          echo "Open pull requests into develop/main: $total"
+
+          refreshed=0; current=0; failed=0; rerun_count=0
+          : > refreshed.txt; : > current.txt; : > failed.txt
+
+          for i in $(seq 0 $(( total - 1 )) ); do
+            [ "$total" -eq 0 ] && break
+
+            number="$(jq -r ".[$i].number"     prs.json)"
+            head="$(jq -r   ".[$i].headRefOid" prs.json)"
+
+            # The most recent Security run for THIS head commit. `head_sha`
+            # rather than branch: a PR that was pushed to since the last run has
+            # a different head, and the old run assessed a tree that no longer
+            # exists.
+            runs="$(gh api \
+              "repos/$REPO/actions/workflows/$WORKFLOW_FILE/runs?head_sha=$head&per_page=20" \
+              --jq '[.workflow_runs[] | {id, status, conclusion, updated_at, created_at}]' \
+              2>/dev/null || echo '[]')"
+
+            newest="$(echo "$runs" | jq -c 'sort_by(.created_at) | last // empty')"
+
+            reason=""
+            if [ -z "$newest" ]; then
+              reason="never assessed at this head commit"
+            else
+              status="$(echo "$newest" | jq -r '.status')"
+              if [ "$status" != "completed" ]; then
+                # Already running. Re-running it now would cancel nothing and
+                # queue a duplicate; the in-flight run is by definition current.
+                echo "PR #$number: assessment in progress, leaving it alone."
+                printf '%s\n' "#$number — assessment already in progress" >> current.txt
+                current=$(( current + 1 ))
+                continue
+              fi
+
+              updated="$(echo "$newest" | jq -r '.updated_at')"
+              age_h="$(python3 -c "
+          import datetime as dt, sys
+          t = dt.datetime.fromisoformat('$updated'.replace('Z', '+00:00'))
+          print(round((dt.datetime.now(dt.timezone.utc) - t).total_seconds() / 3600, 1))")"
+
+              if python3 -c "import sys; sys.exit(0 if float('$age_h') > float('$MAX_AGE_HOURS') else 1)"; then
+                reason="last assessed ${age_h}h ago, window is ${MAX_AGE_HOURS}h"
+              else
+                echo "PR #$number: assessed ${age_h}h ago, still current."
+                printf '%s\n' "#$number — assessed ${age_h}h ago, within the ${MAX_AGE_HOURS}h window" >> current.txt
+                current=$(( current + 1 ))
+                continue
+              fi
+            fi
+
+            if [ "$rerun_count" -ge "$MAX_RERUNS" ]; then
+              echo "::warning::Re-run cap of $MAX_RERUNS reached; PR #$number was not refreshed."
+              printf '%s\n' "#$number — not refreshed: per-run cap of $MAX_RERUNS reached ($reason)" >> failed.txt
+              failed=$(( failed + 1 ))
+              continue
+            fi
+
+            if [ -z "$newest" ]; then
+              # No run exists to re-run. Dispatching `security.yml` against the
+              # PR head is NOT possible — workflow_dispatch takes a branch or
+              # tag, and the assessment has to happen in the PR's own context
+              # anyway. An empty commit or a re-push is the human remedy, so say
+              # so rather than pretending this was handled.
+              echo "::warning::PR #$number has no Security run at $head."
+              printf '%s\n' "#$number — no Security run exists at \`${head:0:12}\`; push to the branch (or close and reopen the PR) to have it assessed" >> failed.txt
+              failed=$(( failed + 1 ))
+              continue
+            fi
+
+            run_id="$(echo "$newest" | jq -r '.id')"
+            echo "PR #$number: re-running Security run $run_id ($reason)."
+            if gh api --method POST "repos/$REPO/actions/runs/$run_id/rerun" --silent 2>/dev/null; then
+              printf '%s\n' "#$number — re-run triggered ($reason)" >> refreshed.txt
+              refreshed=$(( refreshed + 1 ))
+              rerun_count=$(( rerun_count + 1 ))
+            else
+              echo "::warning::Could not re-run $run_id for PR #$number."
+              printf '%s\n' "#$number — re-run could not be triggered for run \`$run_id\` ($reason)" >> failed.txt
+              failed=$(( failed + 1 ))
+            fi
+          done
+
+          # Pull request titles and branch names are attacker-controlled text and
+          # are deliberately NOT reproduced here. The PR number is enough to find
+          # one, and it is a number.
+          {
+            echo "### Security revalidation"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Open PRs into develop/main | $total |"
+            echo "| Re-assessment triggered | $refreshed |"
+            echo "| Already current | $current |"
+            echo "| Could not be refreshed | $failed |"
+            echo "| Freshness window | ${MAX_AGE_HOURS}h |"
+            echo
+            if [ -s refreshed.txt ]; then
+              echo "**Re-assessment triggered**"; echo; sed 's/^/- /' refreshed.txt; echo
+            fi
+            if [ -s current.txt ]; then
+              echo "**Already current**"; echo; sed 's/^/- /' current.txt; echo
+            fi
+            if [ -s failed.txt ]; then
+              echo "**Needs attention**"; echo; sed 's/^/- /' failed.txt; echo
+            fi
+            echo "A refreshed pull request is not yet a passing one — the re-run has only"
+            echo "just started. Check the Security Gate on the pull request itself."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # A PR that could not be refreshed is worth a visible warning, but it is
+          # NOT a failure of this workflow: nothing merged and nothing was
+          # weakened. The protection that matters is the required Security Gate
+          # check on the PR, which is unaffected either way.
+          if [ "$failed" -gt 0 ]; then
+            echo "::warning::$failed pull request(s) could not be re-assessed. See the summary."
+          fi

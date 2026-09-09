@@ -1,0 +1,1235 @@
+# The mandatory Security Gate for frontend-foundation.
+#
+# WHAT THIS IS
+# ------------
+# Every scanner below writes a report. Nothing in this file decides whether the
+# report is acceptable. That judgement belongs entirely to
+# `.github/security/evaluate.py`, reading `.github/security/policy.yml`, and it
+# happens in exactly one job — "Security Gate". Keeping the decision out of the
+# YAML is the point: a threshold that lives in a policy file cannot drift away
+# from the enforcement, and changing what blocks a merge is a reviewed diff to a
+# CODEOWNERS-owned file rather than a quiet edit to a shell one-liner.
+#
+# THE FAILURE MODE THIS EXISTS TO PREVENT
+# ---------------------------------------
+# A security pipeline's characteristic bug is not "it missed a CVE". It is that a
+# scanner crashed, or ran against an empty database, or was skipped, and the
+# check went green anyway — because "no findings were written" and "nothing was
+# found" look identical from the outside. So:
+#
+#   * every scanner's job result is recorded and handed to the evaluator, which
+#     treats failure / cancellation / skip as blocking, never as clean;
+#   * a missing or unparseable report blocks;
+#   * intelligence older than the policy's window blocks;
+#   * `|| true` and `continue-on-error` appear nowhere on a scanning path.
+#
+# NO MERGE QUEUE
+# --------------
+# `merge_group` is deliberately absent. It was verified on 2026-09-09 that this
+# repository has no merge queue configured on any branch; adding the trigger
+# would create a check context that never reports, which is worse than not having
+# it. If a merge queue is ever enabled, `merge_group` must be added here at the
+# same time, or queued merges will bypass this gate entirely.
+#
+# THE CHECK NAME IS LOAD-BEARING
+# ------------------------------
+# The aggregate job is named exactly `Security Gate`. That string is the check
+# context the branch rulesets require, the string `dependabot-auto-merge.yml`
+# looks for, and the string `deploy-production.yml` refuses to deploy without.
+# No other job in any workflow in this repository may use that name, and renaming
+# this one silently disables all three.
+#
+# WHAT A PR CAN AND CANNOT INFLUENCE
+# ----------------------------------
+# The scanner jobs check out the assessed revision and run `npm ci` and
+# `docker build` on it, so they execute pull-request-controlled code. That is
+# unavoidable for a build-and-scan pipeline and is why they carry no secrets and
+# a read-only token. The mitigations that matter are elsewhere:
+#
+#   * the "Security Gate" job never checks out pull-request code. It reads the
+#     policy, the exceptions and the evaluator from the BASE branch, so a PR
+#     cannot lower its own threshold or grant itself an exception in the same
+#     run that is judging it;
+#   * reports are inert data. The evaluator parses them for identifiers, versions
+#     and scores and never executes anything they contain.
+#
+# The residual gap, stated plainly rather than papered over: on `pull_request`,
+# GitHub reads this workflow file from the merge of the PR into its base, so a
+# pull request that edits THIS FILE changes the pipeline that judges it. No
+# setting inside the file can fix that. It is mitigated by CODEOWNERS on
+# `/.github/workflows/` and by human review, and it is documented in
+# docs/security/SECURITY_CI.md.
+
+name: Security
+
+on:
+  pull_request:
+    branches: [develop, main]
+    # `edited` is included because a PR can be retargeted from a branch this
+    # gate does not guard to one it does, and because the base-branch change
+    # arrives as `edited` rather than as a new `opened`.
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+  push:
+    branches: [develop, main]
+  # Daily. The pre-merge scan can only ever reason from advisories that existed
+  # when it ran; this is the mechanism that catches what it could not have known.
+  schedule:
+    - cron: '23 3 * * *'
+  workflow_dispatch:
+
+# Least privilege at the top. Nothing here is granted `contents: write`: this
+# workflow reads the repository and writes artifacts, and a security gate that
+# can push to the branch it is judging is a gate with a hole in it.
+permissions:
+  contents: read
+
+# A newer push to a pull request supersedes the previous assessment of it.
+# Branch validation on `develop` / `main` and scheduled runs are NEVER cancelled:
+# those runs are what `deploy-production.yml` looks for when deciding whether a
+# release commit was assessed, and a cancelled run leaves no verdict at all.
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # ===========================================================================
+  # Plan — which revisions this run assesses, pinned before anything else moves
+  # ===========================================================================
+  # GitHub only ever schedules a workflow on the DEFAULT branch, so a nightly
+  # `schedule` run would assess `develop` and silently leave `main` — the branch
+  # production is released from — unscanned. Nothing warns about that; the run
+  # just looks green.
+  #
+  # So the set of assessed revisions is computed here, explicitly, and every
+  # downstream job is a matrix over it. On a schedule that set is BOTH branches,
+  # each resolved to the exact commit SHA at plan time, so the report names a
+  # revision rather than a moving branch name.
+  plan:
+    name: Plan the assessment
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      assess: ${{ steps.build.outputs.assess }}
+      summary: ${{ steps.build.outputs.summary }}
+    steps:
+      - name: Decide which revisions to assess
+        id: build
+        env:
+          # Every value below is untrusted metadata and reaches the shell only as
+          # an environment variable. Nothing is interpolated into `run:`, so a
+          # branch named `$(curl evil)` is a string and not a command.
+          EVENT: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_HEAD_REF: ${{ github.head_ref }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT" = "schedule" ]; then
+            # Resolve both protected branches to commits NOW. Reading them later,
+            # per job, would let a push between jobs split one "assessment" across
+            # two different trees.
+            dev_sha="$(gh api "repos/$REPO/commits/develop" --jq '.sha')"
+            main_sha="$(gh api "repos/$REPO/commits/main"    --jq '.sha')"
+            assess="$(jq -cn --arg ds "$dev_sha" --arg ms "$main_sha" '[
+              {ref: "develop", revision: $ds, slug: "develop"},
+              {ref: "main",    revision: $ms, slug: "main"}
+            ]')"
+          elif [ "$EVENT" = "pull_request" ]; then
+            # The assessed revision is the PR head. See the honesty note in
+            # docs/security/SECURITY_CI.md: this assesses the branch as proposed,
+            # not the result of merging it into its base.
+            assess="$(jq -cn --arg r "$PR_HEAD_REF" --arg v "$PR_HEAD_SHA" --arg n "$PR_NUMBER" '[
+              {ref: $r, revision: $v, slug: ("pr-" + $n)}
+            ]')"
+          else
+            # push / workflow_dispatch. `github.sha` is the commit the event
+            # names, which for a dispatch against a tag is the tagged commit —
+            # that is how deploy-production.yml asks for a release to be assessed.
+            assess="$(jq -cn --arg r "$REF_NAME" --arg v "$SHA" '[
+              {ref: $r, revision: $v, slug: ($r | gsub("[^A-Za-z0-9_.-]"; "-"))}
+            ]')"
+          fi
+
+          {
+            echo "assess<<__JSON__"
+            echo "$assess"
+            echo "__JSON__"
+          } >> "$GITHUB_OUTPUT"
+
+          summary="$(echo "$assess" | jq -r 'map("\(.ref)@\(.revision[0:12])") | join(", ")')"
+          echo "summary=$summary" >> "$GITHUB_OUTPUT"
+          echo "Assessing: $summary"
+
+  # ===========================================================================
+  # Intelligence — establish, and record, what the scanners are allowed to know
+  # ===========================================================================
+  # Runs before every scanner. It downloads the OSV offline databases, pulls
+  # Trivy's database, fetches the CISA KEV catalogue and proves the GitHub
+  # Advisory Database is reachable, then writes a manifest saying exactly what
+  # was retrieved, when, and at which upstream revision.
+  #
+  # If a mandatory source cannot be established, refresh-intelligence.py exits
+  # non-zero and this job fails. That is the whole design: a scan with no data
+  # must be a red check, never an empty green one.
+  intelligence:
+    name: Intelligence (${{ matrix.assess.slug }})
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        assess: ${{ fromJSON(needs.plan.outputs.assess) }}
+    steps:
+      - name: Check out the assessed revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.assess.revision }}
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install the pinned scanners
+        run: |
+          set -euo pipefail
+          bash .github/security/install-scanner.sh trivy
+          bash .github/security/install-scanner.sh osv-scanner
+          bash .github/security/install-scanner.sh gitleaks
+
+      # The SBOM is taken over the INSTALLED tree, so `npm ci` has to run first.
+      - name: Install dependencies from the lockfile
+        run: npm ci
+
+      - name: Refresh vulnerability intelligence
+        env:
+          # Used only to raise the rate limit on the public advisories endpoint.
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 .github/security/refresh-intelligence.py \
+            --out intel \
+            --ecosystems npm \
+            --probe-file package-lock.json \
+            --repository "${{ github.repository }}"
+
+      # ---------------------------------------------------------------------
+      # Prove the snapshot we are about to publish is actually usable.
+      # ---------------------------------------------------------------------
+      # This check exists because of a measured failure, not a hypothetical one.
+      # osv-scanner 2.5.1 given an unreadable offline database prints
+      # "could not load db for npm ecosystem" to stderr, EXITS 0, and reports
+      # zero vulnerabilities. Reproduced locally on 2026-09-09: the same lockfile
+      # that yields 6 findings against an intact database yields 0 against a
+      # truncated one, with a success exit code both times.
+      #
+      # refresh-intelligence.py checks that a database file exists; it does not
+      # check that the file is a valid archive. A truncated download — a runner
+      # that ran out of disk is the easy way to get one — therefore produces a
+      # manifest saying "ok" over a database that matches nothing.
+      #
+      # So the archive is opened here and required to contain records. A broken
+      # snapshot fails this job loudly instead of being published as evidence.
+      - name: Prove the OSV snapshot is a usable database
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, pathlib, sys, zipfile
+          dbs = sorted(pathlib.Path("intel/osv-db").rglob("*.zip"))
+          if not dbs:
+              sys.exit("::error::No OSV database was written at all.")
+          bad = []
+          for db in dbs:
+              size = db.stat().st_size
+              try:
+                  entries = len(zipfile.ZipFile(db).namelist())
+              except zipfile.BadZipFile as exc:
+                  bad.append(f"{db}: not a valid zip ({exc}); {size} bytes")
+                  continue
+              if entries == 0:
+                  bad.append(f"{db}: valid zip but contains no advisory records")
+                  continue
+              print(f"  {db}: {size} bytes, {entries} advisory records")
+          if bad:
+              for line in bad:
+                  print(f"::error title=Unusable OSV snapshot::{line}")
+              sys.exit(
+                  "The published intelligence snapshot would make every dependency "
+                  "scan report zero findings for the wrong reason."
+              )
+          PY
+
+      # ---------------------------------------------------------------------
+      # Inventory
+      # ---------------------------------------------------------------------
+      # WHAT THIS SBOM COVERS: the npm dependency tree as installed by `npm ci`
+      # from package-lock.json — direct and transitive, dev and production —
+      # plus files Trivy recognises in the working tree.
+      #
+      # WHAT IT DOES NOT COVER, and must not be read as covering: anything the
+      # browser loads at runtime that is not in this tree (a CDN script, an
+      # embedded video player, a font host), the base images used to build and
+      # serve the app (those are inventoried by the container scan instead), and
+      # any dependency resolved at build time by a tool other than npm. An SBOM
+      # is a statement about a build, not about a running page.
+      - name: Generate the CycloneDX SBOM
+        run: |
+          set -euo pipefail
+          mkdir -p sbom
+          trivy fs . \
+            --format cyclonedx \
+            --output "sbom/frontend-foundation.cdx.json"
+          python3 -c "
+          import json,sys
+          d=json.load(open('sbom/frontend-foundation.cdx.json'))
+          n=len(d.get('components') or [])
+          print(f'SBOM components: {n}')
+          sys.exit('::error::The SBOM resolved no components.' if n == 0 else 0)"
+
+      # The full snapshot: manifest + KEV catalogue + the OSV databases. This is
+      # the artifact `deps-osv` consumes, so the data the gate reasons about is
+      # provably the data whose freshness was recorded.
+      - name: Upload the intelligence snapshot
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: intelligence-${{ matrix.assess.slug }}
+          path: intel/
+          retention-days: 7
+          if-no-files-found: error
+
+      # A second, deliberately small copy of just the manifest and the KEV
+      # catalogue. The full snapshot is a few hundred megabytes of OSV database;
+      # the gate job needs the manifest and nothing else, and downloading the
+      # databases into it would add minutes to every run for no benefit.
+      - name: Stage the manifest for the gate
+        run: |
+          set -euo pipefail
+          mkdir -p "reports/${{ matrix.assess.slug }}"
+          cp intel/intelligence-manifest.json "reports/${{ matrix.assess.slug }}/"
+          cp intel/kev.json                   "reports/${{ matrix.assess.slug }}/"
+
+      - name: Upload the manifest and the SBOM
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: report-intelligence-${{ matrix.assess.slug }}
+          path: |
+            reports/
+            sbom/
+          retention-days: 30
+          if-no-files-found: error
+
+  # ===========================================================================
+  # deps-osv — full dependency scan against the recorded OSV snapshot
+  # ===========================================================================
+  deps-osv:
+    name: Dependencies · OSV (${{ matrix.assess.slug }})
+    needs: [plan, intelligence]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        assess: ${{ fromJSON(needs.plan.outputs.assess) }}
+    steps:
+      - name: Check out the assessed revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.assess.revision }}
+          persist-credentials: false
+
+      - name: Install the pinned scanner
+        run: bash .github/security/install-scanner.sh osv-scanner
+
+      - name: Download the recorded intelligence snapshot
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: intelligence-${{ matrix.assess.slug }}
+          path: intel
+
+      # ---------------------------------------------------------------------
+      # Negative control — does this database actually match anything?
+      # ---------------------------------------------------------------------
+      # The scan below reports "0 vulnerabilities" for two completely different
+      # reasons, and osv-scanner exits 0 for both of them: because the tree is
+      # clean, or because it could not load its database. Measured on
+      # 2026-09-09 with osv-scanner 2.5.1 — an unreadable archive produces a
+      # stderr line, exit code 0, and an empty results array.
+      #
+      # This repository's package-lock.json currently has zero known
+      # vulnerabilities, so a clean result here is exactly what a totally broken
+      # scanner would also produce. The only way to tell them apart is to ask the
+      # same database a question with a known answer.
+      #
+      # lodash 4.17.15 carries long-published, never-withdrawn advisories. If
+      # scanning it against this snapshot finds nothing, the snapshot is not
+      # working and this job fails — rather than the repository being declared
+      # clean by a scanner that was reading an empty file.
+      - name: Negative control on the offline database
+        env:
+          OSV_SCANNER_LOCAL_DB_CACHE_DIRECTORY: ${{ github.workspace }}/intel/osv-db
+        run: |
+          set -euo pipefail
+          control="$(mktemp -d)"
+          cat > "$control/package-lock.json" <<'JSON'
+          {
+            "name": "osv-negative-control", "version": "1.0.0",
+            "lockfileVersion": 3, "requires": true,
+            "packages": {
+              "": {"name": "osv-negative-control", "version": "1.0.0",
+                   "dependencies": {"lodash": "4.17.15"}},
+              "node_modules/lodash": {"version": "4.17.15"}
+            }
+          }
+          JSON
+
+          # Exit 1 means "found vulnerabilities", which is the expected outcome
+          # here, so the exit code is captured rather than allowed to end the job.
+          set +e
+          osv-scanner scan source \
+            --lockfile="$control/package-lock.json" \
+            --offline-vulnerabilities \
+            --format=json --output-file="$control/control.json"
+          set -e
+
+          found="$(python3 -c "
+          import json
+          d = json.load(open('$control/control.json'))
+          print(sum(len(p.get('vulnerabilities') or [])
+                    for r in d.get('results', []) for p in r.get('packages', [])))")"
+          echo "Negative control matched $found advisories for lodash 4.17.15."
+          if [ "$found" -eq 0 ]; then
+            echo "::error title=OSV database is not working::The offline snapshot matched"
+            echo "::error::nothing against a package with long-standing published advisories."
+            echo "::error::A 'clean' dependency scan from this database would be meaningless."
+            exit 1
+          fi
+
+      # ---------------------------------------------------------------------
+      # The real scan
+      # ---------------------------------------------------------------------
+      # `--offline-vulnerabilities` WITHOUT `--download-offline-databases`: the
+      # scanner is confined to the snapshot the intelligence job recorded, so the
+      # data the gate reasons about is the data whose freshness it asserted. With
+      # the download flag it would silently fetch its own fresher-or-staler copy
+      # and the manifest would be describing something else.
+      #
+      # EXIT CODES. osv-scanner exits 1 when it FINDS vulnerabilities. That is a
+      # successful scan with findings, not a scanner error, and the difference
+      # decides whether the gate reports "blocking finding" or "scanner failed" —
+      # so it is distinguished explicitly. `|| true` would erase both.
+      - name: Scan package-lock.json
+        env:
+          OSV_SCANNER_LOCAL_DB_CACHE_DIRECTORY: ${{ github.workspace }}/intel/osv-db
+          SLUG: ${{ matrix.assess.slug }}
+        run: |
+          set -euo pipefail
+          mkdir -p "reports/$SLUG"
+
+          set +e
+          osv-scanner scan source \
+            --lockfile=package-lock.json \
+            --offline-vulnerabilities \
+            --format=json \
+            --output-file="reports/$SLUG/deps-osv.osv.json" 2> osv.stderr
+          code=$?
+          set -e
+          cat osv.stderr
+
+          # Belt and braces on top of the negative control: the scanner logs this
+          # exact line when it gives up on a database, and it does so while
+          # exiting 0. Treat it as the scanner error it is.
+          if grep -q 'could not load db' osv.stderr; then
+            echo "::error title=OSV database not loaded::osv-scanner could not load its"
+            echo "::error::offline database. Its zero findings mean nothing."
+            exit 1
+          fi
+
+          case "$code" in
+            0) echo "osv-scanner: no vulnerabilities found." ;;
+            1) echo "osv-scanner: vulnerabilities found. The gate decides what that means." ;;
+            *) echo "::error::osv-scanner failed with exit code $code — this is a scanner"
+               echo "::error::error, not a finding, and the gate must not read it as clean."
+               exit "$code" ;;
+          esac
+
+          python3 -c "
+          import json
+          d = json.load(open('reports/$SLUG/deps-osv.osv.json'))
+          pk = sum(len(r.get('packages', [])) for r in d.get('results', []))
+          vu = sum(len(p.get('vulnerabilities') or [])
+                   for r in d.get('results', []) for p in r.get('packages', []))
+          print(f'Scanned {pk} packages, {vu} vulnerability records.')"
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: report-deps-osv-${{ matrix.assess.slug }}
+          path: reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+  # ===========================================================================
+  # deps-trivy — the second opinion on the same dependency tree
+  # ===========================================================================
+  # Not redundant with OSV. Trivy carries vendor and distro advisory feeds that
+  # OSV lags on, and the two disagreeing is itself information. Running one
+  # scanner and calling the inventory covered is how a known-vulnerable package
+  # stays green for a week.
+  deps-trivy:
+    name: Dependencies · Trivy (${{ matrix.assess.slug }})
+    needs: [plan, intelligence]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        assess: ${{ fromJSON(needs.plan.outputs.assess) }}
+    steps:
+      - name: Check out the assessed revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.assess.revision }}
+          persist-credentials: false
+
+      - name: Install the pinned scanner
+        run: bash .github/security/install-scanner.sh trivy
+
+      # Keyed by the day so the database is reused within a run and across the
+      # jobs of one day, and re-pulled tomorrow. This is only safe because the
+      # evaluator independently checks the database's own build timestamp against
+      # the policy window and blocks if it is stale — the cache cannot quietly
+      # extend the freshness window, it can only avoid re-downloading inside it.
+      - name: Cache the Trivy database
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ runner.os }}-0.74.0-${{ github.run_id }}
+          restore-keys: |
+            trivy-db-${{ runner.os }}-0.74.0-
+
+      - name: Scan the dependency tree
+        env:
+          SLUG: ${{ matrix.assess.slug }}
+        run: |
+          set -euo pipefail
+          mkdir -p "reports/$SLUG/intel"
+
+          # --exit-code is deliberately NOT set. Trivy must report everything it
+          # finds and leave the verdict to the evaluator; a scanner that fails the
+          # job on HIGH would apply a second, invisible policy alongside
+          # policy.yml, and the two would drift.
+          trivy fs . \
+            --scanners vuln \
+            --format json \
+            --output "reports/$SLUG/deps-trivy.trivy.json"
+
+      # Trivy ships its own OCI-distributed database and cannot be pointed at the
+      # snapshot the intelligence job recorded, so it writes back the revision it
+      # actually used instead. evaluate.py holds this to the same freshness window
+      # as everything in the manifest and BLOCKS if the fragment is missing —
+      # without it, a job could scan against a week-old database and still look
+      # clean.
+      - name: Record the Trivy database revision
+        env:
+          SLUG: ${{ matrix.assess.slug }}
+        run: |
+          set -euo pipefail
+          mkdir -p "reports/$SLUG/intel"
+          trivy version --format json > "reports/$SLUG/intel/deps-trivy.trivydb.json"
+          cat "reports/$SLUG/intel/deps-trivy.trivydb.json"
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: report-deps-trivy-${{ matrix.assess.slug }}
+          path: reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+  # ===========================================================================
+  # config-trivy — the Dockerfile and the workflows themselves
+  # ===========================================================================
+  # This one scans the files that decide how everything else runs. A container
+  # that runs as root and a workflow that leaks a token are both misconfigurations
+  # no dependency scanner would ever see.
+  config-trivy:
+    name: Configuration · Trivy (${{ matrix.assess.slug }})
+    needs: [plan, intelligence]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        assess: ${{ fromJSON(needs.plan.outputs.assess) }}
+    steps:
+      - name: Check out the assessed revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.assess.revision }}
+          persist-credentials: false
+
+      - name: Install the pinned scanner
+        run: bash .github/security/install-scanner.sh trivy
+
+      - name: Cache the Trivy database
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ runner.os }}-0.74.0-${{ github.run_id }}
+          restore-keys: |
+            trivy-db-${{ runner.os }}-0.74.0-
+
+      # Covers the Dockerfile and every file under .github/workflows. There is no
+      # docker-compose.yml in this repository — the compose that maps ports and
+      # mounts volumes lives in Manara-Education/manara-infrastructure and is NOT
+      # scanned by this gate. That is a real coverage boundary, not an oversight,
+      # and it is written down in docs/security/SECURITY_CI.md.
+      - name: Scan the configuration
+        env:
+          SLUG: ${{ matrix.assess.slug }}
+        run: |
+          set -euo pipefail
+          mkdir -p "reports/$SLUG/intel"
+          trivy config . \
+            --format json \
+            --output "reports/$SLUG/config-trivy.trivy.json"
+
+          python3 -c "
+          import json
+          d = json.load(open('reports/$SLUG/config-trivy.trivy.json'))
+          rows = [m for r in (d.get('Results') or []) for m in (r.get('Misconfigurations') or [])]
+          from collections import Counter
+          print('Misconfigurations by severity:', dict(Counter(m.get('Severity') for m in rows)))"
+
+      - name: Record the Trivy database revision
+        env:
+          SLUG: ${{ matrix.assess.slug }}
+        run: |
+          set -euo pipefail
+          mkdir -p "reports/$SLUG/intel"
+          trivy version --format json > "reports/$SLUG/intel/config-trivy.trivydb.json"
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: report-config-trivy-${{ matrix.assess.slug }}
+          path: reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+  # ===========================================================================
+  # image-trivy — the artifact that actually reaches production
+  # ===========================================================================
+  # Scanning package-lock.json says nothing about the Alpine packages in the
+  # Caddy runtime layer, and those are what an attacker reaching the container
+  # actually finds. The image is built here exactly as ci.yml builds it —
+  # including NODE_VERSION from .nvmrc, so the scanned image is the one this
+  # repository would ship, not a default-Node approximation of it.
+  #
+  # NO REGISTRY CREDENTIALS. This job runs on pull requests, where the token is
+  # read-only and Dependabot runs receive Dependabot secrets rather than Actions
+  # secrets. The image is built, loaded into the local daemon, scanned and
+  # discarded; nothing is pushed and nothing is deployed. Publishing is
+  # publish.yml's job, and it happens from `main` only.
+  image-trivy:
+    name: Container image · Trivy (${{ matrix.assess.slug }})
+    needs: [plan, intelligence]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        assess: ${{ fromJSON(needs.plan.outputs.assess) }}
+    steps:
+      - name: Check out the assessed revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.assess.revision }}
+          persist-credentials: false
+
+      - name: Install the pinned scanner
+        run: bash .github/security/install-scanner.sh trivy
+
+      - name: Cache the Trivy database
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ runner.os }}-0.74.0-${{ github.run_id }}
+          restore-keys: |
+            trivy-db-${{ runner.os }}-0.74.0-
+
+      # Same mechanism ci.yml uses, so the two cannot disagree about which Node
+      # the image is built with.
+      - name: Read the Node version
+        id: node
+        run: echo "version=$(cat .nvmrc)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - name: Build the image locally
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          push: false
+          load: true
+          tags: frontend-foundation:security-scan
+          build-args: |
+            NODE_VERSION=${{ steps.node.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan the built image
+        env:
+          SLUG: ${{ matrix.assess.slug }}
+        run: |
+          set -euo pipefail
+          mkdir -p "reports/$SLUG/intel"
+          trivy image frontend-foundation:security-scan \
+            --scanners vuln,secret \
+            --format json \
+            --output "reports/$SLUG/image-trivy.trivy.json"
+
+      - name: Record the Trivy database revision
+        env:
+          SLUG: ${{ matrix.assess.slug }}
+        run: |
+          set -euo pipefail
+          mkdir -p "reports/$SLUG/intel"
+          trivy version --format json > "reports/$SLUG/intel/image-trivy.trivydb.json"
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: report-image-trivy-${{ matrix.assess.slug }}
+          path: reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+  # ===========================================================================
+  # sast-codeql — static analysis of the application's own code
+  # ===========================================================================
+  sast-codeql:
+    name: Static analysis · CodeQL (${{ matrix.assess.slug }})
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      # Publishing SARIF to the code scanning API. This is the ONLY extra scope
+      # granted anywhere in this workflow, it is granted to one job, and the
+      # publication it enables is explicitly not what decides the gate.
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        assess: ${{ fromJSON(needs.plan.outputs.assess) }}
+    steps:
+      - name: Check out the assessed revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.assess.revision }}
+          persist-credentials: false
+
+      - name: Initialise CodeQL
+        uses: github/codeql-action/init@486fec2a3ea2626afcd8c7e9208b4f515078dd7e # codeql-bundle-v2.26.4
+        with:
+          languages: javascript-typescript
+          # `security-extended` over the default `security` pack: this repository
+          # is public and the extra queries cost minutes, not money.
+          queries: security-extended
+
+      # ---------------------------------------------------------------------
+      # Analysis and publication are two separate steps ON PURPOSE.
+      # ---------------------------------------------------------------------
+      # `upload: never` here, plus an explicit publication step below, so that:
+      #
+      #   * THIS step's success or failure means "the analysis ran or it did
+      #     not". If CodeQL cannot analyse the code, this job fails and the gate
+      #     records a scanner error;
+      #   * the SARIF written to `output:` is what the gate actually reads, so
+      #     the verdict depends on a file on disk and not on an API call;
+      #   * a code scanning API outage cannot fail a merge, and equally cannot
+      #     hide an analysis that broke. Those two failures are different things
+      #     and `upload: always` would collapse them into one.
+      - name: Analyse
+        uses: github/codeql-action/analyze@486fec2a3ea2626afcd8c7e9208b4f515078dd7e # codeql-bundle-v2.26.4
+        with:
+          category: /language:javascript-typescript
+          output: codeql-results
+          upload: never
+
+      # Optional publication, so findings appear in the Security tab and get
+      # dismissal tracking. `continue-on-error` is correct here and ONLY here:
+      # this step publishes a result the gate has already read from disk.
+      - name: Publish the SARIF to code scanning
+        if: always()
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@486fec2a3ea2626afcd8c7e9208b4f515078dd7e # codeql-bundle-v2.26.4
+        with:
+          sarif_file: codeql-results
+          category: /language:javascript-typescript
+
+      - name: Stage the SARIF for the gate
+        env:
+          SLUG: ${{ matrix.assess.slug }}
+        run: |
+          set -euo pipefail
+          mkdir -p "reports/$SLUG"
+          # analyze writes <language>.sarif into the output directory. Copy rather
+          # than glob-and-hope, and fail if it is not there — a missing SARIF is a
+          # scanner that did not run, which must not reach the gate as "clean".
+          src="codeql-results/javascript-typescript.sarif"
+          if [ ! -f "$src" ]; then
+            echo "::error::CodeQL produced no SARIF at $src."
+            ls -la codeql-results || true
+            exit 1
+          fi
+          cp "$src" "reports/$SLUG/sast-codeql.sarif"
+
+          python3 -c "
+          import json
+          d = json.load(open('reports/$SLUG/sast-codeql.sarif'))
+          n = sum(len(r.get('results') or []) for r in d.get('runs', []))
+          print(f'CodeQL results: {n}')"
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: report-sast-codeql-${{ matrix.assess.slug }}
+          path: reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+  # ===========================================================================
+  # secrets-gitleaks — credentials in the tree and in the PR's own commits
+  # ===========================================================================
+  secrets-gitleaks:
+    name: Secrets · gitleaks (${{ matrix.assess.slug }})
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        assess: ${{ fromJSON(needs.plan.outputs.assess) }}
+    steps:
+      # Full history. `gitleaks git` walks commits, so a shallow clone would scan
+      # a handful of them and report a clean tree it never looked at.
+      - name: Check out the assessed revision with history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.assess.revision }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install the pinned scanner
+        run: bash .github/security/install-scanner.sh gitleaks
+
+      # ---------------------------------------------------------------------
+      # `gitleaks git`, NOT `gitleaks dir`.
+      # ---------------------------------------------------------------------
+      # Verified on 2026-09-09: `gitleaks dir` reads the working tree including
+      # files git ignores. On a runner that has installed dependencies or built
+      # the app that means node_modules/ and dist/, which are full of other
+      # people's test fixtures and example keys. The result is a pile of findings
+      # about files this repository does not contain — and since a detected
+      # secret blocks outright under policy.yml, that is not a cosmetic problem:
+      # it is a gate that cries wolf until someone switches it off.
+      #
+      # `gitleaks git` scans what is actually committed, which is the only thing
+      # this repository is answerable for.
+      #
+      # --redact so a matched value never reaches the log. The report records the
+      # rule, the file and the line; the secret itself is not printed, echoed, or
+      # written into the artifact in the clear.
+      - name: Scan the committed history
+        env:
+          SLUG: ${{ matrix.assess.slug }}
+        run: |
+          set -euo pipefail
+          mkdir -p "reports/$SLUG"
+
+          # Exit 1 means leaks were found. Anything else is a scanner error.
+          set +e
+          gitleaks git . \
+            --redact \
+            --no-banner \
+            --report-format json \
+            --report-path "reports/$SLUG/secrets-gitleaks.gitleaks.json"
+          code=$?
+          set -e
+
+          case "$code" in
+            0) echo "gitleaks: no secrets in the committed history." ;;
+            1) echo "gitleaks: findings recorded. The gate decides what that means." ;;
+            *) echo "::error::gitleaks failed with exit code $code — a scanner error, not"
+               echo "::error::a clean result."
+               exit "$code" ;;
+          esac
+
+      # On a pull request, also scan the range the PR actually proposes. The
+      # history scan above covers what is already committed on the branch; this
+      # is the narrower question "does this PR introduce a secret", asked
+      # directly, and it is the one a reviewer cares about.
+      #
+      # Both SHAs come through env: rather than being interpolated into the shell.
+      - name: Scan the pull request's commit range
+        if: github.event_name == 'pull_request'
+        env:
+          SLUG: ${{ matrix.assess.slug }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          # The base commit has to be present locally for the range to resolve.
+          git fetch --no-tags --quiet origin "$BASE_SHA" || true
+
+          set +e
+          gitleaks git . \
+            --redact \
+            --no-banner \
+            --log-opts="${BASE_SHA}..${HEAD_SHA}" \
+            --report-format json \
+            --report-path "reports/$SLUG/secrets-gitleaks-range.gitleaks.json"
+          code=$?
+          set -e
+
+          case "$code" in
+            0) echo "gitleaks: no secrets introduced by this pull request." ;;
+            1) echo "gitleaks: this pull request introduces findings." ;;
+            *) echo "::error::gitleaks range scan failed with exit code $code."
+               exit "$code" ;;
+          esac
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: report-secrets-gitleaks-${{ matrix.assess.slug }}
+          path: reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+  # ===========================================================================
+  # deps-diff-review — what this pull request changes about the dependency tree
+  # ===========================================================================
+  # PULL REQUESTS ONLY, and this is the single report policy.yml declares
+  # non-applicable to other events. That is not a convenience: on a push to a
+  # branch there is no "difference" to review, and the evaluator encodes exactly
+  # this one allowance rather than accepting any skip it is handed.
+  #
+  # It queries GitHub's Advisory Database live, at job time, which is a genuinely
+  # different source from the OSV snapshot the other jobs use. It also sees only
+  # what the PR CHANGED — it cannot see a vulnerability newly disclosed in a
+  # dependency the PR did not touch, which is why it supplements full dependency
+  # scanning and never replaces it.
+  deps-diff-review:
+    name: Dependency review (${{ matrix.assess.slug }})
+    needs: plan
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+    strategy:
+      fail-fast: false
+      matrix:
+        assess: ${{ fromJSON(needs.plan.outputs.assess) }}
+    steps:
+      - name: Check out the assessed revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.assess.revision }}
+          persist-credentials: false
+
+      # The action enforces its own threshold and annotates the PR. Its verdict
+      # is useful feedback but it is NOT the gate: the gate reads the report
+      # written below, through the same policy as every other scanner.
+      - name: Review the dependency difference
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+
+      # The action does not write a machine-readable file, so the same comparison
+      # is fetched from the API it is built on and flattened into one record per
+      # vulnerability. Without this the findings would live only in that job's
+      # log and never reach the register or the report.
+      - name: Record the dependency difference
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SLUG: ${{ matrix.assess.slug }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p "reports/$SLUG"
+
+          gh api "repos/$REPO/dependency-graph/compare/${BASE_SHA}...${HEAD_SHA}" \
+            > diff.json
+
+          jq '[ .[]
+                | . as $c
+                | ($c.vulnerabilities // [])[]
+                | {
+                    name: $c.name,
+                    version: $c.version,
+                    severity: .severity,
+                    advisory_ghsa_id: .advisory_ghsa_id,
+                    advisory_summary: .advisory_summary,
+                    advisory_url: .advisory_url
+                  } ]' diff.json > "reports/$SLUG/deps-diff-review.depreview.json"
+
+          echo "Dependency changes with advisories: $(jq 'length' "reports/$SLUG/deps-diff-review.depreview.json")"
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: report-deps-diff-review-${{ matrix.assess.slug }}
+          path: reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+  # ===========================================================================
+  # Security Gate — the one job whose result means anything
+  # ===========================================================================
+  # `name: Security Gate` is the required check context. Do not rename it.
+  #
+  # `if: always()` so it runs even when a scanner failed — that is precisely the
+  # case it must judge. `needs:` every scanner, so a scanner that did not run
+  # cannot be missed.
+  #
+  # This job never checks out pull-request code. It reads the policy, the
+  # exceptions and the evaluator from the BASE branch, so a pull request cannot
+  # lower its own threshold or grant itself an exception in the run that is
+  # judging it. Reports arrive as artifacts and are treated as inert data.
+  gate:
+    name: Security Gate
+    needs:
+      - plan
+      - intelligence
+      - deps-osv
+      - deps-trivy
+      - config-trivy
+      - image-trivy
+      - sast-codeql
+      - secrets-gitleaks
+      - deps-diff-review
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # ---------------------------------------------------------------------
+      # The trusted half: what decides.
+      # ---------------------------------------------------------------------
+      # On a pull request this is the base branch's commit, NOT the PR's. On
+      # every other event it is the commit being assessed, which is already on a
+      # protected branch. Only `.github/security` is fetched, because that is all
+      # the decision needs.
+      - name: Check out the deciding policy from the base branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          sparse-checkout: .github/security
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      # BOOTSTRAP. The very first pull request that introduces this gate has a
+      # base branch that does not carry `.github/security` yet, so the checkout
+      # above yields nothing to evaluate with. Rather than fail that one PR
+      # forever, the PR's own copy is used and the substitution is announced
+      # loudly — in the log, in the step summary, and in the report. After this
+      # lands on `develop` the condition can never be true again on a PR into it.
+      - name: Establish the evaluator
+        id: evaluator
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ -f .github/security/evaluate.py ]; then
+            echo "source=base" >> "$GITHUB_OUTPUT"
+            echo "The gate is using the policy and evaluator from the base branch."
+            exit 0
+          fi
+
+          if [ -z "${PR_HEAD_SHA:-}" ]; then
+            echo "::error::.github/security/evaluate.py is missing from the assessed"
+            echo "::error::revision and there is no pull request to bootstrap from."
+            exit 1
+          fi
+
+          echo "::warning title=Security Gate bootstrap::The base branch does not carry"
+          echo "::warning::.github/security yet, so this run is evaluating with the policy"
+          echo "::warning::and evaluator supplied by the pull request itself. This is only"
+          echo "::warning::correct for the PR that introduces the gate."
+          git init -q bootstrap
+          git -C bootstrap remote add origin "https://github.com/${{ github.repository }}.git"
+          git -C bootstrap -c protocol.version=2 fetch -q --depth 1 origin "$PR_HEAD_SHA"
+          git -C bootstrap checkout -q FETCH_HEAD -- .github/security
+          cp -R bootstrap/.github/security/. .github/security/
+          echo "source=pull-request-bootstrap" >> "$GITHUB_OUTPUT"
+
+      - name: Install the evaluator's dependencies
+        run: python3 -m pip install --quiet --disable-pip-version-check 'PyYAML==6.0.3'
+
+      # ---------------------------------------------------------------------
+      # The untrusted half: what is being judged.
+      # ---------------------------------------------------------------------
+      - name: Download every report
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: report-*
+          merge-multiple: true
+          path: assessment
+
+      # ---------------------------------------------------------------------
+      # Job results become the status the evaluator reads.
+      # ---------------------------------------------------------------------
+      # These are written HERE, from `needs.<job>.result`, and never by the
+      # scanner jobs themselves. A job that crashed, timed out or was cancelled
+      # cannot write "I succeeded" — it cannot write anything at all — and that
+      # is the entire reason the status file is produced by the job that
+      # survived rather than by the one that did not.
+      #
+      # One conservatism worth naming: a scanner job is a matrix over the
+      # assessed revisions, and `needs.<job>.result` is the aggregate across its
+      # legs. So on a scheduled run where the `main` leg of a scanner fails, the
+      # `develop` assessment is failed too. That errs toward blocking, which is
+      # the correct direction for a security gate, and it is visible in the
+      # report rather than silent.
+      - name: Record each scanner's outcome
+        env:
+          ASSESS: ${{ needs.plan.outputs.assess }}
+          R_INTELLIGENCE: ${{ needs.intelligence.result }}
+          R_DEPS_OSV: ${{ needs.deps-osv.result }}
+          R_DEPS_TRIVY: ${{ needs.deps-trivy.result }}
+          R_CONFIG_TRIVY: ${{ needs.config-trivy.result }}
+          R_IMAGE_TRIVY: ${{ needs.image-trivy.result }}
+          R_SAST_CODEQL: ${{ needs.sast-codeql.result }}
+          R_SECRETS_GITLEAKS: ${{ needs.secrets-gitleaks.result }}
+          R_DEPS_DIFF_REVIEW: ${{ needs.deps-diff-review.result }}
+        run: |
+          set -euo pipefail
+          for slug in $(echo "$ASSESS" | jq -r '.[].slug'); do
+            dir="assessment/$slug/status"
+            mkdir -p "$dir"
+            printf '%s' "$R_DEPS_OSV"           > "$dir/deps-osv.status"
+            printf '%s' "$R_DEPS_TRIVY"         > "$dir/deps-trivy.status"
+            printf '%s' "$R_CONFIG_TRIVY"       > "$dir/config-trivy.status"
+            printf '%s' "$R_IMAGE_TRIVY"        > "$dir/image-trivy.status"
+            printf '%s' "$R_SAST_CODEQL"        > "$dir/sast-codeql.status"
+            printf '%s' "$R_SECRETS_GITLEAKS"   > "$dir/secrets-gitleaks.status"
+            printf '%s' "$R_DEPS_DIFF_REVIEW"   > "$dir/deps-diff-review.status"
+            echo "--- $slug ---"
+            for f in "$dir"/*.status; do printf '  %-24s %s\n' "$(basename "$f")" "$(cat "$f")"; done
+          done
+
+          # The intelligence job is not one of policy.yml's required reports —
+          # it produces the manifest the evaluator checks directly — but if it
+          # failed there is no manifest, and "could not be evaluated" is the
+          # right verdict rather than a confusing pile of missing-report errors.
+          if [ "$R_INTELLIGENCE" != "success" ]; then
+            echo "::error title=Security Gate::The intelligence job ended"
+            echo "::error::'$R_INTELLIGENCE'. No scan in this run can be shown to have"
+            echo "::error::used fresh data."
+          fi
+
+      # ---------------------------------------------------------------------
+      # The verdict
+      # ---------------------------------------------------------------------
+      # Exit 0 pass, 1 blocked, 2 could not be evaluated. All three are honoured:
+      # "could not be evaluated" is a failure, not a shrug. There is no
+      # `continue-on-error` and no `|| true` anywhere on this path.
+      #
+      # Each assessed revision is evaluated separately against the SAME register,
+      # because the register is per-branch by design: remediating something on
+      # `develop` must not clear it from `main`.
+      - name: Evaluate
+        env:
+          ASSESS: ${{ needs.plan.outputs.assess }}
+          EVENT: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          EVALUATOR_SOURCE: ${{ steps.evaluator.outputs.source }}
+        run: |
+          set -uo pipefail
+          worst=0
+
+          if [ "$EVALUATOR_SOURCE" != "base" ]; then
+            {
+              echo "> [!WARNING]"
+              echo "> This run evaluated with the policy and evaluator supplied by the"
+              echo "> pull request, because the base branch does not carry"
+              echo "> \`.github/security\` yet. Only the pull request that introduces the"
+              echo "> gate may legitimately do this."
+              echo
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          count="$(echo "$ASSESS" | jq 'length')"
+          for i in $(seq 0 $(( count - 1 ))); do
+            ref="$(echo      "$ASSESS" | jq -r ".[$i].ref")"
+            revision="$(echo "$ASSESS" | jq -r ".[$i].revision")"
+            slug="$(echo     "$ASSESS" | jq -r ".[$i].slug")"
+
+            echo "::group::Security Gate — $ref @ $revision"
+            python3 .github/security/evaluate.py \
+              --reports-dir  "assessment/$slug" \
+              --manifest     "assessment/$slug/intelligence-manifest.json" \
+              --policy       .github/security/policy.yml \
+              --exceptions   .github/security/exceptions.yml \
+              --event        "$EVENT" \
+              --ref          "$ref" \
+              --revision     "$revision" \
+              --repository   "$REPO" \
+              --workspace    "$GITHUB_WORKSPACE" \
+              --register-out .github/security/findings.json \
+              --report-out   "assessment/$slug/report.md"
+            code=$?
+            echo "::endgroup::"
+
+            echo "$ref @ $revision -> exit $code"
+            [ "$code" -gt "$worst" ] && worst=$code
+          done
+
+          case "$worst" in
+            0) echo "Security Gate: PASSED for every assessed revision." ;;
+            1) echo "::error title=Security Gate::BLOCKED. See the job summary for the"
+               echo "::error::specific findings and the remediation for each." ;;
+            2) echo "::error title=Security Gate::COULD NOT BE EVALUATED. This is a"
+               echo "::error::failure: the gate has no evidence either way, and absence of"
+               echo "::error::evidence is not a passing result." ;;
+          esac
+          exit "$worst"
+
+      # The register records first_seen across runs. This workflow has no
+      # `contents: write` and never will, so the updated register is published as
+      # an artifact rather than committed — see the "findings register" section
+      # of docs/security/SECURITY_CI.md for what that does and does not preserve.
+      - name: Upload the assessment
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: security-assessment
+          path: |
+            assessment/
+            .github/security/findings.json
+          retention-days: 90
+          if-no-files-found: warn
