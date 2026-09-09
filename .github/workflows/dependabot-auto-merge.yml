@@ -34,9 +34,29 @@
 #   if the head has moved, so a commit pushed after verification cannot merge on
 #   the strength of an earlier commit's green ticks.
 #
-#   The check names below are a contract with ci.yml. Renaming a CI job means
-#   renaming it here in the same pull request, or every dependency update will
-#   be held until someone notices — which is the intended failure direction.
+#   The check names below are a contract with ci.yml and with security.yml.
+#   Renaming a job means renaming it here in the same pull request, or every
+#   dependency update will be held until someone notices — which is the intended
+#   failure direction.
+#
+# Why `Security Gate` is one of those names.
+#   A dependency bump is the single change most likely to introduce a known
+#   vulnerability, and it is the one class of pull request this repository merges
+#   without a human reading it. Requiring only the build checks would mean the
+#   updates that most need scanning are the ones that get merged unscanned.
+#
+#   `Security Gate` is the aggregate job of .github/workflows/security.yml. It is
+#   required here by its exact name, and the verifier treats absent, queued,
+#   skipped, neutral, cancelled and failed all as refusals — absent most of all,
+#   because a check run that was never created and one that passed look identical
+#   to anything that merely counts green ticks.
+#
+#   Two consequences worth stating. Until security.yml exists on the base branch,
+#   no Dependabot pull request can auto-merge: the verifier will wait for a check
+#   that never appears and then refuse. That is the correct failure direction —
+#   held for a human, never merged unscanned. And because the gate blocks on a
+#   HIGH finding, a bump that introduces one is refused here rather than merged
+#   and cleaned up afterwards.
 #
 # This workflow never runs code from the pull request, and that claim needs
 # stating carefully, because the trigger is `pull_request_target`.
@@ -82,7 +102,12 @@ jobs:
   dependabot:
     name: Dependabot auto-merge
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Longer than it used to be, because the Security Gate is now one of the
+    # checks being waited on and it is the slowest: it builds the container image
+    # and runs CodeQL. The verifier's own deadline is set below to expire first,
+    # so a timeout is reported as "these checks did not succeed in time" with the
+    # names listed, rather than as an unexplained cancelled job.
+    timeout-minutes: 60
 
     # Least privilege, and every scope is used:
     #   contents: write       -> completing the merge, reading the base commit
@@ -173,8 +198,10 @@ jobs:
             --pr "$PR_NUMBER" \
             --expected-head "$HEAD_SHA" \
             --producer github-actions \
+            --timeout-seconds 3000 \
             --check "Install, type-check and build" \
-            --check "Build the container image"
+            --check "Build the container image" \
+            --check "Security Gate"
 
       # ---------------------------------------------------------------------
       # Everything else: route to a human. Never merged by this workflow.
