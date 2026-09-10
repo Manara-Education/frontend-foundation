@@ -1245,7 +1245,10 @@ jobs:
               --repository   "$REPO" \
               --workspace    "$GITHUB_WORKSPACE" \
               --register-out .github/security/findings.json \
-              --report-out   "assessment/$slug/report.md"
+              --report-out   "assessment/$slug/report.md" \
+              --verdict-out  "assessment/$slug/verdict.json" \
+              --target-slug  "$slug" \
+              --target-name  "$ref"
             code=$?
             echo "::endgroup::"
 
@@ -1271,7 +1274,12 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: security-assessment
+          # Named to match backend-foundation exactly. The two repositories used
+          # to disagree — `security-assessment` here, `security-gate-verdict`
+          # there — which meant one notifier could not serve both without a
+          # per-repository special case, and a special case in the one workflow
+          # that holds the mail credential is precisely where nobody wants one.
+          name: security-gate-verdict
           path: |
             assessment/
             .github/security/findings.json
