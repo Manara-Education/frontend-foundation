@@ -142,17 +142,31 @@ WORKDIR /caddy
 ARG X_CRYPTO=v0.56.0
 ARG GRPC=v1.83.2
 
-# cel-go carries GO-2026-6094 / GHSA-gcjh-h69q-9w9g, which exposes JSON private
-# fields through NativeTypes and ParseStructTag. It came in at v0.28.1 and the
-# gate tracked it as MEDIUM rather than blocking, so this is not required to go
-# green — it is here because a fix exists and is cheap.
+# CEL-GO IS DELIBERATELY NOT UPGRADED, AND THIS IS THE RECORD OF WHY.
 #
-# The two databases disagree about which release fixes it: the GitHub advisory
-# says v0.29.0, the Go vulnerability database says v0.30.0. v0.30.0 is the
-# version both agree is clean, so that is the floor. When sources disagree the
-# more conservative one wins; being one release newer costs nothing here, and
-# cel-go v0.30.0 needs nothing above what the modules above already resolve.
-ARG CEL_GO=v0.30.0
+# cel-go v0.28.1 carries GO-2026-6094 / GHSA-gcjh-h69q-9w9g — JSON private
+# fields exposed through NativeTypes and ParseStructTag. The gate tracks it as
+# MEDIUM rather than blocking, so the image is green either way.
+#
+# It was attempted. Pinning v0.30.0 — the version both advisory databases agree
+# is clean; the GitHub advisory says v0.29.0, the Go database says v0.30.0 —
+# builds cel-go fine and then fails to compile CADDY:
+#
+#     caddy/v2@v2.11.4/modules/caddyhttp/celmatcher.go:506:5:
+#         cannot use []interpreter.Interpretable ...
+#     caddy/v2@v2.11.4/modules/caddyhttp/celmatcher.go:529:5:
+#         cannot use []interpreter.Interpretable ...
+#
+# cel-go changed that interface between the version Caddy pins and the fixed
+# one. Clearing this finding therefore needs a patched celmatcher.go — a fork of
+# Caddy carried indefinitely — and that is a materially worse security position
+# than one tracked MEDIUM: a forked HTTP matcher is exactly where a subtle
+# routing bug would live, and it would silently miss upstream's own fixes.
+#
+# So it stays visible on the findings register, unfixed and unsuppressed. No
+# exception was written for it and no threshold was lowered. The right fix is
+# upstream: when Caddy moves to a cel-go at or above v0.30.0, this resolves
+# itself and the gate will show it.
 
 # The standard module set is what makes this Caddy equivalent to the official
 # binary: file_server, reverse_proxy, encode, headers, the TLS/ACME stack and
@@ -188,8 +202,7 @@ go get "github.com/caddyserver/caddy/v2@${CADDY_VERSION}"
 # requirement asking for something older.
 go get \
   "golang.org/x/crypto@${X_CRYPTO}" \
-  "google.golang.org/grpc@${GRPC}" \
-  "github.com/google/cel-go@${CEL_GO}"
+  "google.golang.org/grpc@${GRPC}"
 go mod tidy
 
 # ASSERT THE RESULT, DO NOT TRUST THE REQUEST.
@@ -235,7 +248,6 @@ check golang.org/x/crypto     0.56.0
 check golang.org/x/net        0.56.0
 check golang.org/x/text       0.39.0
 check google.golang.org/grpc  1.83.2
-check github.com/google/cel-go 0.30.0
 SH
 
 # -trimpath keeps build-host paths out of the binary. CGO is off so the result
