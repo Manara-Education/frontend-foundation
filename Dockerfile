@@ -74,9 +74,11 @@ RUN npm run build
 FROM golang:1.27.1-alpine@sha256:cf6fca6641884b8433441b2b0652976f975e1d0fdd26d177eaaf8596087f3125 AS caddybuild
 
 # The scanned binary reported Go stdlib v1.26.3. The eleven stdlib advisories
-# are fixed across 1.26.4 and 1.26.6, so the toolchain above (1.26.8) clears all
-# of them with room to spare, and stays on the same minor release the image was
-# already built with rather than jumping a major version under a security fix.
+# are fixed across 1.26.4 and 1.26.6, so any toolchain from 1.26.6 on clears
+# them. The fix shipped on 1.26.8; the pin has since moved with Dependabot's
+# docker updates, so the FROM line above is the only place that names the
+# toolchain, and the Security Gate's scan of the compiled binary is what shows
+# its stdlib is clean.
 ARG CADDY_VERSION=v2.11.4
 
 WORKDIR /caddy
