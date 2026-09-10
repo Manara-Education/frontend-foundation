@@ -142,6 +142,18 @@ WORKDIR /caddy
 ARG X_CRYPTO=v0.56.0
 ARG GRPC=v1.83.2
 
+# cel-go carries GO-2026-6094 / GHSA-gcjh-h69q-9w9g, which exposes JSON private
+# fields through NativeTypes and ParseStructTag. It came in at v0.28.1 and the
+# gate tracked it as MEDIUM rather than blocking, so this is not required to go
+# green — it is here because a fix exists and is cheap.
+#
+# The two databases disagree about which release fixes it: the GitHub advisory
+# says v0.29.0, the Go vulnerability database says v0.30.0. v0.30.0 is the
+# version both agree is clean, so that is the floor. When sources disagree the
+# more conservative one wins; being one release newer costs nothing here, and
+# cel-go v0.30.0 needs nothing above what the modules above already resolve.
+ARG CEL_GO=v0.30.0
+
 # The standard module set is what makes this Caddy equivalent to the official
 # binary: file_server, reverse_proxy, encode, headers, the TLS/ACME stack and
 # the rest. Dropping it would silently produce a Caddy that cannot run this
@@ -176,7 +188,8 @@ go get "github.com/caddyserver/caddy/v2@${CADDY_VERSION}"
 # requirement asking for something older.
 go get \
   "golang.org/x/crypto@${X_CRYPTO}" \
-  "google.golang.org/grpc@${GRPC}"
+  "google.golang.org/grpc@${GRPC}" \
+  "github.com/google/cel-go@${CEL_GO}"
 go mod tidy
 
 # ASSERT THE RESULT, DO NOT TRUST THE REQUEST.
@@ -222,6 +235,7 @@ check golang.org/x/crypto     0.56.0
 check golang.org/x/net        0.56.0
 check golang.org/x/text       0.39.0
 check google.golang.org/grpc  1.83.2
+check github.com/google/cel-go 0.30.0
 SH
 
 # -trimpath keeps build-host paths out of the binary. CGO is off so the result
