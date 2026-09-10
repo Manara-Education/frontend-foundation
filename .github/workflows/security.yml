@@ -1227,11 +1227,43 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
+          # BOOTSTRAP, for exactly one release and then dead code — the same
+          # shape as the evaluator-source fallback above, and for the same
+          # reason. This workflow comes from the PULL REQUEST; the evaluator
+          # comes from the BASE BRANCH, which is what stops a PR grading its own
+          # homework. So the pull request that first teaches the workflow to ask
+          # for --verdict-out is guaranteed to be asking an evaluator that has
+          # never heard of it:
+          #
+          #   evaluate.py: error: unrecognized arguments: --verdict-out ...
+          #
+          # which the gate correctly reported as exit 2, could-not-evaluate —
+          # not as a pass. Rather than weaken that, the flag is offered only
+          # when the base evaluator supports it, and its absence is announced.
+          verdict_supported=no
+          if python3 .github/security/evaluate.py --help 2>&1 | grep -q -- '--verdict-out'; then
+            verdict_supported=yes
+          else
+            echo "::warning title=Security Gate::The evaluator on ${GITHUB_BASE_REF:-this branch} does not support --verdict-out, so no machine-readable verdict is produced and the email notifier will report this run as INCOMPLETE. Expected ONLY while bootstrapping."
+          fi
+
           count="$(echo "$ASSESS" | jq 'length')"
           for i in $(seq 0 $(( count - 1 ))); do
             ref="$(echo      "$ASSESS" | jq -r ".[$i].ref")"
             revision="$(echo "$ASSESS" | jq -r ".[$i].revision")"
             slug="$(echo     "$ASSESS" | jq -r ".[$i].slug")"
+
+            # An array rather than a string: refs contain slashes and, on
+            # other events, spaces. Expanded as ${a[@]+"${a[@]}"} because under
+            # `set -u` bash 3.2 aborts on an EMPTY array's expansion; runners
+            # have bash 5 where it is fine, but anyone reproducing this on
+            # macOS would hit it.
+            verdict_args=()
+            if [ "$verdict_supported" = yes ]; then
+              verdict_args=(--verdict-out "assessment/$slug/verdict.json"
+                            --target-slug "$slug"
+                            --target-name "$ref")
+            fi
 
             echo "::group::Security Gate — $ref @ $revision"
             python3 .github/security/evaluate.py \
@@ -1245,7 +1277,8 @@ jobs:
               --repository   "$REPO" \
               --workspace    "$GITHUB_WORKSPACE" \
               --register-out .github/security/findings.json \
-              --report-out   "assessment/$slug/report.md"
+              --report-out   "assessment/$slug/report.md" \
+              ${verdict_args[@]+"${verdict_args[@]}"}
             code=$?
             echo "::endgroup::"
 
@@ -1271,7 +1304,12 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: security-assessment
+          # Named to match backend-foundation exactly. The two repositories used
+          # to disagree — `security-assessment` here, `security-gate-verdict`
+          # there — which meant one notifier could not serve both without a
+          # per-repository special case, and a special case in the one workflow
+          # that holds the mail credential is precisely where nobody wants one.
+          name: security-gate-verdict
           path: |
             assessment/
             .github/security/findings.json
