@@ -143,32 +143,51 @@ if [ -z "$top_user" ]; then
   # above, and this one is corroboration. Silence about it would be the only
   # wrong answer.
   note "docker top could not report a user; relying on /proc/1/status above"
-elif [ "$top_user" = "1001" ] || [ "$top_user" = "caddy" ]; then
-  ok "docker top agrees the process is non-root (${top_user})"
+elif [ "$top_user" = "root" ] || [ "$top_user" = "0" ]; then
+  bad "docker top reports the server running as root"
 else
-  bad "docker top reports '${top_user}' — expected 1001 or caddy"
+  # The assertion is "not root", not "literally 1001". docker top resolves the
+  # container's uid against the HOST's passwd, so on a GitHub runner — where
+  # uid 1001 is the `runner` account — it prints "runner". That looked like a
+  # failure the first time and was in fact confirmation: a name resolved from
+  # the host is still uid 1001 inside the container, which /proc/1/status above
+  # has already established exactly.
+  ok "docker top agrees the process is not root (host name for its uid: ${top_user})"
 fi
 
 # =============================================================================
-head_ "2b. Negative control — the sysctl is load-bearing"
+head_ "2b. Negative control — the sysctl decides, not luck"
 # =============================================================================
-# If this check does not fail, then nothing above proved anything: it would mean
-# uid 1001 can bind port 80 anyway and the sysctl in docker-compose.prod.yml is
-# decorative. Removing a line from production config and watching the site stay
-# up is exactly how a "harmless cleanup" takes the ingress down six months later.
+# The first version of this control removed the sysctl and expected the bind to
+# fail. It did not fail, and that was worth knowing: Docker sets
+# net.ipv4.ip_unprivileged_port_start=0 inside containers by DEFAULT, so a
+# non-root process can bind 80 with no capability and no sysctl of our own.
+#
+# Which means the honest claim is narrower than "this line is what makes it
+# work". Deleting the line from docker-compose.prod.yml would very likely leave
+# the site up today, on this daemon. What the line buys is that the value is
+# stated rather than inherited — a daemon configured differently, an older
+# Docker, or a future default change cannot silently take the ingress down.
+#
+# So the control now proves the thing that IS provable: that the value is what
+# decides. Setting it to 1024 — the traditional floor, i.e. a daemon that does
+# not hand this out for free — must make the bind fail. If it does not, then
+# something else is granting the privilege and the reason this works is still
+# unexplained.
 docker rm -f "$FRONT" >/dev/null 2>&1 || true
 docker run -d --name "$FRONT" --network "$NET" \
   --security-opt no-new-privileges:true \
+  --sysctl net.ipv4.ip_unprivileged_port_start=1024 \
   -p "127.0.0.1:${HTTP_PORT}:80" \
   -e "SITE_ADDRESS=:80" \
   -v "${VOL_FRESH}:/data" -v "${VOL_CFG}:/config" \
   "$IMAGE" >/dev/null 2>&1 || true
 sleep 8
 if wait_http "http://127.0.0.1:${HTTP_PORT}/" 6; then
-  bad "control FAILED: port 80 was bound WITHOUT the sysctl — the compose setting is not what makes this work, so the reason it works is unexplained"
+  bad "control FAILED: uid 1001 bound port 80 even with the privileged-port floor at 1024 — the reason this works is unexplained"
 else
-  ok "without net.ipv4.ip_unprivileged_port_start the server cannot bind port 80"
-  note "$(docker logs "$FRONT" 2>&1 | grep -iE 'permission denied|bind' | head -2 | tr '\n' ' ')"
+  ok "with the privileged-port floor at 1024, the non-root server cannot bind 80"
+  note "$(docker logs "$FRONT" 2>&1 | grep -iE 'permission denied|bind' | head -1 | cut -c1-120)"
 fi
 
 # Back to the production configuration for everything that follows.
@@ -212,9 +231,27 @@ curl -fsSI --max-time 5 "http://127.0.0.1:${HTTP_PORT}/" | tr -d '\r' | grep -qi
   && bad "Server header is still advertised" || ok "Server header is stripped"
 
 # The admin API must not be reachable from outside the container.
-adm="$(curl -fsS -o /dev/null -w '%{http_code}' --max-time 4 "http://127.0.0.1:${HTTP_PORT}/config/" || true)"
-[ "$adm" = "200" ] && bad "Caddy admin API answered through the public listener" \
-                   || ok "Caddy admin API is not exposed publicly (HTTP ${adm:-refused})"
+#
+# Asking for /config/ and treating HTTP 200 as exposure is wrong, and this test
+# did exactly that at first: the Caddyfile's `try_files {path} /index.html`
+# answers ANY unmatched path with the SPA document and a 200, so the check was
+# reporting the single-page-app fallback as a leaked admin API.
+#
+# What actually distinguishes them is the body. The admin API returns JSON
+# describing the running config; the fallback returns the HTML shell. And the
+# admin listener is a separate port — 2019 — which must not be published at all.
+adm_body="$(curl -fsS --max-time 4 "http://127.0.0.1:${HTTP_PORT}/config/" 2>/dev/null || true)"
+case "$adm_body" in
+  *'"apps"'*|*'"admin"'*|*'"listen"'*)
+    bad "the Caddy admin API answered through the public listener" ;;
+  *)
+    ok "the public listener does not serve the admin API (/config/ falls through to the SPA)" ;;
+esac
+if docker port "$FRONT" 2>/dev/null | grep -q '^2019/'; then
+  bad "the admin port 2019 is published to the host"
+else
+  ok "the admin port 2019 is not published"
+fi
 
 # =============================================================================
 head_ "4. Certificate storage on a FRESH volume"
@@ -231,9 +268,22 @@ else
   bad "/data/caddy was never created — the server could not write its store"
   docker logs "$FRONT" 2>&1 | tail -20
 fi
-tlsc="$(curl -sk -o /dev/null -w '%{http_code}' --max-time 8 "https://127.0.0.1:${HTTPS_PORT}/" || true)"
-[ "$tlsc" = "200" ] && ok "HTTPS on port 443 serves the SPA (internal CA, non-root bind)" \
-                    || bad "HTTPS returned '${tlsc:-nothing}'"
+# Waited for rather than slept at. Provisioning the internal CA and issuing a
+# certificate takes a variable amount of time, and a fixed sleep reported
+# HTTP 000 — a connection that was refused because the TLS listener was not up
+# yet — on a run whose certificate had in fact been issued correctly.
+tlsc=000
+for _ in $(seq 1 30); do
+  tlsc="$(curl -sk -o /dev/null -w '%{http_code}' --max-time 4 "https://127.0.0.1:${HTTPS_PORT}/" 2>/dev/null || echo 000)"
+  [ "$tlsc" = "200" ] && break
+  sleep 2
+done
+if [ "$tlsc" = "200" ]; then
+  ok "HTTPS on port 443 serves the SPA (internal CA, bound by a non-root process)"
+else
+  bad "HTTPS returned '${tlsc}'"
+  docker logs "$FRONT" 2>&1 | tail -15
+fi
 
 # =============================================================================
 head_ "5. An EXISTING root-owned volume — the production case"
