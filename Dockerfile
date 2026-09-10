@@ -95,11 +95,26 @@ WORKDIR /caddy
 # These four modules require each other, so the floor for one raises the floor
 # for the next. Resolved from their published go.mod files:
 #
-#     x/crypto v0.56.0  requires x/net v0.57.0 and x/text v0.41.0
-#     x/net    v0.57.0  raised from its own advisory floor by x/crypto, not
-#                       by choice
-#     x/text   v0.41.0  likewise
-#     grpc     v1.83.2
+# ONLY TWO ARE PINNED, AND THAT IS THE POINT.
+#
+# Pinning all four to exact versions meant hand-solving the constraint graph,
+# and it failed twice in CI for the same reason — a pin one module needs is a
+# pin another module forbids:
+#
+#     go: golang.org/x/crypto@v0.55.0 requires golang.org/x/net@v0.57.0,
+#         not golang.org/x/net@v0.56.0
+#     go: google.golang.org/grpc@v1.83.2 requires golang.org/x/net@v0.58.0,
+#         not golang.org/x/net@v0.57.0
+#
+# x/net and x/text are therefore NOT pinned. They are pulled up by x/crypto and
+# grpc through minimal version selection, which solves that graph correctly and
+# does not need me to. What guarantees they land somewhere safe is not this
+# comment — it is the assertion at the end of this stage, which checks all four
+# resolved versions against their advisory floors and fails the build if any of
+# them is short. Resolution is Go's job; verification is ours.
+#
+# For the record, at the time of writing that resolves to x/net v0.58.0 and
+# x/text v0.41.0, both of which OSV reports clean.
 #
 # THE VERSIONS THE ORIGINAL REPORT NAMED ARE NOT SUFFICIENT. Both corrections
 # below come from querying OSV for what each proposed version itself carries,
@@ -125,8 +140,6 @@ WORKDIR /caddy
 # set is preferred because every extra version is API-change risk inside
 # quic-go and Caddy's TLS stack that only a failed build would catch.
 ARG X_CRYPTO=v0.56.0
-ARG X_NET=v0.57.0
-ARG X_TEXT=v0.41.0
 ARG GRPC=v1.83.2
 
 # The standard module set is what makes this Caddy equivalent to the official
@@ -153,13 +166,16 @@ GO
 go mod init manara/caddy
 go get "github.com/caddyserver/caddy/v2@${CADDY_VERSION}"
 
-# The security bumps. `go get` raises each module to at least the version
-# named; Go's minimal version selection keeps the higher one, so these cannot
-# be silently undone by a transitive requirement asking for an older release.
+# The security bumps — the two modules whose own advisories need a version
+# higher than Caddy asks for. x/net and x/text are deliberately absent: they
+# are pulled up by these two through minimal version selection, and pinning
+# them here is what broke the build twice (see the note above the ARGs).
+#
+# `go get` raises a module to at least the version named, and MVS keeps the
+# higher of the two, so neither of these can be silently undone by a transitive
+# requirement asking for something older.
 go get \
   "golang.org/x/crypto@${X_CRYPTO}" \
-  "golang.org/x/net@${X_NET}" \
-  "golang.org/x/text@${X_TEXT}" \
   "google.golang.org/grpc@${GRPC}"
 go mod tidy
 
