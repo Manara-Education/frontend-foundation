@@ -310,7 +310,20 @@ COPY --from=caddybuild --chown=root:root --chmod=755 /out/caddy /usr/bin/caddy
 # 1001:1001 matches the backend image's `app` user, so a shared volume has one
 # owner across the stack rather than two conventions to reconcile.
 #
-# CAP_NET_BIND_SERVICE is what lets a uid-1001 process still bind 80 and 443.
+# CAP_NET_BIND_SERVICE is what lets a uid-1001 process still bind 80 and 443,
+# and that is a measured claim rather than an assumed one. The verification
+# script's control raises the privileged-port floor to 1024 AND drops
+# NET_BIND_SERVICE from the container's bounding set; the bind then fails. With
+# the capability present it succeeds, including under this stack's
+# `no-new-privileges:true`.
+#
+# That last part is worth stating because an earlier version of this comment
+# claimed the opposite — that no_new_privs would neutralise a file capability,
+# so the compose sysctl must be doing the work. Two controls disproved it: with
+# the sysctl removed, and then with the floor raised to 1024, the server bound
+# port 80 both times. The capability is the mechanism; the compose sysctl is
+# belt and braces.
+#
 # The alternative — listening on high ports and remapping them in Compose —
 # was rejected because Caddy derives its HTTP→HTTPS redirect target and its
 # ACME challenge port from the ports it is told to serve; moving them produces

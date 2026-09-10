@@ -156,38 +156,41 @@ else
 fi
 
 # =============================================================================
-head_ "2b. Negative control — the sysctl decides, not luck"
+head_ "2b. Negative control — what actually grants the low port"
 # =============================================================================
-# The first version of this control removed the sysctl and expected the bind to
-# fail. It did not fail, and that was worth knowing: Docker sets
-# net.ipv4.ip_unprivileged_port_start=0 inside containers by DEFAULT, so a
-# non-root process can bind 80 with no capability and no sysctl of our own.
+# This control has been wrong twice, and each wrong version taught something.
 #
-# Which means the honest claim is narrower than "this line is what makes it
-# work". Deleting the line from docker-compose.prod.yml would very likely leave
-# the site up today, on this daemon. What the line buys is that the value is
-# stated rather than inherited — a daemon configured differently, an older
-# Docker, or a future default change cannot silently take the ingress down.
+#   v1 removed the compose sysctl and expected the bind to fail. It did not.
+#   v2 raised the privileged-port floor to 1024 and expected the bind to fail.
+#      It did not either.
 #
-# So the control now proves the thing that IS provable: that the value is what
-# decides. Setting it to 1024 — the traditional floor, i.e. a daemon that does
-# not hand this out for free — must make the bind fail. If it does not, then
-# something else is granting the privilege and the reason this works is still
-# unexplained.
+# Between them they rule out both of the explanations offered so far. The floor
+# is not what grants the port, and Docker's default floor of 0 is not the only
+# reason it works — because v2 removed that default and the server still bound
+# 80. What is left is the FILE CAPABILITY on /usr/bin/caddy, which means
+# cap_net_bind_service survives this stack's `no-new-privileges:true` rather
+# than being neutralised by it, contrary to what the Dockerfile and the compose
+# file originally claimed.
+#
+# So the control now isolates that directly: raise the floor AND drop the
+# capability from the container's bounding set. If the bind still succeeds,
+# nothing in the image or the compose file explains the privilege and the claim
+# should be treated as unproven.
 docker rm -f "$FRONT" >/dev/null 2>&1 || true
 docker run -d --name "$FRONT" --network "$NET" \
   --security-opt no-new-privileges:true \
   --sysctl net.ipv4.ip_unprivileged_port_start=1024 \
+  --cap-drop NET_BIND_SERVICE \
   -p "127.0.0.1:${HTTP_PORT}:80" \
   -e "SITE_ADDRESS=:80" \
   -v "${VOL_FRESH}:/data" -v "${VOL_CFG}:/config" \
   "$IMAGE" >/dev/null 2>&1 || true
 sleep 8
 if wait_http "http://127.0.0.1:${HTTP_PORT}/" 6; then
-  bad "control FAILED: uid 1001 bound port 80 even with the privileged-port floor at 1024 — the reason this works is unexplained"
+  bad "control FAILED: uid 1001 bound port 80 with the floor at 1024 AND cap_net_bind_service dropped — nothing in this image explains the privilege"
 else
-  ok "with the privileged-port floor at 1024, the non-root server cannot bind 80"
-  note "$(docker logs "$FRONT" 2>&1 | grep -iE 'permission denied|bind' | head -1 | cut -c1-120)"
+  ok "with the capability dropped and the floor at 1024, the non-root server cannot bind 80"
+  note "$(docker logs "$FRONT" 2>&1 | grep -iE 'permission denied|bind|cap' | head -1 | cut -c1-140)"
 fi
 
 # Back to the production configuration for everything that follows.
@@ -272,17 +275,28 @@ fi
 # certificate takes a variable amount of time, and a fixed sleep reported
 # HTTP 000 — a connection that was refused because the TLS listener was not up
 # yet — on a run whose certificate had in fact been issued correctly.
-tlsc=000
+# `|| echo 000` on the same substitution as curl's own -w output appended a
+# second code to the first: a failed probe reported '000000', which reads like
+# a mangled status rather than a refused connection. curl's output is captured
+# on its own, and the fallback only fills in when it produced nothing.
+tlsc=""
 for _ in $(seq 1 30); do
-  tlsc="$(curl -sk -o /dev/null -w '%{http_code}' --max-time 4 "https://127.0.0.1:${HTTPS_PORT}/" 2>/dev/null || echo 000)"
+  tlsc="$(curl -sk -o /dev/null -w '%{http_code}' --max-time 4 "https://127.0.0.1:${HTTPS_PORT}/" 2>/dev/null)" || tlsc=""
   [ "$tlsc" = "200" ] && break
   sleep 2
 done
 if [ "$tlsc" = "200" ]; then
   ok "HTTPS on port 443 serves the SPA (internal CA, bound by a non-root process)"
 else
-  bad "HTTPS returned '${tlsc}'"
-  docker logs "$FRONT" 2>&1 | tail -15
+  bad "HTTPS returned '${tlsc:-no response}'"
+  # Enough to tell a refused mapping from a server that never bound 443. The
+  # first failure of this check reported nothing but the code, and the Caddy log
+  # showed both servers running and the certificate issued — so the code alone
+  # could not distinguish "not published" from "not listening".
+  note "container state: $(docker inspect --format '{{.State.Status}}' "$FRONT" 2>/dev/null || echo unknown)"
+  note "published ports: $(docker port "$FRONT" 2>/dev/null | tr '\n' ' ' || echo none)"
+  note "listening inside: $(docker exec "$FRONT" sh -c 'netstat -ltn 2>/dev/null || ss -ltn 2>/dev/null' 2>/dev/null | tr '\n' ' ' | cut -c1-200)"
+  docker logs "$FRONT" 2>&1 | tail -12
 fi
 
 # =============================================================================
