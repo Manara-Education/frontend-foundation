@@ -61,12 +61,17 @@ start_backend() {
      done' >/dev/null
 }
 
-# EVERY run below uses the SAME hardening docker-compose.prod.yml applies.
-# That matters more than it looks: `no-new-privileges:true` neutralises the file
-# capability set on /usr/bin/caddy, so a verification run without it would prove
-# that the image works in a configuration production does not use. The sysctl is
-# what actually lets uid 1001 bind 80/443 in production, and section 2b below
-# removes it deliberately to show the difference.
+# EVERY run below uses the SAME hardening docker-compose.prod.yml applies, so
+# what passes here is the configuration production actually runs, not a laxer
+# one that happens to work.
+#
+# These two lines used to carry a claim that section 2b then disproved: that
+# `no-new-privileges:true` neutralises the file capability on /usr/bin/caddy,
+# leaving the sysctl as the thing that grants 80/443. It is the other way round
+# — the capability is the mechanism and survives no_new_privs here, and Docker's
+# own default floor of 0 is a second, independent path to the same result. The
+# sysctl is belt and braces. Section 2b is where that is established rather than
+# asserted.
 PROD_SECOPTS=(--security-opt no-new-privileges:true --sysctl net.ipv4.ip_unprivileged_port_start=0)
 
 start_frontend() { # $1=data volume  $2=site address  $3.. extra docker args
@@ -275,27 +280,57 @@ fi
 # certificate takes a variable amount of time, and a fixed sleep reported
 # HTTP 000 — a connection that was refused because the TLS listener was not up
 # yet — on a run whose certificate had in fact been issued correctly.
+#
+# THE HOSTNAME IS LOAD-BEARING, and getting it wrong cost a red run.
+# `curl https://127.0.0.1:PORT` sends no SNI, because SNI is not sent for an IP
+# literal. Caddy is serving the site `localhost` and therefore holds exactly one
+# certificate, for `localhost`; asked for a certificate with no server name it
+# has nothing to answer with and aborts the handshake. `-k` does not help — it
+# skips verification of a certificate that was received, and none is. The probe
+# then failed 30 times in a row against a server that was working perfectly and
+# had already logged "certificate obtained successfully".
+#
+# --resolve keeps the connection on the published loopback port while making the
+# request — and the SNI — say `localhost`, which is the name the certificate is
+# actually for.
+#
 # `|| echo 000` on the same substitution as curl's own -w output appended a
-# second code to the first: a failed probe reported '000000', which reads like
-# a mangled status rather than a refused connection. curl's output is captured
-# on its own, and the fallback only fills in when it produced nothing.
-tlsc=""
+# second code to the first: a failed probe reported '000000', which reads like a
+# mangled status rather than a refused connection. Replacing it with `|| tlsc=""`
+# then went too far the other way and DISCARDED the 000 curl had written,
+# reporting "no response" for every kind of failure. Both are kept apart now:
+# curl's write-out is whatever curl wrote, and its exit status is recorded
+# beside it, because 35 (TLS handshake) and 7 (refused) are different faults.
+tlsc=""; tlsrc=0
 for _ in $(seq 1 30); do
-  tlsc="$(curl -sk -o /dev/null -w '%{http_code}' --max-time 4 "https://127.0.0.1:${HTTPS_PORT}/" 2>/dev/null)" || tlsc=""
+  tlsc="$(curl -sk --resolve "localhost:${HTTPS_PORT}:127.0.0.1" \
+               -o /dev/null -w '%{http_code}' --max-time 4 \
+               "https://localhost:${HTTPS_PORT}/" 2>/dev/null)"; tlsrc=$?
   [ "$tlsc" = "200" ] && break
   sleep 2
 done
 if [ "$tlsc" = "200" ]; then
   ok "HTTPS on port 443 serves the SPA (internal CA, bound by a non-root process)"
 else
-  bad "HTTPS returned '${tlsc:-no response}'"
+  bad "HTTPS returned '${tlsc:-no output}' (curl exit $tlsrc)"
   # Enough to tell a refused mapping from a server that never bound 443. The
   # first failure of this check reported nothing but the code, and the Caddy log
   # showed both servers running and the certificate issued — so the code alone
   # could not distinguish "not published" from "not listening".
   note "container state: $(docker inspect --format '{{.State.Status}}' "$FRONT" 2>/dev/null || echo unknown)"
   note "published ports: $(docker port "$FRONT" 2>/dev/null | tr '\n' ' ' || echo none)"
-  note "listening inside: $(docker exec "$FRONT" sh -c 'netstat -ltn 2>/dev/null || ss -ltn 2>/dev/null' 2>/dev/null | tr '\n' ' ' | cut -c1-200)"
+  # NOT truncated. The previous version piped this through `cut -c1-200`, which
+  # cut the output off after the first listening socket — the one line that
+  # would have answered "did it bind 443?" was the line that got dropped.
+  note "listening inside:"
+  docker exec "$FRONT" sh -c 'netstat -ltn 2>/dev/null || ss -ltn 2>/dev/null' 2>/dev/null \
+    | sed 's/^/          /'
+  # The handshake itself, in words, for the case where the socket is up and the
+  # TLS layer is what refuses.
+  note "handshake:"
+  curl -sv -k --resolve "localhost:${HTTPS_PORT}:127.0.0.1" --max-time 5 \
+       -o /dev/null "https://localhost:${HTTPS_PORT}/" 2>&1 \
+    | grep -iE 'ssl|tls|alert|handshake|connect' | head -8 | sed 's/^/          /'
   docker logs "$FRONT" 2>&1 | tail -12
 fi
 
