@@ -5,20 +5,8 @@ import type { ResetPasswordErrors, ResetPasswordFormState } from "../types/reset
 import { ApiError } from "@/shared/api";
 import { postAuthPath, useAuth } from "@/shared/auth";
 import { paths } from "@/shared/navigation";
-import {
-  PASSWORD_MAX_BYTES,
-  PASSWORD_MIN_CHARACTERS,
-  passwordByteCount,
-  passwordCharacterCount,
-  passwordLengthError,
-} from "@/features/auth/password-policy/password-policy";
+import { passwordPolicyError, passwordRefusal } from "@/features/auth/password-policy/password-policy";
 import * as React from "react";
-
-export interface EvaluatedRule {
-  id: string;
-  label: string;
-  passed: boolean;
-}
 
 export function useResetPassword() {
   const navigate = useNavigate();
@@ -62,32 +50,11 @@ export function useResetPassword() {
   const setField = (k: keyof ResetPasswordFormState) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  // Length only, the same limits the server applies. Composition is not required, and the rest of
-  // the policy — common passwords, the account's own details — is checked by the server on save.
-  const passwordRules = [
-    {
-      id: "length",
-      label: `${PASSWORD_MIN_CHARACTERS} حرفاً على الأقل، والمسافات والحروف العربية مسموحة`,
-      test: (p: string) => passwordCharacterCount(p) >= PASSWORD_MIN_CHARACTERS,
-    },
-    {
-      id: "bytes",
-      label: `لا تتجاوز ${PASSWORD_MAX_BYTES} بايت: الحرف العربي بايتان واللاتيني بايت واحد`,
-      test: (p: string) => p.length > 0 && passwordByteCount(p) <= PASSWORD_MAX_BYTES,
-    },
-  ];
-
-  const evaluatedRules: EvaluatedRule[] = passwordRules.map((r) => ({
-    id: r.id,
-    label: r.label,
-    passed: r.test(form.password),
-  }));
-
   const validate = (): ResetPasswordErrors => {
     const errs: ResetPasswordErrors = {};
     if (forced && !form.currentPassword) errs.currentPassword = "كلمة المرور الحالية مطلوبة";
     if (!form.password) errs.password = "كلمة المرور مطلوبة";
-    else if (passwordLengthError(form.password)) errs.password = passwordLengthError(form.password);
+    else if (passwordPolicyError(form.password)) errs.password = passwordPolicyError(form.password);
     else if (forced && form.password === form.currentPassword)
       errs.password = "يجب أن تختلف كلمة المرور الجديدة عن الحالية";
     if (!form.confirm) errs.confirm = "تأكيد كلمة المرور مطلوب";
@@ -99,7 +66,7 @@ export function useResetPassword() {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
-    
+
     setErrors({});
     setLoading(true);
 
@@ -123,7 +90,10 @@ export function useResetPassword() {
     } catch (err) {
       // Stay here with the requirement intact. A failed attempt changed nothing on the server.
       if (err instanceof ApiError) {
-        setErrors({ general: err.errors[0] });
+        // A refused password belongs under its field, beside the checklist. Anything else goes
+        // above the form, without the API's field name in front of it.
+        const refusal = passwordRefusal(err, "newPassword");
+        setErrors(refusal ? { password: refusal } : { general: err.errors[0]?.replace(/^[A-Za-z]+: /, "") });
       } else {
         setErrors({ general: "حدث خطأ غير متوقع، حاول مرة أخرى" });
       }
@@ -141,6 +111,5 @@ export function useResetPassword() {
     fromProfile,
     setField,
     handleSubmit,
-    evaluatedRules,
   };
 }

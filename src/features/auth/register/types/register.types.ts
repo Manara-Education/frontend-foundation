@@ -34,9 +34,3 @@ export interface RegisterCredentials {
 export interface RegisterResponse {
   message: string;
 }
-
-export interface PasswordStrength {
-  label: string;
-  color: string;
-  width: string;
-}

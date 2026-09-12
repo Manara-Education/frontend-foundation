@@ -65,8 +65,8 @@ const EMAIL_FIELD = "example@manara.com";
 async function fillIdentity() {
   await userEvent.type(screen.getByPlaceholderText(NAME_FIELD), "سارة");
   await userEvent.type(screen.getByPlaceholderText(EMAIL_FIELD), "sara@manara.com");
-  await userEvent.type(screen.getByPlaceholderText("15 حرفاً على الأقل"), "sunlit harbour lantern 42");
-  await userEvent.type(screen.getByPlaceholderText("أعد إدخال كلمة المرور"), "sunlit harbour lantern 42");
+  await userEvent.type(screen.getByPlaceholderText("أدخل كلمة مرور قوية"), "Sunlit harbour lantern 42!");
+  await userEvent.type(screen.getByPlaceholderText("أعد إدخال كلمة المرور"), "Sunlit harbour lantern 42!");
 }
 
 /** Waits for the version fetch to land, which is what unlocks the submit button. */
@@ -194,7 +194,7 @@ describe("sending the consent", () => {
       expect(registerUserMock).toHaveBeenCalledWith({
         fullName: "سارة",
         email: "sara@manara.com",
-        password: "sunlit harbour lantern 42",
+        password: "Sunlit harbour lantern 42!",
         termsAccepted: true,
         termsVersion: "1.0",
       }),

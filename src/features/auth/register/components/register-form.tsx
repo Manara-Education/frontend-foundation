@@ -1,14 +1,13 @@
 import { Mail, Lock, User } from "lucide-react";
 import { AuthCard } from "@/features/auth/components/AuthCard";
 import { FormField, PrimaryButton, LinkButton, Divider } from "@/features/auth/components/FormField";
-import type { RegisterErrors, RegisterFormState, PasswordStrength } from "../types/register.types";
+import type { RegisterErrors, RegisterFormState } from "../types/register.types";
 import { TermsConsentField } from "./terms-consent-field";
-import { PASSWORD_GUIDANCE } from "@/features/auth/password-policy/password-policy";
+import { PasswordRequirements } from "@/features/auth/password-policy/password-requirements";
 import * as React from "react";
 
 interface RegisterFormProps {
   form: RegisterFormState;
-  strength: PasswordStrength | null;
   loading: boolean;
   errors: RegisterErrors;
   onChange: (k: keyof RegisterFormState) => (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -26,7 +25,6 @@ interface RegisterFormProps {
 
 export function RegisterForm({
   form,
-  strength,
   loading,
   errors,
   onChange,
@@ -38,6 +36,8 @@ export function RegisterForm({
   onRetryTerms,
   canSubmit,
 }: RegisterFormProps) {
+  const requirementsId = React.useId();
+
   return (
     <AuthCard
       title="ابدأ رحلتك مع منارة"
@@ -88,32 +88,16 @@ export function RegisterForm({
           <FormField
             label="كلمة المرور"
             isPassword
-            placeholder="15 حرفاً على الأقل"
+            placeholder="أدخل كلمة مرور قوية"
             value={form.password}
             onChange={onChange("password")}
             error={errors.password}
             icon={<Lock size={17} />}
+            autoComplete="new-password"
+            aria-describedby={requirementsId}
           />
-          {/* Password strength */}
-          {strength && (
-            <div className="flex flex-col gap-1.5">
-              <div
-                className="w-full rounded-full overflow-hidden"
-                style={{ height: 4, background: "rgba(78,91,146,0.1)" }}
-              >
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{ width: strength.width, background: strength.color }}
-                />
-              </div>
-              <span style={{ fontFamily: "'Cairo', sans-serif", fontSize: 12, color: strength.color }}>
-                طول كلمة المرور: {strength.label}
-              </span>
-            </div>
-          )}
-          <span style={{ fontFamily: "'Cairo', sans-serif", fontSize: 12, color: "#717182", lineHeight: 1.7 }}>
-            {PASSWORD_GUIDANCE}
-          </span>
+          {/* Shown before anything is typed, so the rules are known before the form is sent. */}
+          <PasswordRequirements password={form.password} id={requirementsId} />
         </div>
 
         <FormField
@@ -124,6 +108,7 @@ export function RegisterForm({
           onChange={onChange("confirm")}
           error={errors.confirm}
           icon={<Lock size={17} />}
+          autoComplete="new-password"
         />
 
         <TermsConsentField

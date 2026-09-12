@@ -3,9 +3,9 @@ import { useNavigate } from "react-router";
 import { useCurrentTerms } from "@/features/legal/terms";
 import { paths } from "@/shared/navigation";
 import { registerUser } from "../services/register.service";
-import type { RegisterErrors, RegisterFormState, PasswordStrength } from "../types/register.types";
+import type { RegisterErrors, RegisterFormState } from "../types/register.types";
 import { ApiError, ApiErrorCode } from "@/shared/api";
-import { passwordLengthError, passwordLengthMeter } from "@/features/auth/password-policy/password-policy";
+import { passwordPolicyError, passwordRefusal } from "@/features/auth/password-policy/password-policy";
 import {
   TERMS_CONSENT_REQUIRED_ERROR,
   TERMS_UNAVAILABLE_MESSAGE,
@@ -49,7 +49,7 @@ export function useRegister() {
     if (!form.email) errs.email = "البريد الإلكتروني مطلوب";
     else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = "البريد الإلكتروني غير صحيح";
     if (!form.password) errs.password = "كلمة المرور مطلوبة";
-    else if (passwordLengthError(form.password)) errs.password = passwordLengthError(form.password);
+    else if (passwordPolicyError(form.password)) errs.password = passwordPolicyError(form.password);
     if (!form.confirm) errs.confirm = "تأكيد كلمة المرور مطلوب";
     else if (form.password !== form.confirm) errs.confirm = "كلمتا المرور غير متطابقتين";
     // Re-checked here rather than trusted from the disabled button: the button is a
@@ -100,8 +100,11 @@ export function useRegister() {
       } else if (err instanceof ApiError && err.is(ApiErrorCode.TERMS_UNAVAILABLE)) {
         setErrors({ general: TERMS_UNAVAILABLE_MESSAGE });
       } else if (err instanceof ApiError) {
-        // Field errors arrive as "password: <message>"; the field name is the API's, not the reader's.
-        setErrors({ general: err.errors[0]?.replace(/^[A-Za-z]+: /, "") });
+        // A refused password belongs under its field, beside the checklist. Anything else goes above
+        // the form; field errors arrive as "email: <message>", and the field name is the API's, not
+        // the reader's.
+        const refusal = passwordRefusal(err, "password");
+        setErrors(refusal ? { password: refusal } : { general: err.errors[0]?.replace(/^[A-Za-z]+: /, "") });
       } else {
         setErrors({ general: "حدث خطأ غير متوقع، حاول مرة أخرى" });
       }
@@ -110,13 +113,8 @@ export function useRegister() {
     }
   };
 
-  // Length is all the client can honestly measure. Composition is not required, so it is not
-  // scored, and whether the password is a common one is for the server to say.
-  const strength: PasswordStrength | null = passwordLengthMeter(form.password);
-
   return {
     form,
-    strength,
     loading,
     errors,
     setField,

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,9 +8,9 @@ import { RegisterPage } from "../pages/register-page";
 import { registerUser } from "../services/register.service";
 
 /*
-  The client mirrors the server's length rules so a person learns about them while typing, not
-  after a round trip. The server stays the authority — the common-password list lives only
-  there — so its refusal has to reach the screen as well.
+  The requirements are on the page before anything is sent, tick off while the person types, and
+  are checked again on submit. The server stays the authority — it also refuses common passwords,
+  which only it can check — so its refusal has to reach the password field as well.
 */
 vi.mock("@/features/legal/terms/services/terms.service", () => ({
   getCurrentTerms: vi.fn(),
@@ -25,11 +25,15 @@ const registerUserMock = vi.mocked(registerUser);
 
 const SUBMIT = "إنشاء الحساب";
 
-/** 14 code points, but 16 UTF-16 units: a `.length` check would wrongly let it through. */
-const FOURTEEN_CODE_POINTS = "river stone 😀😀";
-/** 37 Arabic letters are 74 UTF-8 bytes, two more than bcrypt can use. */
-const ARABIC_74_BYTES = "ب".repeat(37);
-const ARABIC_PASSPHRASE = "نخيل البحر يغني للقمر كل مساء";
+/** The approved wording. Written out here so a reword in the source fails a test. */
+const LABELS = {
+  minimumLength: "15 حرفًا على الأقل",
+  hasUppercase: "حرف إنجليزي كبير واحد على الأقل",
+  hasNumber: "رقم واحد على الأقل",
+  hasSymbol: "رمز خاص واحد على الأقل",
+};
+
+const MEETS_ALL_FOUR = "Sunlit harbour lantern 42!";
 
 beforeEach(() => {
   getCurrentTermsMock.mockResolvedValue({
@@ -62,77 +66,106 @@ async function fillForm(container: HTMLElement, password: string) {
   await userEvent.type(screen.getByPlaceholderText("أدخل اسمك الكامل"), "سارة");
   await userEvent.type(screen.getByPlaceholderText("example@manara.com"), "sara@manara.com");
   const [pwd, confirm] = passwordInputs(container);
-  // fireEvent rather than userEvent.type: the strings carry emoji and 37-letter runs, and what is
-  // under test is the rule applied to the value, not keystroke simulation.
+  // fireEvent rather than userEvent.type: what is under test is the rule applied to the value, not
+  // keystroke simulation, and some of these strings carry emoji and long Arabic runs.
   fireEvent.change(pwd, { target: { value: password } });
   fireEvent.change(confirm, { target: { value: password } });
   await userEvent.click(screen.getByRole("checkbox"));
 }
 
-describe("registration password rules", () => {
-  it("refuses fewer than 15 code points, counting an emoji as one character", async () => {
-    const { container } = renderRegister();
-    await fillForm(container, FOURTEEN_CODE_POINTS);
+/** Whether the checklist shows a requirement as met — said, for screen readers, beside its tick. */
+function isMet(label: string): boolean {
+  const line = screen.getByText(label).closest("li");
+  if (!line) throw new Error(`no checklist line reads "${label}"`);
+  return within(line).queryByText("مستوفى") !== null;
+}
 
-    fireEvent.submit(screen.getByRole("button", { name: SUBMIT }).closest("form")!);
+describe("the password requirements on the registration page", () => {
+  it("are shown before anything is typed, none of them met", async () => {
+    renderRegister();
+    await waitFor(() => expect(getCurrentTermsMock).toHaveBeenCalled());
 
-    expect(await screen.findByText(/يجب أن تتكون كلمة المرور من 15/)).toBeInTheDocument();
-    expect(registerUserMock).not.toHaveBeenCalled();
+    expect(screen.getByText("متطلبات كلمة المرور:")).toBeInTheDocument();
+    for (const label of Object.values(LABELS)) expect(isMet(label)).toBe(false);
   });
 
-  it("refuses a password longer than 72 UTF-8 bytes and says why", async () => {
+  it("tick off one at a time as the password meets them", async () => {
     const { container } = renderRegister();
-    await fillForm(container, ARABIC_74_BYTES);
+    await waitFor(() => expect(getCurrentTermsMock).toHaveBeenCalled());
+    const [password] = passwordInputs(container);
 
-    fireEvent.submit(screen.getByRole("button", { name: SUBMIT }).closest("form")!);
+    fireEvent.change(password, { target: { value: "harbour lights at dusk" } });
+    expect(isMet(LABELS.minimumLength)).toBe(true);
+    expect(isMet(LABELS.hasUppercase)).toBe(false);
 
-    expect(await screen.findByText(/الحد الأقصى 72 بايت/)).toBeInTheDocument();
-    expect(registerUserMock).not.toHaveBeenCalled();
+    fireEvent.change(password, { target: { value: "Harbour lights at dusk" } });
+    expect(isMet(LABELS.hasUppercase)).toBe(true);
+    expect(isMet(LABELS.hasNumber)).toBe(false);
+
+    fireEvent.change(password, { target: { value: "Harbour lights at dusk 7" } });
+    expect(isMet(LABELS.hasNumber)).toBe(true);
+    expect(isMet(LABELS.hasSymbol)).toBe(false);
+
+    fireEvent.change(password, { target: { value: "Harbour lights at dusk 7!" } });
+    expect(Object.values(LABELS).every(isMet)).toBe(true);
   });
 
-  it("sends an Arabic passphrase with spaces exactly as typed", async () => {
+  it("describe the password field, so a screen reader reads them with it", async () => {
     const { container } = renderRegister();
-    await fillForm(container, ARABIC_PASSPHRASE);
+    await waitFor(() => expect(getCurrentTermsMock).toHaveBeenCalled());
 
-    await userEvent.click(screen.getByRole("button", { name: SUBMIT }));
-
-    await waitFor(() =>
-      expect(registerUserMock).toHaveBeenCalledWith(
-        expect.objectContaining({ password: ARABIC_PASSPHRASE }),
-      ),
-    );
-  });
-
-  it("shows the server's refusal, which is where the common-password check lives", async () => {
-    registerUserMock.mockRejectedValue(
-      new ApiError(400, ["password: كلمة المرور هذه موجودة في قوائم كلمات المرور الشائعة أو المسرّبة."]),
-    );
-    const { container } = renderRegister();
-    await fillForm(container, "correcthorsebatterystaple");
-
-    await userEvent.click(screen.getByRole("button", { name: SUBMIT }));
-
-    expect(await screen.findByText(/الشائعة أو المسرّبة/)).toBeInTheDocument();
+    const describedBy = passwordInputs(container)[0].getAttribute("aria-describedby");
+    expect(document.getElementById(describedBy ?? "")).toHaveTextContent("متطلبات كلمة المرور:");
   });
 });
 
-describe("the password meter", () => {
-  it("measures length rather than rewarding upper case, digits and symbols", async () => {
+describe("registration password rules", () => {
+  it.each([
+    ["fewer than 15 characters", "River stone 1😀", "يجب أن تتكون كلمة المرور من 15 حرفًا على الأقل."],
+    ["no upper-case English letter", "password123456789", "يجب أن تحتوي كلمة المرور على حرف إنجليزي كبير واحد على الأقل."],
+    ["no number", "Harbour lights at dusk!", "يجب أن تحتوي كلمة المرور على رقم واحد على الأقل."],
+    ["no special symbol", "PasswordPassword1", "يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل."],
+  ])("refuses a password with %s and sends nothing", async (_, password, message) => {
     const { container } = renderRegister();
-    await waitFor(() => expect(getCurrentTermsMock).toHaveBeenCalled());
+    await fillForm(container, password);
 
-    fireEvent.change(passwordInputs(container)[0], { target: { value: "Aa1!Aa1!Aa1!" } });
+    fireEvent.submit(screen.getByRole("button", { name: SUBMIT }).closest("form")!);
 
-    expect(screen.queryByText(/قوية/)).not.toBeInTheDocument();
-    expect(screen.getByText(/12 من 15/)).toBeInTheDocument();
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(registerUserMock).not.toHaveBeenCalled();
   });
 
-  it("does not call a long lower-case passphrase weak", async () => {
+  it("refuses a password too long to store, in plain words", async () => {
     const { container } = renderRegister();
-    await waitFor(() => expect(getCurrentTermsMock).toHaveBeenCalled());
+    await fillForm(container, "ب".repeat(35) + "A1!?");
 
-    fireEvent.change(passwordInputs(container)[0], { target: { value: "harbour lights at dusk" } });
+    fireEvent.submit(screen.getByRole("button", { name: SUBMIT }).closest("form")!);
 
-    expect(screen.queryByText(/ضعيفة|قصيرة/)).not.toBeInTheDocument();
+    expect(await screen.findByText("كلمة المرور طويلة جدًا. يرجى اختيار كلمة مرور أقصر.")).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/بايت|byte|UTF-8|bcrypt/i);
+    expect(registerUserMock).not.toHaveBeenCalled();
+  });
+
+  it("sends a password that meets all four, Arabic letters included, exactly as typed", async () => {
+    const password = "نخيل البحر يغني للقمر كل مساء Q7!";
+    const { container } = renderRegister();
+    await fillForm(container, password);
+
+    await userEvent.click(screen.getByRole("button", { name: SUBMIT }));
+
+    await waitFor(() => expect(registerUserMock).toHaveBeenCalledWith(expect.objectContaining({ password })));
+  });
+
+  it("shows the server's refusal, which is where the common-password check lives, without the field name", async () => {
+    registerUserMock.mockRejectedValue(
+      new ApiError(400, ["password: كلمة المرور هذه شائعة وسهلة التخمين. يرجى اختيار كلمة مرور أخرى."]),
+    );
+    const { container } = renderRegister();
+    await fillForm(container, MEETS_ALL_FOUR);
+
+    await userEvent.click(screen.getByRole("button", { name: SUBMIT }));
+
+    expect(await screen.findByText("كلمة المرور هذه شائعة وسهلة التخمين. يرجى اختيار كلمة مرور أخرى.")).toBeInTheDocument();
+    expect(screen.queryByText(/password:/)).not.toBeInTheDocument();
   });
 });
