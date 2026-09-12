@@ -1,10 +1,16 @@
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { paths } from "@/shared/navigation";
 import { ArrowRight, RefreshCw } from "lucide-react";
 import { AuthCard } from "@/features/auth/components/AuthCard";
 import { PrimaryButton } from "@/features/auth/components/FormField";
 import { OTP_LENGTH } from "../hooks/use-otp";
 import type { OtpContextType } from "../types/otp.types";
+import {
+  EXISTING_ACCOUNT_NOTE,
+  RESET_PASSWORD_LINK,
+  SIGN_IN_LINK,
+  registrationSubtitle,
+} from "../content/otp-registration.content";
 import * as React from "react";
 
 const PRIMARY = "#4E5B92";
@@ -18,6 +24,8 @@ interface OtpFormProps {
   canResend: boolean;
   inputsRef: React.RefObject<(HTMLInputElement | null)[]>;
   context: OtpContextType;
+  /** Reached straight from registration, which may have emailed instructions rather than a code. */
+  fromRegistration: boolean;
   onChange: (idx: number, val: string) => void;
   onKeyDown: (idx: number, e: React.KeyboardEvent<HTMLInputElement>) => void;
   onPaste: (e: React.ClipboardEvent) => void;
@@ -35,6 +43,7 @@ export function OtpForm({
   canResend,
   inputsRef,
   context,
+  fromRegistration,
   onChange,
   onKeyDown,
   onPaste,
@@ -47,7 +56,11 @@ export function OtpForm({
   return (
     <AuthCard
       title="التحقق من الرمز"
-      subtitle={`أدخل الرمز المكوّن من ${OTP_LENGTH} أرقام الذي أرسلناه إلى بريدك الإلكتروني`}
+      subtitle={
+        fromRegistration
+          ? registrationSubtitle(OTP_LENGTH)
+          : `أدخل الرمز المكوّن من ${OTP_LENGTH} أرقام الذي أرسلناه إلى بريدك الإلكتروني`
+      }
     >
       <form onSubmit={onVerify} noValidate className="flex flex-col gap-6">
         {/* OTP Inputs — reversed for RTL visual order */}
@@ -139,6 +152,31 @@ export function OtpForm({
             </div>
           )}
         </div>
+
+        {fromRegistration && (
+          <div
+            className="rounded-xl px-4 py-3 flex flex-col gap-2 w-full"
+            style={{ background: "rgba(78,91,146,0.05)", border: "1px solid rgba(78,91,146,0.15)" }}
+          >
+            <p style={{ fontFamily: "'Cairo', sans-serif", fontSize: 13, color: "#4B5563", lineHeight: 1.7, margin: 0 }}>
+              {EXISTING_ACCOUNT_NOTE}
+            </p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              {[
+                { to: paths.login, label: SIGN_IN_LINK },
+                { to: paths.forgotPassword, label: RESET_PASSWORD_LINK },
+              ].map(({ to, label }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  style={{ fontFamily: "'Cairo', sans-serif", fontWeight: 600, fontSize: 13, color: PRIMARY }}
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         <PrimaryButton type="submit" loading={loading && !success}>
           تأكيد الرمز

@@ -79,7 +79,11 @@ export function useRegister() {
         termsAccepted: true,
         termsVersion: version,
       });
-      navigate(paths.otp, { state: { email: form.email, context: "email-verification" } });
+      // Every accepted registration is answered alike, taken address or not, so the code screen is
+      // told where the visitor came from and explains both cases itself.
+      navigate(paths.otp, {
+        state: { email: form.email, context: "email-verification", origin: "registration" },
+      });
     } catch (err) {
       if (err instanceof ApiError && err.is(ApiErrorCode.TERMS_VERSION_OUTDATED)) {
         /*
@@ -95,7 +99,8 @@ export function useRegister() {
       } else if (err instanceof ApiError && err.is(ApiErrorCode.TERMS_UNAVAILABLE)) {
         setErrors({ general: TERMS_UNAVAILABLE_MESSAGE });
       } else if (err instanceof ApiError) {
-        setErrors({ general: err.errors[0] });
+        // Field errors arrive as "password: <message>"; the field name is the API's, not the reader's.
+        setErrors({ general: err.errors[0]?.replace(/^[A-Za-z]+: /, "") });
       } else {
         setErrors({ general: "حدث خطأ غير متوقع، حاول مرة أخرى" });
       }

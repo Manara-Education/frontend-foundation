@@ -8,6 +8,9 @@ export interface AuthResponse {
 
 export type OtpContextType = "email-verification" | "password-reset";
 
+/** Which screen sent the visitor here, when that changes what the code screen has to explain. */
+export type OtpOrigin = "registration";
+
 export interface OtpFormState {
   otp: string[];
 }
