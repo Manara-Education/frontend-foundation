@@ -106,7 +106,7 @@
 		#   font-src 'self' https://fonts.gstatic.com
 		#     Where that Google stylesheet resolves its font files to.
 		#
-		#   img-src 'self' data: blob: https://img.youtube.com https://i.vimeocdn.com
+		#   img-src 'self' data: blob: https://img.youtube.com https://i.ytimg.com https://i.vimeocdn.com
 		#     'self' is the backend's /uploads, where course covers and banner
 		#     images live. data: is the inline SVG placeholder in ImageWithFallback.
 		#     blob: is the local preview an instructor sees after picking a cover
@@ -116,6 +116,11 @@
 		#     backend reads one out of Vimeo's oEmbed response and stores it on the
 		#     lesson. Rich content has no image block, so no author-chosen host is
 		#     ever an image source.
+		#     i.ytimg.com is not requested by anything in this repository either.
+		#     During YouTube playback the browser fetches an i.ytimg.com still on
+		#     this page's behalf, not the player's (no script or element initiates
+		#     it; most likely the embed's media-session artwork), so this page's
+		#     img-src governs it. Found by a browser run through this Caddyfile.
 		#
 		#   frame-src https://www.youtube.com https://player.vimeo.com
 		#     The two embed origins the video adapters build. youtube-nocookie.com
@@ -149,7 +154,7 @@
 		# collection while discarding every report. A collector is worth adding —
 		# as its own change, with a body-size and rate limit on the endpoint — so
 		# that a missed origin reaches someone before a user reports it.
-		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://img.youtube.com https://i.vimeocdn.com; media-src 'none'; object-src 'none'; worker-src 'none'; frame-src https://www.youtube.com https://player.vimeo.com; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://img.youtube.com https://i.ytimg.com https://i.vimeocdn.com; media-src 'none'; object-src 'none'; worker-src 'none'; frame-src https://www.youtube.com https://player.vimeo.com; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 
 		# --- HSTS: prepared, NOT enabled -----------------------------------
 		#
