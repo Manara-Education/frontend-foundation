@@ -16,6 +16,7 @@ export function OtpPage() {
         canResend={otpState.canResend}
         inputsRef={otpState.inputsRef}
         context={otpState.context}
+        fromRegistration={otpState.fromRegistration}
         onChange={otpState.handleChange}
         onKeyDown={otpState.handleKeyDown}
         onPaste={otpState.handlePaste}

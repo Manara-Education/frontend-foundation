@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { verifyOtp, verifyResetOtp, resendOtp } from "../services/otp.service";
-import type { OtpErrors, OtpContextType } from "../types/otp.types";
+import type { OtpErrors, OtpContextType, OtpOrigin } from "../types/otp.types";
 import { ApiError } from "@/shared/api";
 import { postAuthPath, useAuth } from "@/shared/auth";
 import { paths } from "@/shared/navigation";
@@ -14,12 +14,14 @@ export function useOtp() {
   const location = useLocation();
   const { setUser } = useAuth();
   const state = location.state as
-    | { email?: string; context?: OtpContextType; from?: string }
+    | { email?: string; context?: OtpContextType; from?: string; origin?: OtpOrigin }
     | null;
   const email = state?.email || "";
   const context = state?.context || "email-verification";
   /** Carried through from the login screen when a guard sent the visitor there. */
   const from = state?.from;
+  /** Registration's answer does not say whether the address already had an account; see the form. */
+  const fromRegistration = state?.origin === "registration";
 
   useEffect(() => {
     // Reached without the address the code was sent to, this screen has nothing to verify.
@@ -166,6 +168,7 @@ export function useOtp() {
     canResend,
     inputsRef,
     context,
+    fromRegistration,
     handleChange,
     handleKeyDown,
     handlePaste,
