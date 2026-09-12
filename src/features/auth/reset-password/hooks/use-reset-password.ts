@@ -5,6 +5,13 @@ import type { ResetPasswordErrors, ResetPasswordFormState } from "../types/reset
 import { ApiError } from "@/shared/api";
 import { postAuthPath, useAuth } from "@/shared/auth";
 import { paths } from "@/shared/navigation";
+import {
+  PASSWORD_MAX_BYTES,
+  PASSWORD_MIN_CHARACTERS,
+  passwordByteCount,
+  passwordCharacterCount,
+  passwordLengthError,
+} from "@/features/auth/password-policy/password-policy";
 import * as React from "react";
 
 export interface EvaluatedRule {
@@ -55,11 +62,19 @@ export function useResetPassword() {
   const setField = (k: keyof ResetPasswordFormState) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
+  // Length only, the same limits the server applies. Composition is not required, and the rest of
+  // the policy — common passwords, the account's own details — is checked by the server on save.
   const passwordRules = [
-    { id: "length", label: "٨ أحرف على الأقل", test: (p: string) => p.length >= 8 },
-    { id: "upper", label: "حرف كبير واحد على الأقل (A-Z)", test: (p: string) => /[A-Z]/.test(p) },
-    { id: "number", label: "رقم واحد على الأقل (0-9)", test: (p: string) => /[0-9]/.test(p) },
-    { id: "special", label: "رمز خاص واحد على الأقل (!@#$...)", test: (p: string) => /[^A-Za-z0-9]/.test(p) },
+    {
+      id: "length",
+      label: `${PASSWORD_MIN_CHARACTERS} حرفاً على الأقل، والمسافات والحروف العربية مسموحة`,
+      test: (p: string) => passwordCharacterCount(p) >= PASSWORD_MIN_CHARACTERS,
+    },
+    {
+      id: "bytes",
+      label: `لا تتجاوز ${PASSWORD_MAX_BYTES} بايت: الحرف العربي بايتان واللاتيني بايت واحد`,
+      test: (p: string) => p.length > 0 && passwordByteCount(p) <= PASSWORD_MAX_BYTES,
+    },
   ];
 
   const evaluatedRules: EvaluatedRule[] = passwordRules.map((r) => ({
@@ -72,7 +87,7 @@ export function useResetPassword() {
     const errs: ResetPasswordErrors = {};
     if (forced && !form.currentPassword) errs.currentPassword = "كلمة المرور الحالية مطلوبة";
     if (!form.password) errs.password = "كلمة المرور مطلوبة";
-    else if (form.password.length < 8) errs.password = "كلمة المرور قصيرة جداً";
+    else if (passwordLengthError(form.password)) errs.password = passwordLengthError(form.password);
     else if (forced && form.password === form.currentPassword)
       errs.password = "يجب أن تختلف كلمة المرور الجديدة عن الحالية";
     if (!form.confirm) errs.confirm = "تأكيد كلمة المرور مطلوب";

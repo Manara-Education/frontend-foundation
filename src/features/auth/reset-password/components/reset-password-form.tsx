@@ -6,6 +6,7 @@ import { FormField, PrimaryButton } from "@/features/auth/components/FormField";
 import { ManaraLogoIcon } from "@/shared/components/ManaraLogo";
 import type { ResetPasswordErrors, ResetPasswordFormState } from "../types/reset-password.types";
 import type { EvaluatedRule } from "../hooks/use-reset-password";
+import { PASSWORD_GUIDANCE } from "@/features/auth/password-policy/password-policy";
 import * as React from "react";
 
 const PRIMARY = "#4E5B92";
@@ -243,6 +244,9 @@ export function ResetPasswordForm({
               </div>
             );
           })}
+          <p style={{ fontFamily: "'Cairo', sans-serif", fontSize: 12, color: "#717182", lineHeight: 1.7, marginTop: 4 }}>
+            {PASSWORD_GUIDANCE}
+          </p>
         </div>
 
         <FormField

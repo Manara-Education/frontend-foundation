@@ -5,6 +5,7 @@ import { paths } from "@/shared/navigation";
 import { registerUser } from "../services/register.service";
 import type { RegisterErrors, RegisterFormState, PasswordStrength } from "../types/register.types";
 import { ApiError, ApiErrorCode } from "@/shared/api";
+import { passwordLengthError, passwordLengthMeter } from "@/features/auth/password-policy/password-policy";
 import {
   TERMS_CONSENT_REQUIRED_ERROR,
   TERMS_UNAVAILABLE_MESSAGE,
@@ -48,7 +49,7 @@ export function useRegister() {
     if (!form.email) errs.email = "البريد الإلكتروني مطلوب";
     else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = "البريد الإلكتروني غير صحيح";
     if (!form.password) errs.password = "كلمة المرور مطلوبة";
-    else if (form.password.length < 8) errs.password = "يجب أن تكون كلمة المرور 8 أحرف على الأقل";
+    else if (passwordLengthError(form.password)) errs.password = passwordLengthError(form.password);
     if (!form.confirm) errs.confirm = "تأكيد كلمة المرور مطلوب";
     else if (form.password !== form.confirm) errs.confirm = "كلمتا المرور غير متطابقتين";
     // Re-checked here rather than trusted from the disabled button: the button is a
@@ -104,21 +105,9 @@ export function useRegister() {
     }
   };
 
-  const getPasswordStrength = (): PasswordStrength | null => {
-    const p = form.password;
-    if (!p) return null;
-    let score = 0;
-    if (p.length >= 8) score++;
-    if (/[A-Z]/.test(p)) score++;
-    if (/[0-9]/.test(p)) score++;
-    if (/[^A-Za-z0-9]/.test(p)) score++;
-    if (score <= 1) return { label: "ضعيفة", color: "#D4183D", width: "25%" };
-    if (score === 2) return { label: "مقبولة", color: "#F5A623", width: "55%" };
-    if (score === 3) return { label: "جيدة", color: "#4E5B92", width: "75%" };
-    return { label: "قوية", color: "#27AE60", width: "100%" };
-  };
-
-  const strength = getPasswordStrength();
+  // Length is all the client can honestly measure. Composition is not required, so it is not
+  // scored, and whether the password is a common one is for the server to say.
+  const strength: PasswordStrength | null = passwordLengthMeter(form.password);
 
   return {
     form,
