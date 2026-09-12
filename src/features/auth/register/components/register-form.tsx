@@ -3,6 +3,7 @@ import { AuthCard } from "@/features/auth/components/AuthCard";
 import { FormField, PrimaryButton, LinkButton, Divider } from "@/features/auth/components/FormField";
 import type { RegisterErrors, RegisterFormState, PasswordStrength } from "../types/register.types";
 import { TermsConsentField } from "./terms-consent-field";
+import { PASSWORD_GUIDANCE } from "@/features/auth/password-policy/password-policy";
 import * as React from "react";
 
 interface RegisterFormProps {
@@ -87,7 +88,7 @@ export function RegisterForm({
           <FormField
             label="كلمة المرور"
             isPassword
-            placeholder="٨ أحرف على الأقل"
+            placeholder="15 حرفاً على الأقل"
             value={form.password}
             onChange={onChange("password")}
             error={errors.password}
@@ -106,10 +107,13 @@ export function RegisterForm({
                 />
               </div>
               <span style={{ fontFamily: "'Cairo', sans-serif", fontSize: 12, color: strength.color }}>
-                قوة كلمة المرور: {strength.label}
+                طول كلمة المرور: {strength.label}
               </span>
             </div>
           )}
+          <span style={{ fontFamily: "'Cairo', sans-serif", fontSize: 12, color: "#717182", lineHeight: 1.7 }}>
+            {PASSWORD_GUIDANCE}
+          </span>
         </div>
 
         <FormField
