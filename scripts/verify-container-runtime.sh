@@ -231,10 +231,21 @@ case "$idx_cc" in *no-cache*) ok "index.html is sent no-cache" ;; *) bad "index.
 proxy="$(curl -fsS --max-time 8 "http://127.0.0.1:${HTTP_PORT}/api/health" || true)"
 case "$proxy" in *backend-ok*) ok "/api/* reverse-proxies to the backend" ;; *) bad "/api/* proxy returned '${proxy:-<empty>}'" ;; esac
 
-for h in x-content-type-options x-frame-options referrer-policy content-security-policy-report-only permissions-policy; do
+for h in x-content-type-options x-frame-options referrer-policy content-security-policy permissions-policy; do
   curl -fsSI --max-time 5 "http://127.0.0.1:${HTTP_PORT}/" | tr -d '\r' | grep -qi "^${h}:" \
     && ok "security header present: ${h}" || bad "security header MISSING: ${h}"
 done
+
+# The CSP is present above; what makes it worth anything is that it ENFORCES and
+# that script-src stays exactly 'self'. A report-only header blocks nothing, and
+# 'unsafe-inline'/'unsafe-eval' or a host on script-src would let an injected
+# script run.
+csp="$(curl -fsSI --max-time 5 "http://127.0.0.1:${HTTP_PORT}/" | tr -d '\r' | awk -F': ' 'tolower($1)=="content-security-policy"{print $2}')"
+script_src="$(printf '%s' "$csp" | tr ';' '\n' | sed 's/^ *//; s/ *$//' | awk '$1=="script-src"')"
+[ "$script_src" = "script-src 'self'" ] \
+  && ok "CSP is enforced and script-src is 'self' only" || bad "CSP script-src was '${script_src:-<missing>}'"
+curl -fsSI --max-time 5 "http://127.0.0.1:${HTTP_PORT}/" | tr -d '\r' | grep -qi '^content-security-policy-report-only:' \
+  && bad "a report-only CSP is still being sent" || ok "no report-only CSP alongside the enforced one"
 curl -fsSI --max-time 5 "http://127.0.0.1:${HTTP_PORT}/" | tr -d '\r' | grep -qi '^server:' \
   && bad "Server header is still advertised" || ok "Server header is stripped"
 

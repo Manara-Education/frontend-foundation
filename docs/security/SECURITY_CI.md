@@ -268,10 +268,10 @@ Verified current editions: **OWASP Top 10:2025**, **API Security Top 10:2023**,
 | Category | Automated coverage here | Gap |
 |---|---|---|
 | A01 Broken Access Control / API1 BOLA, API5 BFLA | Route-guard and role-rendering tests | **Enforced server-side.** A frontend guard is a usability affordance, not a security control. |
-| A02 Security Misconfiguration / API8 | `trivy config` over the Dockerfile and workflows; the Caddy security headers and the report-only CSP in `Caddyfile` | Production TLS and ingress live in `manara-infrastructure`. |
+| A02 Security Misconfiguration / API8 | `trivy config` over the Dockerfile and workflows; the Caddy security headers and the enforced CSP in `Caddyfile`, asserted by `scripts/verify-container-runtime.sh` | Production TLS and ingress live in `manara-infrastructure`. |
 | A03 Software Supply Chain Failures | osv-scanner + Trivy + dependency-review over the full lockfile; **image scanning of the Caddy base**; pinned action SHAs; pinned, checksum-verified scanner binaries | A compromised upstream npm publish that no advisory has caught is not detected. |
 | A04 Cryptographic Failures | Dependency advisories for TLS libraries in the image | Nothing cryptographic is implemented in this application. |
-| A05 Injection — **stored XSS is the live risk here** | CodeQL XSS/DOM rules; the rich-content sanitizer's own tests; the report-only CSP records what a violation *would* have been | Lesson content is authored as rich text and rendered as HTML. Sanitizer correctness is the control; CSP is not yet enforcing. |
+| A05 Injection — **stored XSS is the live risk here** | CodeQL XSS/DOM rules; the rich-content sanitizer's own tests; the enforced CSP (`script-src 'self'`, no inline script) refuses an injected script even if one reached the page | Lesson content is authored as rich text and rendered as HTML. Sanitizer correctness is the first control; CSP is the second. Violation reports are not collected yet. |
 | A06 Insecure Design | — | Not automatable. Design review. |
 | A07 Authentication Failures / API2 | Session and CSRF handling in `src/shared/api/`, covered by its tests | Session lifetime, OTP abuse and reset-token handling are backend concerns. |
 | A08 Software or Data Integrity Failures | Immutable-digest image scanning; the deployment gate; secret scanning | — |
