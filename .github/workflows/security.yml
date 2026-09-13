@@ -76,6 +76,16 @@ on:
   schedule:
     - cron: '23 3 * * *'
   workflow_dispatch:
+    inputs:
+      scope:
+        description: >-
+          dispatched-ref assesses the ref this run is dispatched against, which
+          is what deploy-production.yml asks for. protected-branches assesses
+          develop AND main at their current heads, exactly as the daily schedule
+          does, without waiting for it.
+        type: choice
+        options: [dispatched-ref, protected-branches]
+        default: dispatched-ref
 
 # Least privilege at the top. Nothing here is granted `contents: write`: this
 # workflow reads the repository and writes artifacts, and a security gate that
@@ -126,10 +136,12 @@ jobs:
           SHA: ${{ github.sha }}
           REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
+          DISPATCH_SCOPE: ${{ inputs.scope }}
         run: |
           set -euo pipefail
 
-          if [ "$EVENT" = "schedule" ]; then
+          if [ "$EVENT" = "schedule" ] || { [ "$EVENT" = "workflow_dispatch" ] \
+               && [ "${DISPATCH_SCOPE:-}" = "protected-branches" ]; }; then
             # Resolve both protected branches to commits NOW. Reading them later,
             # per job, would let a push between jobs split one "assessment" across
             # two different trees.
@@ -198,12 +210,41 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'npm'
 
+      # The scanners are installed, and the intelligence refreshed, by the
+      # tooling of the workflow revision that is RUNNING, never by the revision
+      # being assessed. A scheduled run assesses `main` with `develop`'s
+      # workflow, and `main` can predate the tooling that workflow calls: that
+      # is how every `main` leg failed with "No such file or directory" on
+      # 2026-09-13 while the `develop` legs passed. Which tools run, at which
+      # pinned versions, is the workflow's decision; the assessed revision only
+      # supplies what is scanned. See "Tooling comes from the running workflow"
+      # in docs/security/SECURITY_CI.md.
+      - name: Fetch the security tooling of the running workflow
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: .security-tooling
+          sparse-checkout: .github/security
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Move the tooling out of the assessed tree
+        run: |
+          set -euo pipefail
+          # Out of the workspace before anything is scanned or built, so the
+          # tooling can never be mistaken for part of the assessed revision.
+          dest="${RUNNER_TEMP}/security-tooling"
+          mkdir -p "$dest"
+          cp -R .security-tooling/.github/security/. "$dest/"
+          rm -rf .security-tooling
+          echo "SECURITY_TOOLING=$dest" >> "$GITHUB_ENV"
+
       - name: Install the pinned scanners
         run: |
           set -euo pipefail
-          bash .github/security/install-scanner.sh trivy
-          bash .github/security/install-scanner.sh osv-scanner
-          bash .github/security/install-scanner.sh gitleaks
+          bash "$SECURITY_TOOLING/install-scanner.sh" trivy
+          bash "$SECURITY_TOOLING/install-scanner.sh" osv-scanner
+          bash "$SECURITY_TOOLING/install-scanner.sh" gitleaks
 
       # The SBOM is taken over the INSTALLED tree, so `npm ci` has to run first.
       - name: Install dependencies from the lockfile
@@ -215,7 +256,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          python3 .github/security/refresh-intelligence.py \
+          python3 "$SECURITY_TOOLING/refresh-intelligence.py" \
             --out intel \
             --ecosystems npm \
             --probe-file package-lock.json \
@@ -362,8 +403,30 @@ jobs:
           ref: ${{ matrix.assess.revision }}
           persist-credentials: false
 
+      # Tooling from the running workflow, not the assessed revision (see the
+      # intelligence job).
+      - name: Fetch the security tooling of the running workflow
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: .security-tooling
+          sparse-checkout: .github/security
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Move the tooling out of the assessed tree
+        run: |
+          set -euo pipefail
+          # Out of the workspace before anything is scanned or built, so the
+          # tooling can never be mistaken for part of the assessed revision.
+          dest="${RUNNER_TEMP}/security-tooling"
+          mkdir -p "$dest"
+          cp -R .security-tooling/.github/security/. "$dest/"
+          rm -rf .security-tooling
+          echo "SECURITY_TOOLING=$dest" >> "$GITHUB_ENV"
+
       - name: Install the pinned scanner
-        run: bash .github/security/install-scanner.sh osv-scanner
+        run: bash "$SECURITY_TOOLING/install-scanner.sh" osv-scanner
 
       - name: Download the recorded intelligence snapshot
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -517,8 +580,30 @@ jobs:
           ref: ${{ matrix.assess.revision }}
           persist-credentials: false
 
+      # Tooling from the running workflow, not the assessed revision (see the
+      # intelligence job).
+      - name: Fetch the security tooling of the running workflow
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: .security-tooling
+          sparse-checkout: .github/security
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Move the tooling out of the assessed tree
+        run: |
+          set -euo pipefail
+          # Out of the workspace before anything is scanned or built, so the
+          # tooling can never be mistaken for part of the assessed revision.
+          dest="${RUNNER_TEMP}/security-tooling"
+          mkdir -p "$dest"
+          cp -R .security-tooling/.github/security/. "$dest/"
+          rm -rf .security-tooling
+          echo "SECURITY_TOOLING=$dest" >> "$GITHUB_ENV"
+
       - name: Install the pinned scanner
-        run: bash .github/security/install-scanner.sh trivy
+        run: bash "$SECURITY_TOOLING/install-scanner.sh" trivy
 
       # Keyed by the day so the database is reused within a run and across the
       # jobs of one day, and re-pulled tomorrow. This is only safe because the
@@ -595,8 +680,30 @@ jobs:
           ref: ${{ matrix.assess.revision }}
           persist-credentials: false
 
+      # Tooling from the running workflow, not the assessed revision (see the
+      # intelligence job).
+      - name: Fetch the security tooling of the running workflow
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: .security-tooling
+          sparse-checkout: .github/security
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Move the tooling out of the assessed tree
+        run: |
+          set -euo pipefail
+          # Out of the workspace before anything is scanned or built, so the
+          # tooling can never be mistaken for part of the assessed revision.
+          dest="${RUNNER_TEMP}/security-tooling"
+          mkdir -p "$dest"
+          cp -R .security-tooling/.github/security/. "$dest/"
+          rm -rf .security-tooling
+          echo "SECURITY_TOOLING=$dest" >> "$GITHUB_ENV"
+
       - name: Install the pinned scanner
-        run: bash .github/security/install-scanner.sh trivy
+        run: bash "$SECURITY_TOOLING/install-scanner.sh" trivy
 
       - name: Cache the Trivy database
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -675,8 +782,30 @@ jobs:
           ref: ${{ matrix.assess.revision }}
           persist-credentials: false
 
+      # Tooling from the running workflow, not the assessed revision (see the
+      # intelligence job).
+      - name: Fetch the security tooling of the running workflow
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: .security-tooling
+          sparse-checkout: .github/security
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Move the tooling out of the assessed tree
+        run: |
+          set -euo pipefail
+          # Out of the workspace before anything is scanned or built, so the
+          # tooling can never be mistaken for part of the assessed revision.
+          dest="${RUNNER_TEMP}/security-tooling"
+          mkdir -p "$dest"
+          cp -R .security-tooling/.github/security/. "$dest/"
+          rm -rf .security-tooling
+          echo "SECURITY_TOOLING=$dest" >> "$GITHUB_ENV"
+
       - name: Install the pinned scanner
-        run: bash .github/security/install-scanner.sh trivy
+        run: bash "$SECURITY_TOOLING/install-scanner.sh" trivy
 
       - name: Cache the Trivy database
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -873,8 +1002,30 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # Tooling from the running workflow, not the assessed revision (see the
+      # intelligence job).
+      - name: Fetch the security tooling of the running workflow
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: .security-tooling
+          sparse-checkout: .github/security
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Move the tooling out of the assessed tree
+        run: |
+          set -euo pipefail
+          # Out of the workspace before anything is scanned or built, so the
+          # tooling can never be mistaken for part of the assessed revision.
+          dest="${RUNNER_TEMP}/security-tooling"
+          mkdir -p "$dest"
+          cp -R .security-tooling/.github/security/. "$dest/"
+          rm -rf .security-tooling
+          echo "SECURITY_TOOLING=$dest" >> "$GITHUB_ENV"
+
       - name: Install the pinned scanner
-        run: bash .github/security/install-scanner.sh gitleaks
+        run: bash "$SECURITY_TOOLING/install-scanner.sh" gitleaks
 
       # ---------------------------------------------------------------------
       # `gitleaks git`, NOT `gitleaks dir`.
@@ -1073,6 +1224,11 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      # Read-only access to earlier runs' artifacts, to carry the findings
+      # register forward. Nothing in this job can write.
+      actions: read
     steps:
       # ---------------------------------------------------------------------
       # The trusted half: what decides.
@@ -1206,6 +1362,118 @@ jobs:
       # Each assessed revision is evaluated separately against the SAME register,
       # because the register is per-branch by design: remediating something on
       # `develop` must not clear it from `main`.
+      # The findings register is history, not a snapshot. `first_seen` starts
+      # each finding's remediation clock (policy.yml: remediation), and
+      # `resolved_on` records the assessment that closed it on a branch. Until
+      # this step existed every run began with an empty register, so every
+      # clock restarted daily and no closure outlived its own run.
+      #
+      # Only a register written by a push, scheduled or dispatched run ON
+      # develop or main is trusted: those execute this workflow as it stands on
+      # a protected branch. A pull request can rewrite this file, so an artifact
+      # from one could claim any history it liked.
+      #
+      # The register never decides the verdict (evaluate.py judges this run's
+      # reports), so missing history is announced, not fatal.
+      - name: Carry the findings register forward
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          mkdir -p register
+          python3 - <<'PY' || echo "::warning title=Findings register::The carry-forward step crashed; this run starts a fresh register."
+          import json, os, pathlib, subprocess, tempfile
+
+          REPO, ME = os.environ["REPO"], os.environ["RUN_ID"]
+          DEST = pathlib.Path("register/findings.json")
+          TRUSTED_EVENTS = {"push", "schedule", "workflow_dispatch"}
+          PROTECTED = {"develop", "main"}
+          MAX_TRIED = 15
+
+          def gh(*args):
+              return subprocess.run(["gh", *args], capture_output=True, text=True, timeout=180)
+
+          def registers_in(root):
+              found = []
+              for p in sorted(pathlib.Path(root).rglob("findings.json")):
+                  try:
+                      doc = json.loads(p.read_text())
+                  except (OSError, ValueError):
+                      continue
+                  if (doc.get("schema") == 1 and doc.get("repository") == REPO
+                          and isinstance(doc.get("findings"), list)):
+                      found.append((p.parent.name == "register", doc))
+              canonical = [d for is_canonical, d in found if is_canonical]
+              return canonical[:1] or [d for _, d in found]
+
+          def union(docs):
+              # Older runs kept one register per target. Join them without
+              # losing the earliest clock or any branch a finding is open on.
+              if len(docs) == 1:
+                  return docs[0]
+              merged = {}
+              for doc in docs:
+                  for entry in doc["findings"]:
+                      key = entry.get("key")
+                      if not key:
+                          continue
+                      kept = merged.setdefault(key, dict(entry))
+                      if (entry.get("first_seen") or "~") < (kept.get("first_seen") or "~"):
+                          kept["first_seen"] = entry["first_seen"]
+                          kept["first_seen_revision"] = entry.get("first_seen_revision")
+                      kept["branches"] = {**(entry.get("branches") or {}),
+                                          **(kept.get("branches") or {})}
+              out = dict(docs[0])
+              out["findings"] = list(merged.values())
+              return out
+
+          def find():
+              listing = gh("api",
+                           f"repos/{REPO}/actions/workflows/security.yml/runs?status=completed&per_page=50",
+                           "--jq", '.workflow_runs[] | [.id, .event, .head_branch, '
+                                   '(.head_repository.full_name // "")] | @tsv')
+              if listing.returncode != 0:
+                  return None, f"could not list earlier runs: {listing.stderr.strip()[:200]}"
+              tried = 0
+              for line in listing.stdout.splitlines():
+                  run_id, event, branch, head_repo = (line.split("\t") + ["", "", "", ""])[:4]
+                  if (run_id == ME or head_repo != REPO
+                          or event not in TRUSTED_EVENTS or branch not in PROTECTED):
+                      continue
+                  tried += 1
+                  if tried > MAX_TRIED:
+                      break
+                  tmp = tempfile.mkdtemp()
+                  if gh("run", "download", run_id, "-R", REPO,
+                        "-n", "security-gate-verdict", "-D", tmp).returncode != 0:
+                      continue  # expired, or that run never reached its upload
+                  docs = registers_in(tmp)
+                  if docs:
+                      return (run_id, event, branch, union(docs)), ""
+              return None, f"none of the last {min(tried, MAX_TRIED)} trusted runs carries a register"
+
+          try:
+              found, why = find()
+          except Exception as exc:  # history must never stop the gate
+              found, why = None, f"{type(exc).__name__}: {exc}"
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              if found:
+                  run_id, event, branch, doc = found
+                  DEST.write_text(json.dumps(doc, indent=2) + "\n")
+                  msg = (f"Findings register carried forward from run {run_id} "
+                         f"({event} on {branch}): {len(doc['findings'])} entries.")
+                  print(msg)
+                  summary.write(f"\n> {msg}\n\n")
+              else:
+                  msg = (f"No findings register was carried forward ({why}). This run "
+                         "starts a fresh register, so remediation clocks start today.")
+                  print(f"::warning title=Findings register::{msg}")
+                  summary.write(f"\n> [!WARNING]\n> {msg}\n\n")
+          PY
+
       - name: Evaluate
         env:
           ASSESS: ${{ needs.plan.outputs.assess }}
@@ -1276,7 +1544,7 @@ jobs:
               --revision     "$revision" \
               --repository   "$REPO" \
               --workspace    "$GITHUB_WORKSPACE" \
-              --register-out .github/security/findings.json \
+              --register-out register/findings.json \
               --report-out   "assessment/$slug/report.md" \
               ${verdict_args[@]+"${verdict_args[@]}"}
             code=$?
@@ -1312,6 +1580,6 @@ jobs:
           name: security-gate-verdict
           path: |
             assessment/
-            .github/security/findings.json
+            register/
           retention-days: 90
           if-no-files-found: warn
