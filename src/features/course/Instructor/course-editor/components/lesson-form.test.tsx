@@ -20,7 +20,9 @@ function existingLesson(overrides: Partial<CourseLessonEditorState> = {}): Cours
   };
 }
 
-const videoInput = () => screen.getByPlaceholderText(/youtube\.com/i);
+// A case-insensitive substring match, not `/youtube\.com/i`: CodeQL reads an unanchored host regex
+// as a URL check that can be bypassed (js/regex/missing-regexp-anchor), even in a test.
+const videoInput = () => screen.getByPlaceholderText("youtube.com", { exact: false });
 
 /**
  * The instructor's video input. The product concept here is "a video", not "a YouTube video", so
