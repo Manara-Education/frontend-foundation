@@ -54,6 +54,9 @@ permissions:
   # Reading the image manifest from GHCR to prove the tag exists before the
   # server is touched at all.
   packages: read
+  # The promotion validator reads the check runs on the tagged commit.
+  checks: read
+  actions: read
 
 # One deployment at a time. cancel-in-progress is deliberately false: cancelling
 # a run mid-way could leave .env rewritten with the service half-restarted.
@@ -62,10 +65,319 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ===========================================================================
+  # Gate — was the commit this release points at actually assessed?
+  # ===========================================================================
+  # Before this job existed, deployment depended on nothing security-related.
+  # The chain was: tag push -> Release -> (workflow_run) -> deploy. A commit
+  # could be tagged and shipped without any security scan ever having looked at
+  # it, and nothing in the pipeline would have noticed.
+  #
+  # This job answers one question: does the exact commit this tag points at carry
+  # a `Security Gate` check run that concluded `success`, recently enough to
+  # mean anything? If not, the deployment stops here with production untouched.
+  #
+  # It runs in its OWN job with no `environment:`, so it holds none of the
+  # deployment secrets. The gate that decides whether to deploy has no ability to
+  # deploy, and nothing a pull request can influence reaches this far — the
+  # trigger is a tag on `main` or a manual dispatch, never a pull request.
+  assess:
+    name: Verify the release was assessed
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    permissions:
+      contents: read
+      # Reading the Security Gate check run on the released commit.
+      checks: read
+      # Dispatching a fresh assessment when the recorded one is too old to rely
+      # on. This is the one write scope, it acts only on this repository's own
+      # `Security` workflow, and it is what makes "stale" recoverable without a
+      # bypass.
+      actions: write
+
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      sha: ${{ steps.resolve.outputs.sha }}
+
+    steps:
+      # Same validation as the deploy job used to do alone, moved earlier so that
+      # nothing downstream ever sees an unvalidated tag. The deploy job still
+      # reads the tag from here rather than re-deriving it, so there is one
+      # definition of "which version is being deployed".
+      - name: Resolve the release tag to an exact commit
+        id: resolve
+        env:
+          RAW_TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$RAW_TAG" | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'; then
+            echo "::error::Resolved '$RAW_TAG', which is not a vMAJOR.MINOR.PATCH release tag."
+            echo "::error::A publish triggered by something other than a release tag does not deploy."
+            exit 1
+          fi
+
+          # A tag is a movable label and may be annotated, in which case the ref
+          # points at a tag object rather than at a commit. Dereferencing it here
+          # means everything below is anchored to a commit SHA — the thing that
+          # was actually scanned — rather than to a name that can be re-pointed.
+          obj_type="$(gh api "repos/$REPO/git/ref/tags/$RAW_TAG" --jq '.object.type')"
+          obj_sha="$(gh api  "repos/$REPO/git/ref/tags/$RAW_TAG" --jq '.object.sha')"
+          if [ "$obj_type" = "tag" ]; then
+            sha="$(gh api "repos/$REPO/git/tags/$obj_sha" --jq '.object.sha')"
+          else
+            sha="$obj_sha"
+          fi
+
+          printf '%s' "$sha" | grep -Eq '^[0-9a-f]{40}$' \
+            || { echo "::error::Could not resolve $RAW_TAG to a commit SHA."; exit 1; }
+
+          echo "tag=$RAW_TAG" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha"     >> "$GITHUB_OUTPUT"
+          echo "Deploying $RAW_TAG -> $sha"
+
+      # The freshness window comes from the policy AT THE RELEASED COMMIT, not
+      # from a number written here. If the two could disagree, the deployment
+      # gate would be enforcing a different standard from the one the gate itself
+      # was built to, and nobody would find out until it mattered.
+      - name: Check out the released commit's security policy
+        id: checkout_policy
+        continue-on-error: true
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.resolve.outputs.sha }}
+          sparse-checkout: .github/security/policy.yml
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Read the freshness window
+        id: policy
+        env:
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ ! -f .github/security/policy.yml ]; then
+            echo "::error title=Release predates the Security Gate::$TAG does not carry"
+            echo "::error::.github/security/policy.yml, so it was built before this"
+            echo "::error::repository had a Security Gate and cannot have been assessed by it."
+            echo "::error::"
+            echo "::error::This deployment is refused. To ship this tag anyway, cut a new"
+            echo "::error::release from a commit that carries the gate. Do not remove this"
+            echo "::error::check — an unassessed release is exactly what it exists to stop."
+            exit 1
+          fi
+          python3 -m pip install --quiet --disable-pip-version-check 'PyYAML==6.0.3'
+          hours="$(python3 -c "
+          import yaml
+          p = yaml.safe_load(open('.github/security/policy.yml'))
+          print(int((p.get('intelligence') or {})['max_age_hours']))")"
+          echo "max_age_hours=$hours" >> "$GITHUB_OUTPUT"
+          echo "An assessment older than ${hours}h will be refreshed before deploying."
+
+      # ---------------------------------------------------------------------
+      # The gate itself
+      # ---------------------------------------------------------------------
+      # This POLLS rather than sampling once, and the distinction is the whole
+      # correctness of the step.
+      #
+      # `security.yml` runs on `push` to `main`; this workflow is chained off
+      # `Release`. The two are independent, so when this job starts the Security
+      # Gate for the tagged commit is very often still queued or in progress.
+      # A step that read the check once would see `queued` and have to guess —
+      # and both guesses are wrong. Treating it as a pass ships an unassessed
+      # commit; treating it as a failure makes every release fail a race it was
+      # always going to lose.
+      #
+      # So: `success` proceeds, a terminal non-success fails immediately without
+      # burning the remaining budget, still-running waits, and running out of time
+      # fails. Absent is never a pass — a commit with no Security Gate at all is
+      # precisely the case this job exists to refuse.
+      #
+      # STALENESS. A check that passed is treated by GitHub as passing forever,
+      # however old it is. A commit tagged today can carry a Security Gate that
+      # went green a week ago, before the advisory that matters was published. So
+      # after finding a successful run, its age is compared against the policy's
+      # window; if it is too old, a fresh assessment is dispatched against the tag
+      # and the FRESH result is what decides. There is no fallback to the stale
+      # pass — if the refresh cannot be dispatched or does not finish in time,
+      # this job fails.
+      - name: Require a fresh, successful Security Gate on the released commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ steps.resolve.outputs.tag }}
+          SHA: ${{ steps.resolve.outputs.sha }}
+          MAX_AGE_HOURS: ${{ steps.policy.outputs.max_age_hours }}
+          GATE_NAME: 'Security Gate'
+          WORKFLOW_FILE: 'security.yml'
+        run: |
+          set -euo pipefail
+
+          # The newest attempt, by check-run id. Ids increase; `completed_at` is
+          # null while a run is in progress, so sorting on it would rank a re-run
+          # that is still going below the attempt it supersedes.
+          newest_gate() {
+            gh api --paginate "repos/$REPO/commits/$SHA/check-runs?per_page=100" \
+              --jq '.check_runs[]' 2>/dev/null \
+              | jq -s --arg n "$GATE_NAME" \
+                  '[.[] | select(.name == $n)] | sort_by(.id) | last // empty'
+          }
+
+          # Poll until the gate reaches a terminal state, or the deadline passes.
+          # Echoes the winning check run on stdout; anything else is fatal.
+          await_gate() {
+            local deadline=$(( SECONDS + $1 )) entry status conclusion
+            while :; do
+              entry="$(newest_gate)"
+
+              if [ -n "$entry" ]; then
+                status="$(printf '%s' "$entry" | jq -r '.status')"
+                conclusion="$(printf '%s' "$entry" | jq -r '.conclusion // "none"')"
+
+                if [ "$status" = "completed" ]; then
+                  if [ "$conclusion" = "success" ]; then
+                    printf '%s' "$entry"
+                    return 0
+                  fi
+                  # Terminal and not success. Waiting longer cannot change it.
+                  echo "::error title=Security Gate did not pass::The '$GATE_NAME' check on" >&2
+                  echo "::error::$SHA (tag $TAG) concluded '$conclusion'." >&2
+                  echo "::error::" >&2
+                  echo "::error::Production has NOT been touched. Open the Security workflow run" >&2
+                  echo "::error::for that commit, fix or formally except the blocking findings, and" >&2
+                  echo "::error::cut a new release. Re-running this deployment will not help until" >&2
+                  echo "::error::the gate on that commit is green." >&2
+                  return 1
+                fi
+                echo "  '$GATE_NAME' is $status on $SHA; waiting..." >&2
+              else
+                echo "  no '$GATE_NAME' check on $SHA yet; waiting..." >&2
+              fi
+
+              if (( SECONDS >= deadline )); then
+                if [ -z "$entry" ]; then
+                  echo "::error title=Release was never assessed::No '$GATE_NAME' check run" >&2
+                  echo "::error::exists on $SHA (tag $TAG)." >&2
+                  echo "::error::" >&2
+                  echo "::error::This is refused rather than assumed safe: a commit with no" >&2
+                  echo "::error::assessment is not a commit that passed one. Run the Security" >&2
+                  echo "::error::workflow against $TAG (Actions -> Security -> Run workflow, ref" >&2
+                  echo "::error::$TAG), wait for it to pass, then re-run this deployment." >&2
+                else
+                  echo "::error title=Security Gate did not finish::The '$GATE_NAME' check on" >&2
+                  echo "::error::$SHA was still running when this job's budget ran out." >&2
+                  echo "::error::Production has NOT been touched. Re-run this deployment once it" >&2
+                  echo "::error::has finished." >&2
+                fi
+                return 1
+              fi
+              sleep 20
+            done
+          }
+
+          echo "Waiting for '$GATE_NAME' on $SHA (tag $TAG)"
+          entry="$(await_gate 1200)"
+
+          completed="$(printf '%s' "$entry" | jq -r '.completed_at')"
+          age_h="$(python3 -c "
+          import datetime as dt
+          t = dt.datetime.fromisoformat('$completed'.replace('Z', '+00:00'))
+          print(round((dt.datetime.now(dt.timezone.utc) - t).total_seconds() / 3600, 1))")"
+          echo "The assessment of $SHA completed ${age_h}h ago; the window is ${MAX_AGE_HOURS}h."
+
+          if python3 -c "import sys; sys.exit(0 if float('$age_h') <= float('$MAX_AGE_HOURS') else 1)"; then
+            echo "Security Gate: fresh and successful on $SHA. Deployment may proceed."
+            exit 0
+          fi
+
+          # Too old to rely on. Dispatch a fresh assessment against the TAG — the
+          # workflow resolves it back to this same commit — and require the new
+          # result. Never the old one.
+          previous_id="$(printf '%s' "$entry" | jq -r '.id')"
+          echo "::warning::The recorded assessment of $SHA is ${age_h}h old. Dispatching a"
+          echo "::warning::fresh Security run against $TAG before deploying."
+
+          if ! gh workflow run "$WORKFLOW_FILE" --repo "$REPO" --ref "$TAG"; then
+            echo "::error title=Could not refresh the assessment::Dispatching '$WORKFLOW_FILE'"
+            echo "::error::against $TAG failed, and the existing assessment is ${age_h}h old —"
+            echo "::error::older than the ${MAX_AGE_HOURS}h this repository's own policy allows."
+            echo "::error::"
+            echo "::error::Refusing to deploy on a stale pass. Production has NOT been touched."
+            exit 1
+          fi
+
+          # Wait for a check run that is genuinely new, identified by an id higher
+          # than the one just read. Matching on "completed recently" would accept
+          # the stale run all over again.
+          echo "Waiting for the fresh assessment to appear and finish"
+          deadline=$(( SECONDS + 2100 ))
+          while :; do
+            entry="$(newest_gate)"
+            if [ -n "$entry" ]; then
+              id="$(printf '%s' "$entry" | jq -r '.id')"
+              if [ "$id" != "$previous_id" ]; then
+                status="$(printf '%s' "$entry" | jq -r '.status')"
+                if [ "$status" = "completed" ]; then
+                  conclusion="$(printf '%s' "$entry" | jq -r '.conclusion // "none"')"
+                  if [ "$conclusion" = "success" ]; then
+                    echo "Fresh Security Gate on $SHA concluded success. Deployment may proceed."
+                    exit 0
+                  fi
+                  echo "::error title=Fresh Security Gate failed::The re-assessment of $SHA"
+                  echo "::error::concluded '$conclusion'. Something has been published since the"
+                  echo "::error::original scan. Production has NOT been touched."
+                  exit 1
+                fi
+                echo "  fresh assessment is $status; waiting..."
+              else
+                echo "  fresh assessment has not registered a check run yet; waiting..."
+              fi
+            fi
+            if (( SECONDS >= deadline )); then
+              echo "::error title=Refresh did not finish::The fresh assessment of $SHA did not"
+              echo "::error::complete in time, and the previous one is ${age_h}h old. Refusing to"
+              echo "::error::deploy on a stale pass. Production has NOT been touched."
+              exit 1
+            fi
+            sleep 20
+          done
+
+      - name: Record the assessment in the summary
+        if: always()
+        env:
+          TAG: ${{ steps.resolve.outputs.tag }}
+          SHA: ${{ steps.resolve.outputs.sha }}
+        run: |
+          {
+            echo "### Pre-deployment security assessment — ${{ job.status }}"
+            echo
+            echo '```'
+            echo "tag     $TAG"
+            echo "commit  $SHA"
+            echo "gate    Security Gate"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   deploy:
     name: Deploy the frontend
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
+    # The deployment cannot start until the released commit has been shown to
+    # carry a fresh, successful Security Gate. `needs:` is what makes that a hard
+    # dependency rather than a parallel job whose failure nobody notices.
+    needs: assess
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+      digest: ${{ steps.image.outputs.digest }}
+      deployed_at: ${{ steps.deploy.outputs.deployed_at }}
+      scan: ${{ steps.scan.outputs.result }}
 
     # Scopes the deployment secrets to this job and applies whatever protection
     # rules the Production environment carries.
@@ -75,6 +387,11 @@ jobs:
 
     # workflow_run fires on completion whatever the outcome, so a FAILED publish
     # would otherwise deploy. The conclusion has to be checked explicitly.
+    #
+    # The `workflow_dispatch ||` arm short-circuits only this check, which a
+    # manual run has nothing to evaluate against. Everything else below runs
+    # unconditionally: a manual deployment now answers the same questions an
+    # automatic one does. Previously it answered none of them beyond tag syntax.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success'
@@ -87,10 +404,16 @@ jobs:
       # TAG name rather than a branch. It is validated rather than trusted: if
       # it is ever anything else the deployment stops here, with the server
       # untouched, instead of guessing at a version.
+      # The tag now arrives from the `assess` job, which resolved and validated it
+      # before anything security-related was checked — so there is exactly one
+      # definition of "which version is being deployed" and the commit the gate
+      # was verified against is the commit deployed here. The syntax check is
+      # repeated rather than assumed: it is two lines, and a job output is still
+      # a string arriving from somewhere else.
       - name: Resolve the release tag
         id: resolve
         env:
-          RAW_TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
+          RAW_TAG: ${{ needs.assess.outputs.tag }}
         run: |
           set -euo pipefail
           if ! printf '%s' "$RAW_TAG" | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'; then
@@ -102,7 +425,36 @@ jobs:
           echo "Deploying $RAW_TAG"
 
       # ---------------------------------------------------------------------
-      # 2. Prove the image exists BEFORE touching production
+      # 2. Prove the tag deserves to be deployed
+      # ---------------------------------------------------------------------
+      # Tag syntax was previously the only question asked, and on a manual run
+      # not even the release check applied. So any semver-shaped tag, pointing
+      # anywhere, could be deployed by anyone able to dispatch this workflow.
+      #
+      # The same validator the release and publish workflows use: a published,
+      # non-draft release, still pointing at the same commit, on main, with CI
+      # green on that exact commit.
+      - name: Check out the repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate the tag before deploying it
+        id: commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          .github/scripts/validate-promotion.sh \
+            --tag "${{ steps.resolve.outputs.tag }}" \
+            --require-release \
+            --require-checks \
+            --check "Install, type-check and build" \
+            --check "Build the container image" \
+            --check "Security Gate"
+
+      # ---------------------------------------------------------------------
+      # 3. Prove the image exists BEFORE touching production
       # ---------------------------------------------------------------------
       # The server pulls this tag in a moment. Resolving it here first means a
       # missing or half-published image fails on the runner, while production is
@@ -114,6 +466,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.resolve.outputs.tag }}
+          SHA: ${{ steps.commit.outputs.sha }}
         run: |
           set -euo pipefail
           IMAGE="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
@@ -136,18 +489,117 @@ jobs:
           done
 
           DIGEST="$(docker buildx imagetools inspect "$IMAGE:$TAG" --format '{{.Manifest.Digest}}')"
+
+          # The tag says which image; it does not say the image came from the
+          # commit that was just approved. Publish tags every image twice — once
+          # with the version and once with :sha-<commit> — so if those two tags
+          # do not resolve to the same digest, the version tag has been re-pushed
+          # over a different build and this deployment is not carrying the code
+          # that was validated.
+          SHA_DIGEST="$(docker buildx imagetools inspect "$IMAGE:sha-$SHA" --format '{{.Manifest.Digest}}')"
+          if [ "$DIGEST" != "$SHA_DIGEST" ]; then
+            echo "::error::$IMAGE:$TAG is $DIGEST but $IMAGE:sha-$SHA is $SHA_DIGEST."
+            echo "::error::The version tag does not point at the build for the approved commit."
+            exit 1
+          fi
+
+          # And the image's own provenance label must agree, independently of
+          # how it was tagged.
+          REVISION="$(docker buildx imagetools inspect "$IMAGE@$DIGEST" \
+                        --format '{{ index .Image.Config.Labels "org.opencontainers.image.revision" }}')"
+          if [ "$REVISION" != "$SHA" ]; then
+            echo "::error::Image $DIGEST claims revision '$REVISION', not the approved $SHA."
+            exit 1
+          fi
+
           echo "image=$IMAGE"   >> "$GITHUB_OUTPUT"
           echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
-          echo "Resolved $IMAGE:$TAG -> $DIGEST"
+          echo "Resolved $IMAGE:$TAG -> $DIGEST (revision $SHA)"
 
       # ---------------------------------------------------------------------
-      # 3. SSH
+      # 4. Scan the image that is actually about to be deployed
+      # ---------------------------------------------------------------------
+      # The Security Gate already scanned an image — but one it BUILT itself from
+      # the source tree. This scans the one GHCR is holding, addressed BY DIGEST
+      # rather than by tag, which is the only way to be certain the bytes examined
+      # here are the bytes the server pulls in the next step. A tag can be
+      # re-pushed between two `docker pull`s; a digest cannot.
+      #
+      # This is deliberately the last thing that happens before the SSH key is
+      # written. Everything above proved the image corresponds to an approved
+      # commit; this proves the image itself is currently acceptable, using
+      # today's vulnerability database rather than whatever was current when the
+      # release was cut.
+      #
+      # The threshold matches policy.yml's `block_at_or_above: HIGH`. Trivy's
+      # `--exit-code 1` is used here, unlike in security.yml, and the difference
+      # is intentional: this is not the gate, it is a last-moment safety
+      # interlock, and there is no evaluator in this workflow to hand a report to.
+      - name: Install the pinned scanner
+        run: bash .github/security/install-scanner.sh trivy
+
+      - name: Scan the published image by digest
+        id: scan
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
+          DIGEST: ${{ steps.image.outputs.digest }}
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          set -euo pipefail
+          echo "Scanning $IMAGE@$DIGEST"
+
+          # --ignore-unfixed is NOT set. A vulnerability with no fix available is
+          # still a vulnerability in production, and hiding it here would make
+          # this interlock quietly weaker than the gate it backs up.
+          trivy image "$IMAGE@$DIGEST" \
+            --scanners vuln \
+            --severity HIGH,CRITICAL \
+            --format table \
+            --exit-code 1 \
+            --output image-scan.txt || scan_failed=1
+
+          cat image-scan.txt
+          mkdir -p "$RUNNER_TEMP/observation" && cp image-scan.txt "$RUNNER_TEMP/observation/image-scan.txt"
+          echo "result=$([ "${scan_failed:-0}" = 1 ] && echo blocked || echo pass)" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Pre-deployment image scan"
+            echo
+            echo '```'
+            echo "image   $IMAGE"
+            echo "digest  $DIGEST"
+            echo '```'
+            echo
+            echo '<details><summary>Trivy HIGH/CRITICAL findings</summary>'
+            echo
+            echo '```'
+            cat image-scan.txt
+            echo '```'
+            echo
+            echo '</details>'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "${scan_failed:-0}" = "1" ]; then
+            echo "::error title=Published image has blocking findings::$IMAGE@$DIGEST"
+            echo "::error::carries HIGH or CRITICAL vulnerabilities. Production has NOT been"
+            echo "::error::touched and is still serving the previous version."
+            echo "::error::"
+            echo "::error::This can happen even when the release's Security Gate was green:"
+            echo "::error::the advisory may have been published after the release was cut."
+            echo "::error::Fix or formally except the findings and cut a new release."
+            exit 1
+          fi
+          echo "No HIGH or CRITICAL findings in the image about to be deployed."
+
+      # ---------------------------------------------------------------------
+      # 5. SSH
       # ---------------------------------------------------------------------
       # The host key is pinned rather than accepted on first sight. `ssh-keyscan`
       # into known_hosts trusts whatever answers on the day, which is the one
       # thing host-key checking exists to prevent — and this connection carries
       # the right to restart production.
       - name: Configure SSH
+        id: ssh
         env:
           SSH_KEY: ${{ secrets.HETZNER_SSH_KEY }}
           HOST: ${{ secrets.HETZNER_HOST }}
@@ -161,7 +613,7 @@ jobs:
           chmod 600 ~/.ssh/known_hosts
 
       # ---------------------------------------------------------------------
-      # 4. Deploy
+      # 6. Deploy
       # ---------------------------------------------------------------------
       # scripts/deploy.sh is the deployment abstraction that lives with the
       # compose file on the server: it pulls the exact tag, rewrites only the
@@ -173,18 +625,29 @@ jobs:
       # No secret is passed over this connection. The server's .env already holds
       # them at mode 600 and is the only place they exist.
       - name: Deploy to Hetzner
+        id: deploy
         env:
           HOST: ${{ secrets.HETZNER_HOST }}
           USER: ${{ secrets.HETZNER_USER }}
           TAG: ${{ steps.resolve.outputs.tag }}
+          DIGEST: ${{ steps.image.outputs.digest }}
         run: |
           set -euo pipefail
+          # The digest was resolved and then thrown away before: the server was
+          # asked to pull a tag and re-resolved it itself, so what production ran
+          # was whatever the tag meant at pull time rather than what was approved
+          # here. deploy.sh now takes the digest and pins repo:tag@digest.
+          if [[ ! "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::Refusing to deploy without a resolved digest (got '$DIGEST')."
+            exit 1
+          fi
           ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes \
               -o ConnectTimeout=20 "$USER@$HOST" \
-              "cd /opt/manara && ./scripts/deploy.sh frontend '$TAG'"
+              "cd /opt/manara && ./scripts/deploy.sh frontend '$TAG' '$DIGEST'"
+          echo "deployed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       # ---------------------------------------------------------------------
-      # 5. Prove it from outside
+      # 7. Prove it from outside
       # ---------------------------------------------------------------------
       # deploy.sh asserts the container reports healthy, but the frontend
       # container's own healthcheck is `caddy validate` — it proves the config
@@ -196,21 +659,77 @@ jobs:
       - name: Verify production is serving
         run: |
           set -euo pipefail
+          out="$RUNNER_TEMP/observation/http-checks.json"
+          mkdir -p "$(dirname "$out")"
           for attempt in $(seq 1 10); do
-            root="$(curl -fsS -m 20 -o /dev/null -w '%{http_code}' https://manara-edu.com/ || echo 000)"
+            # No -f: an HTTP error is a status code to record, not a curl failure.
+            root="$(curl -sS -m 20 -o /dev/null -w '%{http_code}' https://manara-edu.com/ 2>/dev/null || true)"
             # 204 is this endpoint's success: it sets the CSRF cookie and returns
-            # no body. Reaching it at all proves /api/* still routes to the
-            # backend through the new Caddy configuration.
-            api="$(curl -fsS -m 20 -o /dev/null -w '%{http_code}' https://manara-edu.com/api/v1/auth/csrf || echo 000)"
-            if [ "$root" = "200" ] && [ "$api" = "204" ]; then
-              echo "https://manara-edu.com/ -> 200, /api/v1/auth/csrf -> 204"
-              exit 0
-            fi
+            # no body. Reaching it proves /api/* routes to the backend through Caddy.
+            api="$(curl -sS -m 20 -o /dev/null -w '%{http_code}' https://manara-edu.com/api/v1/auth/csrf 2>/dev/null || true)"
+            root="${root:-000}"; api="${api:-000}"
+            if [ "$root" = "200" ] && [ "$api" = "204" ]; then break; fi
             echo "attempt $attempt: root=$root api=$api, retrying..."
             sleep 10
           done
-          echo "::error::Production did not serve correctly after the deployment (root=$root api=$api)."
-          exit 1
+          printf '[{"name":"the site root serves","target":"https://manara-edu.com/","expected":"200","observed":"%s","ok":%s},{"name":"the API reaches the backend","target":"https://manara-edu.com/api/v1/auth/csrf","expected":"204","observed":"%s","ok":%s}]\n' \
+            "$root" "$([ "$root" = 200 ] && echo true || echo false)" \
+            "$api" "$([ "$api" = 204 ] && echo true || echo false)" > "$out"
+          if [ "$root" = "200" ] && [ "$api" = "204" ]; then
+            echo "https://manara-edu.com/ -> 200, /api/v1/auth/csrf -> 204"
+          else
+            echo "::error::Production did not serve correctly after the deployment (root=$root api=$api)."
+            exit 1
+          fi
+
+      # ---------------------------------------------------------------------
+      # What is the host actually running now?
+      # ---------------------------------------------------------------------
+      # Recorded on every attempt that reached the host, successful or not:
+      # after a failure it is the recovery evidence. It is the host's own report
+      # (manara-infrastructure scripts/manifest.sh --json): image digests,
+      # revisions, the commerce mode and secret PRESENCE. No secret value
+      # leaves the host.
+      - name: Observe what production is running
+        if: always() && steps.ssh.outcome == 'success'
+        env:
+          HOST: ${{ secrets.HETZNER_HOST }}
+          USER: ${{ secrets.HETZNER_USER }}
+        run: |
+          set -uo pipefail
+          mkdir -p "$RUNNER_TEMP/observation"
+          if ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes \
+                 -o ConnectTimeout=20 "$USER@$HOST" \
+                 "cd /opt/manara && ./scripts/manifest.sh --json" > "$RUNNER_TEMP/observation/runtime.json"; then
+            echo "Recorded the host's report."
+          else
+            rm -f "$RUNNER_TEMP/observation/runtime.json"
+            echo "::warning::The host did not report what it runs; the release evidence will say so."
+          fi
+
+      # A healthy container and a serving site do not prove the host runs the
+      # approved artifact, configured as required. This does, from the host's
+      # report: the approved digest and commit, .env closed to other users and
+      # untracked.
+      - name: Check the running release against what was approved
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
+          DIGEST: ${{ steps.image.outputs.digest }}
+          SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          python3 .github/scripts/release-evidence.py check-runtime \
+            --runtime "$RUNNER_TEMP/observation/runtime.json" --service frontend \
+            --image "$IMAGE" --digest "$DIGEST" --sha "$SHA" \
+            --out "$RUNNER_TEMP/observation/runtime-checks.json"
+
+      - name: Keep the observation for the evidence job
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deployment-observation
+          path: ${{ runner.temp }}/observation/
+          retention-days: 90
+          if-no-files-found: warn
 
       - name: Summarise the deployment
         if: always()
@@ -235,3 +754,135 @@ jobs:
             echo "ssh <deploy-user>@<host> 'cd /opt/manara && ./scripts/rollback.sh frontend'"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # ===========================================================================
+  # Release evidence (TECH-32, TECH-60)
+  # ===========================================================================
+  # One machine-readable manifest per deployment attempt, attached to the
+  # GitHub Release together with the security evidence it cites, then proved
+  # to resolve. See docs/security/RELEASE_EVIDENCE.md. A separate job, so the
+  # Production environment's secrets are out of scope while it runs, and so a
+  # FAILED attempt is recorded as faithfully as a successful one.
+  evidence:
+    name: Record the release evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [assess, deploy]
+    if: always() && needs.assess.result == 'success' && needs.deploy.result != 'skipped'
+    permissions:
+      contents: write   # attach the manifest and bundle to the GitHub Release
+      actions: read     # read the assessment run and download its artifacts
+      checks: read      # resolve the Security Gate and build check runs
+      packages: read    # re-resolve the image digest in GHCR
+    steps:
+      - name: Check out the evidence script
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Download the deployment observation
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: deployment-observation
+          path: observation
+
+      - name: Build the manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ needs.assess.outputs.tag }}
+          SHA: ${{ needs.assess.outputs.sha }}
+          IMAGE: ${{ needs.deploy.outputs.image }}
+          DIGEST: ${{ needs.deploy.outputs.digest }}
+          DEPLOYED_AT: ${{ needs.deploy.outputs.deployed_at }}
+          SCAN: ${{ needs.deploy.outputs.scan }}
+          STATUS: ${{ needs.deploy.result }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -uo pipefail
+          python3 -c 'import yaml' 2>/dev/null \
+            || python3 -m pip install --quiet --disable-pip-version-check 'PyYAML==6.0.3' \
+            || python3 -m pip install --quiet --disable-pip-version-check --break-system-packages 'PyYAML==6.0.3'
+          reason=""
+          [ -s observation/runtime.json ] || reason="the deploy job did not obtain the host's report"
+          python3 .github/scripts/release-evidence.py collect \
+            --repository "$REPO" --service frontend --tag "$TAG" --sha "$SHA" \
+            --image "${IMAGE:-ghcr.io/manara-education/frontend-foundation}" --digest "${DIGEST:-unresolved}" \
+            --deploy-run-id "$RUN_ID" --deploy-run-attempt "$RUN_ATTEMPT" \
+            --deploy-status "$STATUS" --deployed-at "$DEPLOYED_AT" \
+            --required-check "Install, type-check and build" --required-check "Build the container image" \
+            --verification observation/preflight.json \
+            --verification observation/http-checks.json \
+            --verification observation/runtime-checks.json \
+            --runtime observation/runtime.json --runtime-reason "$reason" \
+            --image-scan observation/image-scan.txt --image-scan-result "${SCAN:-not-run}" \
+            --out evidence
+          rc=$?
+          # 1 means the manifest was written and records problems; 2 means no
+          # manifest could be built at all.
+          if [ "$rc" -eq 1 ]; then echo "::warning title=Release evidence::the manifest records problems; see its 'problems' list."; fi
+          [ "$rc" -le 1 ] || exit "$rc"
+
+      - name: Keep the evidence as a workflow artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-evidence
+          path: evidence/
+          retention-days: 90
+          if-no-files-found: warn
+
+      # Workflow artifacts expire; release assets stay with the GitHub Release.
+      - name: Attach the manifest and bundle to the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.assess.outputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          manifest="$(sed -n 1p evidence/asset-names.txt)"
+          bundle="$(sed -n 2p evidence/asset-names.txt)"
+          cp evidence/release-manifest.json "evidence/$manifest"
+          gh release upload "$TAG" -R "$REPO" --clobber "evidence/$manifest" "evidence/$bundle"
+          echo "Attached $manifest and $bundle to $TAG."
+
+      - name: Prove every reference in the manifest resolves
+        if: needs.deploy.result == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+          python3 .github/scripts/release-evidence.py verify --manifest evidence/release-manifest.json
+
+      - name: Summarise the evidence
+        if: always()
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, pathlib
+          p = pathlib.Path("evidence/release-manifest.json")
+          print("### Release evidence\n")
+          if not p.exists():
+              print("_No manifest was produced; see the job log._")
+              raise SystemExit
+          m = json.loads(p.read_text())
+          v = m["security"].get("verdict") or {}
+          print("```")
+          print(f"release     {m['release']['tag']} @ {m['release']['commit']}")
+          print(f"artifact    {m['artifact']['reference']}")
+          print(f"gate        {m['security']['gate'].get('conclusion')}  {m['security']['gate'].get('url')}")
+          print(f"verdict     {v.get('status')}  generated {v.get('generated_at')}")
+          print(f"deployment  {m['deployment']['status']}  at {m['deployment']['deployed_at']}")
+          print(f"runtime     {m['runtime_observation']['status']}")
+          print(f"manifest    {m['evidence']['manifest_asset']}")
+          print(f"bundle      {m['evidence']['bundle']['url']}")
+          print(f"            {m['evidence']['bundle']['sha256']}")
+          print("```")
+          for problem in m.get("problems") or []:
+              print(f"- ⚠ {problem}")
+          PY

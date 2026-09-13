@@ -20,6 +20,24 @@ import * as fx from "./fixtures.mjs";
 
 const PORT = Number(process.env.MOCK_API_PORT ?? 8081);
 
+/**
+ * The browser origins allowed to call the mock directly, with credentials.
+ *
+ * The app does not need this: it reaches the mock through Vite's `/api` proxy, which is
+ * same-origin, so CORS never comes into it. This is only for a page on another local origin
+ * talking to :8081 itself. Echoing back whatever `Origin` arrived, alongside
+ * `Access-Control-Allow-Credentials`, would let any page open in the same browser read the
+ * mock's responses — so the origins are named, never reflected.
+ *
+ *     MOCK_API_ALLOWED_ORIGINS='http://localhost:4173,http://localhost:5174' npm run mock-api
+ */
+const ALLOWED_ORIGINS = (
+  process.env.MOCK_API_ALLOWED_ORIGINS ?? "http://localhost:5173,http://127.0.0.1:5173"
+)
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const ok = (data) => ({ status: "success", data });
 const err = (errors, code) => ({ status: "error", errors, code });
 
@@ -143,10 +161,16 @@ createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
   const query = Object.fromEntries(url.searchParams);
 
-  res.setHeader("Access-Control-Allow-Origin", req.headers.origin ?? "*");
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-XSRF-TOKEN, Accept-Language");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  // CORS only for a listed origin. Any other origin gets no CORS headers, so the browser keeps
+  // the response from it. `Vary` stops a cache handing one origin's answer to another.
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-XSRF-TOKEN, Accept-Language");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  }
+  res.setHeader("Vary", "Origin");
   if (req.method === "OPTIONS") return res.writeHead(204).end();
 
   // The client sends this back as X-XSRF-TOKEN; without it every mutation 403s.

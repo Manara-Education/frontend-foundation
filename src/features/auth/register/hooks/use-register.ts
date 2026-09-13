@@ -3,8 +3,9 @@ import { useNavigate } from "react-router";
 import { useCurrentTerms } from "@/features/legal/terms";
 import { paths } from "@/shared/navigation";
 import { registerUser } from "../services/register.service";
-import type { RegisterErrors, RegisterFormState, PasswordStrength } from "../types/register.types";
+import type { RegisterErrors, RegisterFormState } from "../types/register.types";
 import { ApiError, ApiErrorCode } from "@/shared/api";
+import { passwordPolicyError, passwordRefusal } from "@/features/auth/password-policy/password-policy";
 import {
   TERMS_CONSENT_REQUIRED_ERROR,
   TERMS_UNAVAILABLE_MESSAGE,
@@ -48,7 +49,7 @@ export function useRegister() {
     if (!form.email) errs.email = "البريد الإلكتروني مطلوب";
     else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = "البريد الإلكتروني غير صحيح";
     if (!form.password) errs.password = "كلمة المرور مطلوبة";
-    else if (form.password.length < 8) errs.password = "يجب أن تكون كلمة المرور 8 أحرف على الأقل";
+    else if (passwordPolicyError(form.password)) errs.password = passwordPolicyError(form.password);
     if (!form.confirm) errs.confirm = "تأكيد كلمة المرور مطلوب";
     else if (form.password !== form.confirm) errs.confirm = "كلمتا المرور غير متطابقتين";
     // Re-checked here rather than trusted from the disabled button: the button is a
@@ -79,7 +80,11 @@ export function useRegister() {
         termsAccepted: true,
         termsVersion: version,
       });
-      navigate(paths.otp, { state: { email: form.email, context: "email-verification" } });
+      // Every accepted registration is answered alike, taken address or not, so the code screen is
+      // told where the visitor came from and explains both cases itself.
+      navigate(paths.otp, {
+        state: { email: form.email, context: "email-verification", origin: "registration" },
+      });
     } catch (err) {
       if (err instanceof ApiError && err.is(ApiErrorCode.TERMS_VERSION_OUTDATED)) {
         /*
@@ -95,7 +100,11 @@ export function useRegister() {
       } else if (err instanceof ApiError && err.is(ApiErrorCode.TERMS_UNAVAILABLE)) {
         setErrors({ general: TERMS_UNAVAILABLE_MESSAGE });
       } else if (err instanceof ApiError) {
-        setErrors({ general: err.errors[0] });
+        // A refused password belongs under its field, beside the checklist. Anything else goes above
+        // the form; field errors arrive as "email: <message>", and the field name is the API's, not
+        // the reader's.
+        const refusal = passwordRefusal(err, "password");
+        setErrors(refusal ? { password: refusal } : { general: err.errors[0]?.replace(/^[A-Za-z]+: /, "") });
       } else {
         setErrors({ general: "حدث خطأ غير متوقع، حاول مرة أخرى" });
       }
@@ -104,25 +113,8 @@ export function useRegister() {
     }
   };
 
-  const getPasswordStrength = (): PasswordStrength | null => {
-    const p = form.password;
-    if (!p) return null;
-    let score = 0;
-    if (p.length >= 8) score++;
-    if (/[A-Z]/.test(p)) score++;
-    if (/[0-9]/.test(p)) score++;
-    if (/[^A-Za-z0-9]/.test(p)) score++;
-    if (score <= 1) return { label: "ضعيفة", color: "#D4183D", width: "25%" };
-    if (score === 2) return { label: "مقبولة", color: "#F5A623", width: "55%" };
-    if (score === 3) return { label: "جيدة", color: "#4E5B92", width: "75%" };
-    return { label: "قوية", color: "#27AE60", width: "100%" };
-  };
-
-  const strength = getPasswordStrength();
-
   return {
     form,
-    strength,
     loading,
     errors,
     setField,

@@ -59,6 +59,130 @@
 
 		# Nothing here needs a camera, a microphone or a location.
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+
+		# --- Content policy, ENFORCED ------------------------------------------
+		#
+		# The browser refuses every script, style, frame, image, font and
+		# connection this policy does not name. It used to be sent as
+		# Content-Security-Policy-Report-Only, which blocks nothing: a local
+		# assessment on 2026-09-10 served an inline <script> from this origin
+		# behind that header, and the script ran. Under this header it does not.
+		#
+		# Enforced now rather than after a report-only soak, because the soak had
+		# nowhere to report to (see the end of this block) and the policy is small
+		# enough to prove directly: every origin below is read out of the source,
+		# confirmed in the built output, and the policy was checked in a browser
+		# through this Caddyfile before it was switched. If one is still missed, the
+		# failure is a missing thumbnail or an unstyled font — visible, and narrow
+		# — rather than an injected script that runs.
+		#
+		# Two things this deliberately does not use. There is no nonce: a nonce
+		# has to be minted per request by whatever renders the page, and this is a
+		# static bundle served off disk — there is no render. And there is no
+		# wildcard host, 'unsafe-inline' or 'unsafe-eval' on script-src; if a page
+		# turns out to need one, that is a defect to fix in the page, not a hole to
+		# open here. scripts/verify-container-runtime.sh fails if script-src is
+		# ever anything but 'self', or if this header goes back to report-only.
+		#
+		#   script-src 'self'
+		#     The built index.html carries no inline <script> whatsoever — the
+		#     entry is one hashed module file and nothing else — so this needs
+		#     neither a hash nor a nonce. Checked in dist/, not assumed: a bundler
+		#     that inlines a preload polyfill would change the answer.
+		#
+		#   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com
+		#     'unsafe-inline' is the honest ceiling for style, and for style only.
+		#     Inline <style> ships in two places: the html/body height reset in
+		#     index.html, and the <style> elements components render — the shimmer
+		#     keyframes on the skeleton screens, the rich-content and
+		#     rich-content-editor stylesheets, the create-course responsive rules
+		#     and a spinner keyframe. Hashing them was considered and rejected: the
+		#     list would have to be regenerated whenever any one of those strings is
+		#     edited, and a stale entry fails silently as an unstyled screen. Moving
+		#     them into CSS files is what would let 'unsafe-inline' go.
+		#     fonts.googleapis.com is where src/styles/fonts.css @imports the Cairo
+		#     stylesheet from; the @import survives into the built CSS.
+		#
+		#   font-src 'self' https://fonts.gstatic.com
+		#     Where that Google stylesheet resolves its font files to.
+		#
+		#   img-src 'self' data: blob: https://img.youtube.com https://i.ytimg.com https://i.vimeocdn.com
+		#     'self' is the backend's /uploads, where course covers and banner
+		#     images live. data: is the inline SVG placeholder in ImageWithFallback.
+		#     blob: is the local preview an instructor sees after picking a cover
+		#     image and before it is uploaded. img.youtube.com is the YouTube still,
+		#     derived from the video id on both sides. i.vimeocdn.com appears nowhere
+		#     in this repository: Vimeo stills are addressed by content hash, so the
+		#     backend reads one out of Vimeo's oEmbed response and stores it on the
+		#     lesson. Rich content has no image block, so no author-chosen host is
+		#     ever an image source.
+		#     i.ytimg.com is not requested by anything in this repository either.
+		#     During YouTube playback the browser fetches an i.ytimg.com still on
+		#     this page's behalf, not the player's (no script or element initiates
+		#     it; most likely the embed's media-session artwork), so this page's
+		#     img-src governs it. Found by a browser run through this Caddyfile.
+		#
+		#   frame-src https://www.youtube.com https://player.vimeo.com
+		#     The two embed origins the video adapters build. youtube-nocookie.com
+		#     is accepted as input but always rewritten to www.youtube.com, so
+		#     allowing it would widen the policy for a request nothing makes.
+		#
+		#   connect-src 'self'
+		#     Every request goes through the shared api-client, whose base URL is
+		#     the relative /api. The players talk to the page through postMessage,
+		#     which connect-src does not govern.
+		#
+		#   media-src / object-src / worker-src 'none'
+		#     There is no <video>, <audio>, <object>, <embed> or worker in the tree.
+		#
+		#   base-uri 'self' / form-action 'self'
+		#     No <base> element exists, and every form submits through an onSubmit
+		#     handler rather than an action attribute.
+		#
+		#   frame-ancestors 'none'
+		#     The same statement X-Frame-Options makes above, in the header that
+		#     replaced it. Both are sent; the older one is what an older browser
+		#     obeys.
+		#
+		# Payments add nothing. No payment provider is integrated, and
+		# Permissions-Policy above denies the Payment Request API. Integrating one
+		# means adding its origins here, on the same evidence standard.
+		#
+		# Violation reports are not collected. `report-uri`/`report-to` is absent
+		# because nothing in this stack accepts a report, and pointing the browser
+		# at a path the SPA fallback answers with index.html would look like
+		# collection while discarding every report. A collector is worth adding —
+		# as its own change, with a body-size and rate limit on the endpoint — so
+		# that a missed origin reaches someone before a user reports it.
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://img.youtube.com https://i.ytimg.com https://i.vimeocdn.com; media-src 'none'; object-src 'none'; worker-src 'none'; frame-src https://www.youtube.com https://player.vimeo.com; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+
+		# --- HSTS: prepared, NOT enabled -----------------------------------
+		#
+		# Commented out on purpose, and it must stay that way until someone
+		# with the authority to make the call says otherwise. HSTS is the one
+		# header here that cannot be taken back: once a browser has seen it,
+		# that browser refuses plain HTTP to this host for max-age seconds no
+		# matter what the server sends afterwards. Reverting the line does not
+		# undo it — the instruction is already cached in every visitor's
+		# browser.
+		#
+		# Preconditions, all of which must hold before the line is
+		# uncommented:
+		#   * The site is genuinely reachable over HTTPS on the final,
+		#     canonical hostname, with a certificate that renews.
+		#   * That hostname is settled. Turning HSTS on for a name that is
+		#     later moved or retired strands every browser that saw it.
+		#   * The alternate-hostname redirect block at the bottom of this file
+		#     is serving HTTPS too, since a visitor may arrive there first.
+		#
+		# Then start at one day, confirm nothing broke, and raise it in steps.
+		# Deliberately without `preload`, which is a submission to a list
+		# baked into browser binaries and is slow and painful to reverse, and
+		# deliberately without `includeSubDomains`, which would bind every
+		# present and future subdomain — api., staging., anything — to HTTPS
+		# whether or not it is ready.
+		#
+		# Strict-Transport-Security "max-age=86400"
 	}
 
 	encode zstd gzip

@@ -51,7 +51,7 @@ describe("LessonForm lesson type", () => {
   it("shows the video field for a video lesson and no content editor", () => {
     renderForm();
 
-    expect(screen.getByPlaceholderText(/youtube\.com/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("youtube.com", { exact: false })).toBeInTheDocument();
     expect(screen.queryByText("محتوى الدرس", { selector: "label" })).not.toBeInTheDocument();
   });
 
@@ -60,7 +60,7 @@ describe("LessonForm lesson type", () => {
 
     // The video field is not disabled or hidden — it is not rendered, so there is no empty URL box
     // on a lesson that will never have a video.
-    expect(screen.queryByPlaceholderText(/youtube\.com/i)).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("youtube.com", { exact: false })).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("محتوى الدرس", { selector: "label" })).toBeInTheDocument());
   });
 
@@ -82,7 +82,7 @@ describe("LessonForm lesson type", () => {
     // waitFor because the confirmation animates out rather than vanishing.
     await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
     expect(screen.getByRole("radio", { name: /فيديو/ })).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByPlaceholderText(/youtube\.com/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("youtube.com", { exact: false })).toBeInTheDocument();
   });
 
   it("switches once the instructor confirms", async () => {
@@ -93,7 +93,7 @@ describe("LessonForm lesson type", () => {
     await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "متابعة" }));
 
     expect(screen.getByRole("radio", { name: /محتوى/ })).toHaveAttribute("aria-checked", "true");
-    expect(screen.queryByPlaceholderText(/youtube\.com/i)).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("youtube.com", { exact: false })).not.toBeInTheDocument();
   });
 
   it("does not interrupt a switch when there is nothing to lose", async () => {
@@ -118,7 +118,7 @@ describe("LessonForm lesson type", () => {
 
     // The URL is back in the field, not cleared: retention is what makes a type change reversible
     // rather than destructive.
-    expect(screen.getByPlaceholderText(/youtube\.com/i)).toHaveValue(
+    expect(screen.getByPlaceholderText("youtube.com", { exact: false })).toHaveValue(
       "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     );
 

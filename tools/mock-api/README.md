@@ -21,6 +21,15 @@ curl 'localhost:8081/api/__mock/role?as=instructor'
 curl 'localhost:8081/api/__mock/role?as=student'
 ```
 
+The app goes through Vite's same-origin proxy, so CORS does not apply to it. A page that
+calls `:8081` directly from another origin is only answered with CORS headers if that
+origin is listed — `http://localhost:5173` and `http://127.0.0.1:5173` by default. The
+request's `Origin` is never reflected back. List others, comma-separated:
+
+```bash
+MOCK_API_ALLOWED_ORIGINS='http://localhost:4173' npm run mock-api
+```
+
 ## Why the fixtures look like that
 
 `fixtures.mjs` is deliberately adversarial, because a layout verified against short,

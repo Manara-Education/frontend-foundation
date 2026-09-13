@@ -60,6 +60,9 @@ on:
 permissions:
   contents: read
   packages: write
+  # The promotion validator reads the check runs on the tagged commit.
+  checks: read
+  actions: read
 
 concurrency:
   group: publish-${{ github.event.workflow_run.head_branch || inputs.tag }}
@@ -70,10 +73,19 @@ jobs:
     name: Build and push to GHCR
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Scopes publishing to the Production environment, so whatever protection
+    # rules it carries apply to a manual (re)publish as well as an automatic one.
+    environment: Production
+
     # A failed release must not publish an image. workflow_run fires on
     # completion regardless of outcome, so the conclusion has to be checked
-    # explicitly. A manual dispatch has no workflow_run to inspect and is
-    # allowed through on the operator's judgement.
+    # explicitly.
+    #
+    # The `workflow_dispatch ||` arm used to mean a manual run skipped every
+    # question that followed. It still short-circuits this particular check —
+    # a manual run genuinely has no workflow_run to inspect — but it no longer
+    # skips anything else: the validation step below runs unconditionally, and
+    # a manual dispatch faces exactly the same questions as an automatic one.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success'
@@ -92,21 +104,39 @@ jobs:
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Check out the released commit
+      # Checked out at the default branch FIRST, only to get the validator and
+      # the tag history. Nothing from the candidate commit is built until it has
+      # been approved, so a tag pointing at hostile code cannot supply the script
+      # that decides whether it is allowed.
+      - name: Check out the repository
         uses: actions/checkout@v7
         with:
-          # The tag, not the default branch. Building from the branch would
-          # publish whatever has landed since the release was cut, under the
-          # released version's name.
-          ref: ${{ steps.resolve.outputs.tag }}
+          fetch-depth: 0
           persist-credentials: false
 
-      # Under workflow_run, github.sha is the DEFAULT BRANCH's head, not the
-      # tagged commit — so it cannot be used to label or tag the image. This
-      # resolves the real commit from the checkout above.
-      - name: Resolve the tagged commit
+      # The gate. A published, non-draft release must exist for this tag, the tag
+      # must still point where it did when the release was cut, it must be on
+      # main, and CI must have actually passed on that exact commit.
+      - name: Validate the tag before building it
         id: commit
-        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          .github/scripts/validate-promotion.sh \
+            --tag "${{ steps.resolve.outputs.tag }}" \
+            --require-release \
+            --require-checks \
+            --check "Install, type-check and build" \
+            --check "Build the container image"
+
+      # Now, and only now, the candidate. By SHA rather than by tag: the commit
+      # that was validated is the commit that gets built, even if the tag were
+      # moved between the two steps.
+      - name: Check out the approved commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.commit.outputs.sha }}
+          persist-credentials: false
 
       - name: Read the Node version
         id: node
