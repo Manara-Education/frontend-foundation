@@ -23,8 +23,8 @@ vi.mock("../services/register.service", () => ({
 const getCurrentTermsMock = vi.mocked(getCurrentTerms);
 const registerUserMock = vi.mocked(registerUser);
 
-/** Fifteen characters or more, so the form's own length rule is never what these tests hit. */
-const PASSWORD = "amber meadow river 58";
+/** Meets every password requirement, so the form's own rules are never what these tests hit. */
+const PASSWORD = "Amber meadow river 58!";
 
 beforeEach(() => {
   getCurrentTermsMock.mockResolvedValue({
@@ -59,8 +59,8 @@ async function fillAndSubmit(container: HTMLElement) {
   await waitFor(() => expect(getCurrentTermsMock).toHaveBeenCalled());
   await userEvent.type(screen.getByPlaceholderText("أدخل اسمك الكامل"), "سارة");
   await userEvent.type(screen.getByPlaceholderText("example@manara.com"), "sara@manara.com");
-  // By type rather than placeholder: the password field's placeholder states the length rule,
-  // which is not what these tests are about.
+  // By type rather than placeholder: the password field's placeholder is copy, which is not what
+  // these tests are about.
   const [password, confirm] = Array.from(container.querySelectorAll<HTMLInputElement>('input[type="password"]'));
   await userEvent.type(password, PASSWORD);
   await userEvent.type(confirm, PASSWORD);

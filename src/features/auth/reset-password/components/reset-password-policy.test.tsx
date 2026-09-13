@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "@/shared/api";
 import type { AuthUser } from "@/shared/auth";
 import { ResetPasswordPage } from "../pages/reset-password-page";
 import { changePassword, resetPassword } from "../services/reset-password.service";
@@ -25,9 +26,16 @@ const resetPasswordMock = vi.mocked(resetPassword);
 const changePasswordMock = vi.mocked(changePassword);
 
 const SUBMIT = "حفظ كلمة المرور الجديدة";
-const FOURTEEN_CODE_POINTS = "river stone 😀😀";
-const ARABIC_74_BYTES = "ب".repeat(37);
-const ASCII_PASSPHRASE_60 = "lanterns drift past the quiet harbour wall every evening now";
+
+/** The approved wording, the same four lines registration shows. */
+const LABELS = {
+  minimumLength: "15 حرفًا على الأقل",
+  hasUppercase: "حرف كبير واحد على الأقل",
+  hasNumber: "رقم واحد على الأقل",
+  hasSymbol: "رمز خاص واحد على الأقل",
+};
+
+const MEETS_ALL_FOUR = "Lanterns drift past the quiet harbour wall every evening, 7!";
 
 afterEach(() => {
   auth.user = null;
@@ -58,60 +66,107 @@ function submitWith(container: HTMLElement, password: string, currentPassword?: 
   fireEvent.submit(screen.getByRole("button", { name: SUBMIT }).closest("form")!);
 }
 
-describe("the password requirements checklist", () => {
-  it("states the length rule and no composition rules", () => {
-    renderReset();
+/** Whether the checklist shows a requirement as met — said, for screen readers, beside its tick. */
+function isMet(label: string): boolean {
+  const line = screen.getByText(label).closest("li");
+  if (!line) throw new Error(`no checklist line reads "${label}"`);
+  return within(line).queryByText("مستوفى") !== null;
+}
 
-    expect(screen.getByText(/15 حرفاً على الأقل/)).toBeInTheDocument();
-    expect(screen.queryByText(/حرف كبير/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/رقم واحد/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/رمز خاص/)).not.toBeInTheDocument();
+describe("the password requirements checklist", () => {
+  it("lists the four requirements and nothing about how the password is stored", () => {
+    const { container } = renderReset();
+
+    expect(screen.getByText("متطلبات كلمة المرور:")).toBeInTheDocument();
+    for (const label of Object.values(LABELS)) expect(screen.getByText(label)).toBeInTheDocument();
+    expect(container).not.toHaveTextContent(/بايت|byte|UTF-8|bcrypt/i);
+  });
+
+  it("ticks off a requirement once the new password meets it", () => {
+    const { container } = renderReset();
+
+    fireEvent.change(passwordInputs(container)[0], { target: { value: "A1" } });
+
+    expect(isMet(LABELS.hasUppercase)).toBe(true);
+    expect(isMet(LABELS.hasNumber)).toBe(true);
+    expect(isMet(LABELS.minimumLength)).toBe(false);
+    expect(isMet(LABELS.hasSymbol)).toBe(false);
   });
 });
 
 describe("resetting with an emailed code", () => {
-  it("refuses fewer than 15 code points", async () => {
+  it.each([
+    ["fewer than 15 characters", "River stone 1😀", "يجب أن تتكون كلمة المرور من 15 حرفًا على الأقل."],
+    ["no upper-case English letter", "abcdefghijklmno!", "يجب أن تحتوي كلمة المرور على حرف كبير واحد على الأقل."],
+    ["no number", "Harbour lights at dusk!", "يجب أن تحتوي كلمة المرور على رقم واحد على الأقل."],
+    ["no special symbol", "PASSWORD123456789", "يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل."],
+  ])("refuses a password with %s", async (_, password, message) => {
     const { container } = renderReset();
 
-    submitWith(container, FOURTEEN_CODE_POINTS);
+    submitWith(container, password);
 
-    expect(await screen.findByText(/يجب أن تتكون كلمة المرور من 15/)).toBeInTheDocument();
+    expect(await screen.findByText(message)).toBeInTheDocument();
     expect(resetPasswordMock).not.toHaveBeenCalled();
   });
 
-  it("refuses more than 72 UTF-8 bytes", async () => {
+  it("refuses a password too long to store, in plain words", async () => {
     const { container } = renderReset();
 
-    submitWith(container, ARABIC_74_BYTES);
+    submitWith(container, "ب".repeat(35) + "A1!?");
 
-    expect(await screen.findByText(/الحد الأقصى 72 بايت/)).toBeInTheDocument();
+    expect(await screen.findByText("كلمة المرور طويلة جدًا. يرجى اختيار كلمة مرور أقصر.")).toBeInTheDocument();
     expect(resetPasswordMock).not.toHaveBeenCalled();
   });
 
-  it("sends a long passphrase with spaces untouched", async () => {
+  it("sends a password that meets all four untouched", async () => {
     resetPasswordMock.mockResolvedValue({ message: "تم" } as never);
     const { container } = renderReset();
 
-    submitWith(container, ASCII_PASSPHRASE_60);
+    submitWith(container, MEETS_ALL_FOUR);
 
     await waitFor(() =>
       expect(resetPasswordMock).toHaveBeenCalledWith({
         email: "sara@manara.com",
         code: "123456",
-        newPassword: ASCII_PASSPHRASE_60,
+        newPassword: MEETS_ALL_FOUR,
       }),
     );
+  });
+
+  it("shows the server's refusal of the new password without the field name", async () => {
+    resetPasswordMock.mockRejectedValue(
+      new ApiError(400, ["newPassword: كلمة المرور هذه شائعة وسهلة التخمين. يرجى اختيار كلمة مرور أخرى."]),
+    );
+    const { container } = renderReset();
+
+    submitWith(container, MEETS_ALL_FOUR);
+
+    expect(await screen.findByText("كلمة المرور هذه شائعة وسهلة التخمين. يرجى اختيار كلمة مرور أخرى.")).toBeInTheDocument();
+    expect(screen.queryByText(/newPassword:/)).not.toBeInTheDocument();
   });
 });
 
 describe("the forced change-password flow", () => {
-  it("applies the same length rule before calling change-password", async () => {
+  it("shows the same checklist and applies the same rules before calling change-password", async () => {
     auth.user = { requiresPasswordReset: true } as AuthUser;
     const { container } = renderReset();
 
-    submitWith(container, FOURTEEN_CODE_POINTS, "old-short");
+    expect(screen.getByText(LABELS.hasSymbol)).toBeInTheDocument();
+    submitWith(container, "PasswordPassword1", "old-short");
 
-    expect(await screen.findByText(/يجب أن تتكون كلمة المرور من 15/)).toBeInTheDocument();
+    expect(await screen.findByText("يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل.")).toBeInTheDocument();
     expect(changePasswordMock).not.toHaveBeenCalled();
+  });
+
+  it("calls change-password with a password that meets all four", async () => {
+    auth.user = { requiresPasswordReset: true } as AuthUser;
+    changePasswordMock.mockResolvedValue({ message: "تم" } as never);
+    const { container } = renderReset();
+
+    submitWith(container, MEETS_ALL_FOUR, "old-short");
+
+    await waitFor(() =>
+      expect(changePasswordMock).toHaveBeenCalledWith({ currentPassword: "old-short", newPassword: MEETS_ALL_FOUR }),
+    );
   });
 });

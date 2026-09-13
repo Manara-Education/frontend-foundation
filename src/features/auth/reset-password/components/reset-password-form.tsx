@@ -5,8 +5,7 @@ import { AuthCard } from "@/features/auth/components/AuthCard";
 import { FormField, PrimaryButton } from "@/features/auth/components/FormField";
 import { ManaraLogoIcon } from "@/shared/components/ManaraLogo";
 import type { ResetPasswordErrors, ResetPasswordFormState } from "../types/reset-password.types";
-import type { EvaluatedRule } from "../hooks/use-reset-password";
-import { PASSWORD_GUIDANCE } from "@/features/auth/password-policy/password-policy";
+import { PasswordRequirements } from "@/features/auth/password-policy/password-requirements";
 import * as React from "react";
 
 const PRIMARY = "#4E5B92";
@@ -18,7 +17,6 @@ interface ResetPasswordFormProps {
   done: boolean;
   forced: boolean;
   fromProfile: boolean;
-  evaluatedRules: EvaluatedRule[];
   onChange: (k: keyof ResetPasswordFormState) => (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
 }
@@ -30,11 +28,11 @@ export function ResetPasswordForm({
   done,
   forced,
   fromProfile,
-  evaluatedRules,
   onChange,
   onSubmit,
 }: ResetPasswordFormProps) {
   const navigate = useNavigate();
+  const requirementsId = React.useId();
 
   if (done) {
     return (
@@ -173,7 +171,7 @@ export function ResetPasswordForm({
             العودة إلى الملف الشخصي
           </button>
         )}
-      
+
         {/* Only the forced flow asks for this: the anonymous reset proves the account with an
             emailed code instead, and renders exactly as it did before. */}
         {forced && (
@@ -197,57 +195,11 @@ export function ResetPasswordForm({
           onChange={onChange("password")}
           error={errors.password}
           icon={<Lock size={17} />}
+          autoComplete="new-password"
+          aria-describedby={requirementsId}
         />
 
-        {/* Password rules */}
-        <div
-          className="rounded-xl p-4 flex flex-col gap-2"
-          style={{ background: "#F6F7FC", border: "1px solid rgba(78,91,146,0.08)" }}
-        >
-          <p
-            style={{
-              fontFamily: "'Cairo', sans-serif",
-              fontWeight: 600,
-              fontSize: 13,
-              color: "#2C3156",
-              marginBottom: 4,
-            }}
-          >
-            متطلبات كلمة المرور:
-          </p>
-          {evaluatedRules.map((rule) => {
-            const passed = rule.passed;
-            return (
-              <div key={rule.id} className="flex items-center gap-2">
-                <div
-                  className="rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200"
-                  style={{
-                    width: 18,
-                    height: 18,
-                    background: passed ? PRIMARY : "transparent",
-                    border: `1.5px solid ${passed ? PRIMARY : "rgba(78,91,146,0.2)"}`,
-                  }}
-                >
-                  {passed && <Check size={10} color="white" strokeWidth={3} />}
-                </div>
-                <span
-                  style={{
-                    fontFamily: "'Cairo', sans-serif",
-                    fontSize: 12,
-                    color: passed ? PRIMARY : "#9BA3C4",
-                    fontWeight: passed ? 500 : 400,
-                    transition: "color 0.2s",
-                  }}
-                >
-                  {rule.label}
-                </span>
-              </div>
-            );
-          })}
-          <p style={{ fontFamily: "'Cairo', sans-serif", fontSize: 12, color: "#717182", lineHeight: 1.7, marginTop: 4 }}>
-            {PASSWORD_GUIDANCE}
-          </p>
-        </div>
+        <PasswordRequirements password={form.password} id={requirementsId} />
 
         <FormField
           label="تأكيد كلمة المرور الجديدة"
@@ -257,6 +209,7 @@ export function ResetPasswordForm({
           onChange={onChange("confirm")}
           error={errors.confirm}
           icon={<Lock size={17} />}
+          autoComplete="new-password"
         />
 
         {/* Match indicator */}
