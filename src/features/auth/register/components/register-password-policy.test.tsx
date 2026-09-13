@@ -28,7 +28,7 @@ const SUBMIT = "إنشاء الحساب";
 /** The approved wording. Written out here so a reword in the source fails a test. */
 const LABELS = {
   minimumLength: "15 حرفًا على الأقل",
-  hasUppercase: "حرف إنجليزي كبير واحد على الأقل",
+  hasUppercase: "حرف كبير واحد على الأقل",
   hasNumber: "رقم واحد على الأقل",
   hasSymbol: "رمز خاص واحد على الأقل",
 };
@@ -122,7 +122,7 @@ describe("the password requirements on the registration page", () => {
 describe("registration password rules", () => {
   it.each([
     ["fewer than 15 characters", "River stone 1😀", "يجب أن تتكون كلمة المرور من 15 حرفًا على الأقل."],
-    ["no upper-case English letter", "password123456789", "يجب أن تحتوي كلمة المرور على حرف إنجليزي كبير واحد على الأقل."],
+    ["no upper-case English letter", "password123456789", "يجب أن تحتوي كلمة المرور على حرف كبير واحد على الأقل."],
     ["no number", "Harbour lights at dusk!", "يجب أن تحتوي كلمة المرور على رقم واحد على الأقل."],
     ["no special symbol", "PasswordPassword1", "يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل."],
   ])("refuses a password with %s and sends nothing", async (_, password, message) => {

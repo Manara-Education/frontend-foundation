@@ -14,7 +14,7 @@ import {
 */
 const SERVER_WORDING = {
   minimumLength: "يجب أن تتكون كلمة المرور من 15 حرفًا على الأقل.",
-  hasUppercase: "يجب أن تحتوي كلمة المرور على حرف إنجليزي كبير واحد على الأقل.",
+  hasUppercase: "يجب أن تحتوي كلمة المرور على حرف كبير واحد على الأقل.",
   hasNumber: "يجب أن تحتوي كلمة المرور على رقم واحد على الأقل.",
   hasSymbol: "يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل.",
 } as const;
@@ -25,7 +25,7 @@ describe("the four password requirements", () => {
     expect(PASSWORD_REQUIREMENTS.map((r) => r.id)).toEqual(["minimumLength", "hasUppercase", "hasNumber", "hasSymbol"]);
     expect(PASSWORD_REQUIREMENTS.map((r) => r.label)).toEqual([
       "15 حرفًا على الأقل",
-      "حرف إنجليزي كبير واحد على الأقل",
+      "حرف كبير واحد على الأقل",
       "رقم واحد على الأقل",
       "رمز خاص واحد على الأقل",
     ]);

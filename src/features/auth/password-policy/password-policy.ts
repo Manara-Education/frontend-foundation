@@ -49,8 +49,8 @@ export const PASSWORD_REQUIREMENTS: readonly PasswordRequirement[] = [
   },
   {
     id: "hasUppercase",
-    label: "حرف إنجليزي كبير واحد على الأقل",
-    message: "يجب أن تحتوي كلمة المرور على حرف إنجليزي كبير واحد على الأقل.",
+    label: "حرف كبير واحد على الأقل",
+    message: "يجب أن تحتوي كلمة المرور على حرف كبير واحد على الأقل.",
     isMet: (password) => UPPERCASE.test(password),
   },
   {

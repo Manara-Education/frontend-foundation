@@ -30,7 +30,7 @@ const SUBMIT = "حفظ كلمة المرور الجديدة";
 /** The approved wording, the same four lines registration shows. */
 const LABELS = {
   minimumLength: "15 حرفًا على الأقل",
-  hasUppercase: "حرف إنجليزي كبير واحد على الأقل",
+  hasUppercase: "حرف كبير واحد على الأقل",
   hasNumber: "رقم واحد على الأقل",
   hasSymbol: "رمز خاص واحد على الأقل",
 };
@@ -97,7 +97,7 @@ describe("the password requirements checklist", () => {
 describe("resetting with an emailed code", () => {
   it.each([
     ["fewer than 15 characters", "River stone 1😀", "يجب أن تتكون كلمة المرور من 15 حرفًا على الأقل."],
-    ["no upper-case English letter", "abcdefghijklmno!", "يجب أن تحتوي كلمة المرور على حرف إنجليزي كبير واحد على الأقل."],
+    ["no upper-case English letter", "abcdefghijklmno!", "يجب أن تحتوي كلمة المرور على حرف كبير واحد على الأقل."],
     ["no number", "Harbour lights at dusk!", "يجب أن تحتوي كلمة المرور على رقم واحد على الأقل."],
     ["no special symbol", "PASSWORD123456789", "يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل."],
   ])("refuses a password with %s", async (_, password, message) => {
