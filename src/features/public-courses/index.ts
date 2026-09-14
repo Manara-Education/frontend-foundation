@@ -20,3 +20,14 @@ export type {
   PublicOffer,
   PublicPlan,
 } from "./types/public-courses.types";
+export { PublicCourseDetailPage } from "./pages/public-course-detail-page";
+export { OfferBadge } from "./components/offer-badge";
+export {
+  describeOffer,
+  formatDurationSeconds,
+  formatLessonCount,
+  formatMoney,
+  formatMoneySpoken,
+  formatPlanTerm,
+} from "./formatters/public-offer.formatter";
+export type { OfferDescription, OfferTone } from "./formatters/public-offer.formatter";
