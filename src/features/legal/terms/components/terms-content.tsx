@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { AlertTriangle, RotateCw } from "lucide-react";
 import { BORDER, FONT, PRIMARY, TEXT, TEXT_MUTED } from "@/features/landing/components/theme";
+import { PUBLIC_BUSINESS_FACTS } from "@/shared/business";
 import { ManaraLogoFull } from "@/shared/components/ManaraLogo";
 import { Spinner } from "@/shared/components";
 import { paths } from "@/shared/navigation";
@@ -42,7 +43,7 @@ function TermsShell({ children }: { children: ReactNode }) {
           to={paths.landing}
           className="focus-visible:outline-2 focus-visible:outline-offset-2 rounded"
           style={{ textDecoration: "none", outlineColor: PRIMARY }}
-          aria-label="العودة إلى منارة"
+          aria-label={`العودة إلى ${PUBLIC_BUSINESS_FACTS.brand.arabic}`}
         >
           <ManaraLogoFull size={30} color={PRIMARY} textColor={PRIMARY} />
         </Link>

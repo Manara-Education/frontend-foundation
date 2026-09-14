@@ -62,7 +62,7 @@ export function LoginForm({
         <FormField
           label="البريد الإلكتروني"
           type="email"
-          placeholder="example@manara.com"
+          placeholder="name@example.com"
           value={email}
           onChange={onEmailChange}
           error={errors.email}

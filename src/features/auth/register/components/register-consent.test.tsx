@@ -60,7 +60,7 @@ function formElement(): HTMLFormElement {
   is a change to every auth screen and does not belong in this one.
 */
 const NAME_FIELD = "أدخل اسمك الكامل";
-const EMAIL_FIELD = "example@manara.com";
+const EMAIL_FIELD = "name@example.com";
 
 async function fillIdentity() {
   await userEvent.type(screen.getByPlaceholderText(NAME_FIELD), "سارة");
