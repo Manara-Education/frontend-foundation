@@ -55,14 +55,14 @@
     "date-fns": "4.4.0",
     "embla-carousel-react": "8.6.0",
     "input-otp": "1.5.0",
-    "lucide-react": "1.42.0",
+    "lucide-react": "1.44.0",
     "motion": "13.2.0",
     "next-themes": "0.4.6",
-    "react": "^19.2.8",
+    "react": "^19.3.0",
     "react-day-picker": "10.0.1",
     "react-dnd": "16.0.1",
     "react-dnd-html5-backend": "16.0.1",
-    "react-dom": "^19.2.8",
+    "react-dom": "^19.3.0",
     "react-hook-form": "7.87.0",
     "react-resizable-panels": "4.12.4",
     "react-responsive-masonry": "2.7.2",
@@ -79,19 +79,19 @@
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
-    "@types/node": "^26.4.1",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.7",
+    "@types/node": "^26.5.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "6.1.1",
     "jsdom": "^30.0.1",
     "tailwindcss": "4.3.3",
     "typescript": "^7.0.2",
-    "vite": "8.2.2",
+    "vite": "8.3.0",
     "vitest": "^5.0.0"
   },
   "pnpm": {
     "overrides": {
-      "vite": "8.2.2"
+      "vite": "8.3.0"
     }
   },
   "engines": {
