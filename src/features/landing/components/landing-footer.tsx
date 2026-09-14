@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { paths } from "@/shared/navigation";
+import { PUBLIC_BUSINESS_FACTS } from "@/shared/business";
 import { LandingWordmark } from "./landing-primitives";
 import { FONT, TEXT } from "./theme";
 
@@ -15,14 +15,14 @@ export function LandingFooter() {
         </div>
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", minInlineSize: 0 }}>
-            <span style={{ fontFamily: FONT, fontSize: 12, color: "rgba(255,255,255,0.3)" }}>© {new Date().getFullYear()} Manara. جميع الحقوق محفوظة.</span>
+            <span style={{ fontFamily: FONT, fontSize: 12, color: "rgba(255,255,255,0.3)" }}>© {new Date().getFullYear()} {PUBLIC_BUSINESS_FACTS.brand.latin}. جميع الحقوق محفوظة.</span>
             {/*
-              The one legal destination the site actually has. A privacy-policy or contact
-              link would have to point somewhere, and neither page exists — an invented link
-              in a footer is worse than a missing one.
+              Destinations and names come from the shared public facts, never from literals
+              here. A privacy-policy or contact link appears only once its fact is approved —
+              an invented link in a footer is worse than a missing one.
             */}
             <Link
-              to={paths.terms}
+              to={PUBLIC_BUSINESS_FACTS.legalLinks.terms}
               style={{ fontFamily: FONT, fontSize: 12, color: "rgba(255,255,255,0.5)", textDecoration: "none" }}
             >
               الشروط والأحكام
