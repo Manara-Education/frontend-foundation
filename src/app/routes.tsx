@@ -18,6 +18,7 @@ import {
 import { AppLayout } from "./layout/app-layout";
 import { LegacyMainRedirect } from "./layout/legacy-main-redirect";
 import { NotFoundPage } from "./layout/not-found-page";
+import { PublicCourseScreen } from "./screens/public-screens";
 import {
   StudentBrowseCourseScreen,
   StudentCourseDetailsScreen,
@@ -94,6 +95,16 @@ export const router = createBrowserRouter([
         path: "terms",
         Component: TermsPage,
         handle: handle({ title: "الشروط والأحكام" }),
+      },
+
+      // A course's public page — description, price and plans — readable before signing in,
+      // so a visitor can see what is on offer and a direct link or a refresh works for anyone.
+      // Ungated like the terms. Enrolling and paying are not here: they stay behind
+      // `ProtectedRoute` on the student course screen this page sends a visitor to.
+      {
+        path: "courses/:courseId",
+        Component: PublicCourseScreen,
+        handle: handle({ title: "تفاصيل الدورة" }),
       },
 
       // ── AUTHENTICATION ────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import { useRef, type ReactNode } from "react";
 import { motion, useInView } from "motion/react";
+import { PUBLIC_BUSINESS_FACTS } from "@/shared/business";
 import { ManaraLogoIcon } from "@/shared/components/ManaraLogo";
 import { PRIMARY, FONT, TEXT, TEXT_MUTED, TEXT_LIGHT } from "./theme";
 
@@ -14,8 +15,8 @@ export function LandingWordmark({ size = 32, light = false }: { size?: number; l
     <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
       <ManaraLogoIcon size={size} color={light ? "rgba(255,255,255,0.85)" : PRIMARY} />
       <div>
-        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: size * 0.56, color: light ? "#fff" : TEXT, lineHeight: 1 }}>منارة</div>
-        <div style={{ fontFamily: FONT, fontSize: size * 0.25, color: light ? "rgba(255,255,255,0.55)" : TEXT_LIGHT, letterSpacing: 2, lineHeight: 1.2 }}>MANARA</div>
+        <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: size * 0.56, color: light ? "#fff" : TEXT, lineHeight: 1 }}>{PUBLIC_BUSINESS_FACTS.brand.arabic}</div>
+        <div style={{ fontFamily: FONT, fontSize: size * 0.25, color: light ? "rgba(255,255,255,0.55)" : TEXT_LIGHT, letterSpacing: 2, lineHeight: 1.2 }}>{PUBLIC_BUSINESS_FACTS.brand.latin.toUpperCase()}</div>
       </div>
     </div>
   );

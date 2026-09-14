@@ -58,7 +58,7 @@ function renderRegister() {
 async function fillAndSubmit(container: HTMLElement) {
   await waitFor(() => expect(getCurrentTermsMock).toHaveBeenCalled());
   await userEvent.type(screen.getByPlaceholderText("أدخل اسمك الكامل"), "سارة");
-  await userEvent.type(screen.getByPlaceholderText("example@manara.com"), "sara@manara.com");
+  await userEvent.type(screen.getByPlaceholderText("name@example.com"), "sara@manara.com");
   // By type rather than placeholder: the password field's placeholder is copy, which is not what
   // these tests are about.
   const [password, confirm] = Array.from(container.querySelectorAll<HTMLInputElement>('input[type="password"]'));
