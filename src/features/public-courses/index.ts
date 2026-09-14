@@ -31,3 +31,4 @@ export {
   formatPlanTerm,
 } from "./formatters/public-offer.formatter";
 export type { OfferDescription, OfferTone } from "./formatters/public-offer.formatter";
+export { PublicCourseCard } from "./components/public-course-card";

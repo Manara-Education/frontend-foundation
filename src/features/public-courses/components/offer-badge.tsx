@@ -12,6 +12,8 @@ interface OfferBadgeProps {
   offer: PublicOffer;
   /** `md` for a card, `lg` for the course page's price panel. */
   size?: "md" | "lg";
+  /** Id for the spoken sentence, so a card's link can be described by its price. */
+  spokenId?: string;
 }
 
 /**
@@ -20,14 +22,14 @@ interface OfferBadgeProps {
  * The visible text abbreviates the currency; a visually hidden sentence says the whole offer
  * for screen readers, and the visible pieces are hidden from them so it is not read twice.
  */
-export function OfferBadge({ offer, size = "md" }: OfferBadgeProps) {
+export function OfferBadge({ offer, size = "md", spokenId }: OfferBadgeProps) {
   const { badge, caption, spoken, tone } = describeOffer(offer);
   const palette = TONES[tone];
   const large = size === "lg";
 
   return (
     <div data-offer-tone={tone} style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4, minInlineSize: 0 }}>
-      <span className="sr-only">{spoken}</span>
+      <span id={spokenId} className="sr-only">{spoken}</span>
       <span
         aria-hidden="true"
         style={{
