@@ -30,6 +30,14 @@ export const paths = {
    */
   terms: "/terms",
 
+  /**
+   * A course's public page: what it teaches and what it costs, readable without an account.
+   *
+   * Ungated for the same reason as the terms. Buying or enrolling does not happen here; the
+   * page sends the visitor through sign-in to the signed-in course screen, which owns checkout.
+   */
+  publicCourse: (courseId: number | string) => `/courses/${courseId}`,
+
   login: "/login",
   register: "/register",
   forgotPassword: "/forgot-password",

@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { useCurrentTerms } from "@/features/legal/terms";
 import { paths } from "@/shared/navigation";
 import { registerUser } from "../services/register.service";
 import type { RegisterErrors, RegisterFormState } from "../types/register.types";
 import { ApiError, ApiErrorCode } from "@/shared/api";
+import type { FromLocationState } from "@/shared/auth";
 import { passwordPolicyError, passwordRefusal } from "@/features/auth/password-policy/password-policy";
 import {
   TERMS_CONSENT_REQUIRED_ERROR,
@@ -14,6 +15,12 @@ import * as React from "react";
 
 export function useRegister() {
   const navigate = useNavigate();
+  /*
+    Where the visitor was headed before they chose to create an account — a course's public
+    page, say. It rides through the code screen, which signs them in and resumes it; the
+    destination is checked there (`postAuthPath`) like every other remembered one.
+  */
+  const from = (useLocation().state as FromLocationState | null)?.from;
   const [form, setForm] = useState<RegisterFormState>({
     name: "",
     email: "",
@@ -83,7 +90,7 @@ export function useRegister() {
       // Every accepted registration is answered alike, taken address or not, so the code screen is
       // told where the visitor came from and explains both cases itself.
       navigate(paths.otp, {
-        state: { email: form.email, context: "email-verification", origin: "registration" },
+        state: { email: form.email, context: "email-verification", origin: "registration", from },
       });
     } catch (err) {
       if (err instanceof ApiError && err.is(ApiErrorCode.TERMS_VERSION_OUTDATED)) {
