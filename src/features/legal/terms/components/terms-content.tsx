@@ -1,11 +1,10 @@
 import type { ReactNode } from "react";
-import { Link } from "react-router";
 import { AlertTriangle, RotateCw } from "lucide-react";
 import { BORDER, FONT, PRIMARY, TEXT, TEXT_MUTED } from "@/features/landing/components/theme";
-import { PUBLIC_BUSINESS_FACTS } from "@/shared/business";
-import { ManaraLogoFull } from "@/shared/components/ManaraLogo";
+import { LandingFooter } from "@/features/landing/components/landing-footer";
+import { PublicHeader } from "@/features/landing/components/public-header";
+import { PublicBreadcrumb } from "@/features/landing/components/public-breadcrumb";
 import { Spinner } from "@/shared/components";
-import { paths } from "@/shared/navigation";
 import type { TermsViewState } from "../types/terms.types";
 import { TermsDocumentView } from "./terms-document";
 import { TermsMetadata } from "./terms-metadata";
@@ -18,53 +17,31 @@ interface TermsContentProps {
 
 const TITLE_ID = "terms-title";
 
-/** The page's own frame: RTL, the wordmark home, and whichever state is being shown. */
+/**
+ * The page's own frame: RTL, the shared public header and footer, and whichever state is being
+ * shown. Shares its shell with About/Contact/Privacy/Security rather than the bespoke logo-only
+ * header this page used to carry on its own — a visitor reading the terms can now reach the rest
+ * of the public site the same way they would from any other page.
+ */
 function TermsShell({ children }: { children: ReactNode }) {
   return (
-    <div
-      dir="rtl"
-      style={{
-        minHeight: "100dvh",
-        background: "#F6F7FC",
-        backgroundImage: `radial-gradient(circle at 85% 6%, rgba(78,91,146,0.06) 0%, transparent 55%),
-                          radial-gradient(circle at 10% 90%, rgba(78,91,146,0.05) 0%, transparent 50%)`,
-        fontFamily: FONT,
-      }}
-    >
-      <header
-        className="flex items-center justify-between gap-4 flex-wrap"
-        style={{
-          padding: "20px clamp(16px, 4vw, 40px)",
-          borderBottom: `1px solid ${BORDER}`,
-          background: "rgba(255,255,255,0.7)",
-        }}
-      >
-        <Link
-          to={paths.landing}
-          className="focus-visible:outline-2 focus-visible:outline-offset-2 rounded"
-          style={{ textDecoration: "none", outlineColor: PRIMARY }}
-          aria-label={`العودة إلى ${PUBLIC_BUSINESS_FACTS.brand.arabic}`}
-        >
-          <ManaraLogoFull size={30} color={PRIMARY} textColor={PRIMARY} />
-        </Link>
-        <Link
-          to={paths.landing}
-          className="rs-longform focus-visible:outline-2 focus-visible:outline-offset-2 rounded"
-          style={{ fontFamily: FONT, fontSize: 14, fontWeight: 600, color: PRIMARY, outlineColor: PRIMARY }}
-        >
-          العودة إلى الصفحة الرئيسية
-        </Link>
-      </header>
+    <div dir="rtl" style={{ minHeight: "100dvh", background: "#F8F9FD", fontFamily: FONT, display: "flex", flexDirection: "column" }}>
+      <PublicHeader />
 
       <main
         style={{
+          flex: "1 1 auto",
+          inlineSize: "100%",
           maxInlineSize: 1100,
           margin: "0 auto",
-          padding: "clamp(24px, 5vw, 48px) clamp(16px, 4vw, 40px) 64px",
+          padding: "clamp(20px, 4vw, 36px) clamp(16px, 4vw, 40px) clamp(56px, 8vw, 84px)",
         }}
       >
+        <PublicBreadcrumb current="الشروط والأحكام" />
         {children}
       </main>
+
+      <LandingFooter />
     </div>
   );
 }

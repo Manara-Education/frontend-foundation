@@ -38,6 +38,13 @@ export const paths = {
    */
   publicCourse: (courseId: number | string) => `/courses/${courseId}`,
 
+  /** The `/#courses` in-page anchor on the landing page, usable from any public page. */
+  courses: "/#courses",
+  about: "/about",
+  contact: "/contact",
+  privacy: "/privacy",
+  security: "/security",
+
   login: "/login",
   register: "/register",
   forgotPassword: "/forgot-password",
