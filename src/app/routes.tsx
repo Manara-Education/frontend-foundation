@@ -1,11 +1,15 @@
 import { createBrowserRouter, Navigate, Outlet } from "react-router";
 import { LandingPage } from "@/features/landing/pages/landing-page";
+import { AboutPage } from "@/features/about/pages/about-page";
+import { ContactPage } from "@/features/contact/pages/contact-page";
 import { LoginPage } from "@/features/auth/login/pages/login-page";
 import { RegisterPage } from "@/features/auth/register/pages/register-page";
 import { ForgotPasswordPage } from "@/features/auth/forgot-password/pages/forgot-password-page";
 import { OtpPage } from "@/features/auth/otp/pages/otp-page";
 import { ResetPasswordPage } from "@/features/auth/reset-password/pages/reset-password-page";
 import { TermsPage } from "@/features/legal/terms/pages/terms-page";
+import { PrivacyPage } from "@/features/legal/privacy/pages/privacy-page";
+import { SecurityPage } from "@/features/legal/security/pages/security-page";
 import { ProfileView } from "@/features/profile/pages/profile-view";
 import { AccessDeniedPage } from "@/features/session/access-denied/pages/access-denied-page";
 import { ProtectedRoute, PublicOnlyRoute, RoleRoute, ROLES } from "@/shared/auth";
@@ -95,6 +99,30 @@ export const router = createBrowserRouter([
         path: "terms",
         Component: TermsPage,
         handle: handle({ title: "الشروط والأحكام" }),
+      },
+
+      // The rest of the public site — About, Contact and the two legal drafts — is ungated for
+      // the same reason as the terms: a visitor has to be able to reach them before, and
+      // regardless of, having an account.
+      {
+        path: "about",
+        Component: AboutPage,
+        handle: handle({ title: "عن منارة" }),
+      },
+      {
+        path: "contact",
+        Component: ContactPage,
+        handle: handle({ title: "تواصل معنا" }),
+      },
+      {
+        path: "privacy",
+        Component: PrivacyPage,
+        handle: handle({ title: "سياسة الخصوصية" }),
+      },
+      {
+        path: "security",
+        Component: SecurityPage,
+        handle: handle({ title: "سياسة الأمان" }),
       },
 
       // A course's public page — description, price and plans — readable before signing in,
