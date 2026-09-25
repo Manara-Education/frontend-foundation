@@ -68,7 +68,7 @@ export function ContactSupportChannels({ facts = PUBLIC_BUSINESS_FACTS }: Contac
 
       <p style={{ fontSize: 13.5, color: TEXT_MUTED, lineHeight: 1.9, margin: "20px 0 0", paddingBlockStart: 18, borderBlockStart: `1px solid ${BORDER}`, overflowWrap: "anywhere", fontFamily: FONT }}>
         للاستفسارات المتعلقة بالمدفوعات، راجع{" "}
-        <Link to={facts.legalLinks.refundPolicy} style={{ color: PRIMARY, fontWeight: 600, textDecoration: "none", borderBlockEnd: "1px solid rgba(78,91,146,0.35)" }}>
+        <Link to={facts.legalLinks.refundPolicy} replace style={{ color: PRIMARY, fontWeight: 600, textDecoration: "none", borderBlockEnd: "1px solid rgba(78,91,146,0.35)" }}>
           سياسة الإلغاء والاسترداد
         </Link>{" "}
         قبل إرسال الرسالة.

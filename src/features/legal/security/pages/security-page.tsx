@@ -83,7 +83,7 @@ export function SecurityPage() {
         </LegalParagraph>
         <LegalParagraph>
           عند الاسترداد، يُعاد المبلغ عبر وسيلة الدفع الأصلية نفسها، وهو ما يوضّحه القسم 7 من الشروط. ولمعرفة مهل الإلغاء والاسترداد، راجع{" "}
-          <Link to={`${paths.terms}#section-6`} style={linkStyle}>
+          <Link to={`${paths.terms}#section-6`} replace style={linkStyle}>
             سياسة الإلغاء والاسترداد
           </Link>
           .
@@ -115,7 +115,7 @@ export function SecurityPage() {
             تذكرة عامة
           </a>{" "}
           لا تذكر أي تفاصيل عن الثغرة، واطلب فيها فقط قناة تواصل خاصة، وسيتواصل معك أحد فريق الصيانة. يمكنك أيضًا استخدام{" "}
-          <Link to={paths.contact} style={linkStyle}>
+          <Link to={paths.contact} replace style={linkStyle}>
             صفحة تواصل معنا
           </Link>{" "}
           واختيار «مشكلة تقنية» بالطريقة نفسها — بلا تفاصيل عن الثغرة في النص المفتوح.
@@ -130,11 +130,11 @@ export function SecurityPage() {
       <LegalSection id="section-6" title="6. التحديثات والتواصل">
         <LegalParagraph>
           تُحدَّث هذه السياسة عند تغيّر ما تصفه، ويُنشر تاريخ سريان النسخة المعتمدة على هذه الصفحة. ولأي سؤال عنها، راسلنا من{" "}
-          <Link to={paths.contact} style={linkStyle}>
+          <Link to={paths.contact} replace style={linkStyle}>
             صفحة تواصل معنا
           </Link>
           . ولمعرفة البيانات التي تُجمع وأغراض معالجتها، راجع{" "}
-          <Link to={paths.privacy} style={linkStyle}>
+          <Link to={paths.privacy} replace style={linkStyle}>
             سياسة الخصوصية
           </Link>
           .
