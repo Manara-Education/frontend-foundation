@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { ArrowLeft, ArrowUp, Mail, Phone } from "lucide-react";
 import {
   approvedContactChannels,
@@ -53,6 +53,10 @@ interface LandingFooterProps {
 export function LandingFooter({ facts = PUBLIC_BUSINESS_FACTS }: LandingFooterProps) {
   const channels = approvedContactChannels(facts);
   const [year] = useState(() => new Date().getFullYear());
+  // This footer is on the landing page and on every secondary public page. Leaving the landing
+  // page pushes, so Back returns here; moving between the secondary pages replaces, so touring
+  // them never stacks up and Back always lands on the page the visitor came in from.
+  const onLanding = useLocation().pathname === paths.landing;
 
   const backToTop = () => {
     const reduced = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -70,6 +74,7 @@ export function LandingFooter({ facts = PUBLIC_BUSINESS_FACTS }: LandingFooterPr
             </p>
             <Link
               to={paths.about}
+              replace={!onLanding}
               className={LINK_CLASS}
               style={{ display: "inline-flex", alignItems: "center", gap: 8, minBlockSize: 44, marginBlockStart: 6, paddingInline: 6, marginInline: -6, borderRadius: 8, fontSize: 13.5, fontWeight: 600, color: "#D7DAEA", textDecoration: "none" }}
             >
@@ -81,20 +86,20 @@ export function LandingFooter({ facts = PUBLIC_BUSINESS_FACTS }: LandingFooterPr
           <nav aria-label={`اكتشف ${facts.brand.arabic}`} style={{ flex: "1 1 200px", minInlineSize: 0 }}>
             <ColumnHeading>{`اكتشف ${facts.brand.arabic}`}</ColumnHeading>
             <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-              <li><Link to={paths.landing} className={LINK_CLASS} style={NAV_LINK_STYLE}>الرئيسية</Link></li>
-              <li><Link to={paths.courses} className={LINK_CLASS} style={NAV_LINK_STYLE}>الدورات المتاحة</Link></li>
-              <li><Link to={paths.about} className={LINK_CLASS} style={NAV_LINK_STYLE}>عن {facts.brand.arabic}</Link></li>
-              <li><Link to={paths.contact} className={LINK_CLASS} style={NAV_LINK_STYLE}>تواصل معنا</Link></li>
+              <li><Link to={paths.landing} replace className={LINK_CLASS} style={NAV_LINK_STYLE}>الرئيسية</Link></li>
+              <li><Link to={paths.courses} replace={!onLanding} className={LINK_CLASS} style={NAV_LINK_STYLE}>الدورات المتاحة</Link></li>
+              <li><Link to={paths.about} replace={!onLanding} className={LINK_CLASS} style={NAV_LINK_STYLE}>عن {facts.brand.arabic}</Link></li>
+              <li><Link to={paths.contact} replace={!onLanding} className={LINK_CLASS} style={NAV_LINK_STYLE}>تواصل معنا</Link></li>
             </ul>
           </nav>
 
           <nav aria-label="السياسات والشروط" style={{ flex: "1 1 200px", minInlineSize: 0 }}>
             <ColumnHeading>السياسات والشروط</ColumnHeading>
             <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-              <li><Link to={paths.privacy} className={LINK_CLASS} style={NAV_LINK_STYLE}>سياسة الخصوصية</Link></li>
-              <li><Link to={paths.security} className={LINK_CLASS} style={NAV_LINK_STYLE}>سياسة الأمان</Link></li>
-              <li><Link to={facts.legalLinks.terms} className={LINK_CLASS} style={NAV_LINK_STYLE}>الشروط والأحكام</Link></li>
-              <li><Link to={facts.legalLinks.refundPolicy} className={LINK_CLASS} style={NAV_LINK_STYLE}>سياسة الإلغاء والاسترداد</Link></li>
+              <li><Link to={paths.privacy} replace={!onLanding} className={LINK_CLASS} style={NAV_LINK_STYLE}>سياسة الخصوصية</Link></li>
+              <li><Link to={paths.security} replace={!onLanding} className={LINK_CLASS} style={NAV_LINK_STYLE}>سياسة الأمان</Link></li>
+              <li><Link to={facts.legalLinks.terms} replace={!onLanding} className={LINK_CLASS} style={NAV_LINK_STYLE}>الشروط والأحكام</Link></li>
+              <li><Link to={facts.legalLinks.refundPolicy} replace={!onLanding} className={LINK_CLASS} style={NAV_LINK_STYLE}>سياسة الإلغاء والاسترداد</Link></li>
             </ul>
           </nav>
 
@@ -125,6 +130,7 @@ export function LandingFooter({ facts = PUBLIC_BUSINESS_FACTS }: LandingFooterPr
               <li>
                 <Link
                   to={paths.contact}
+                  replace={!onLanding}
                   className={LINK_CLASS}
                   style={{ display: "inline-flex", alignItems: "center", gap: 8, minBlockSize: 44, marginBlockStart: 8, paddingInline: 14, borderRadius: 10, border: "1px solid rgba(255,255,255,0.22)", fontSize: 13, fontWeight: 700, color: "#FFFFFF", textDecoration: "none" }}
                 >

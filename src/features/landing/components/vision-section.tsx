@@ -1,6 +1,6 @@
 import { Layers, Zap, Target, Sparkles, TrendingUp } from "lucide-react";
 import { FadeIn, SectionHeading } from "./landing-primitives";
-import { PRIMARY, FONT, BG_SOFT, TEXT, TEXT_MUTED, BORDER } from "./theme";
+import { PRIMARY, FONT, BG, TEXT, TEXT_MUTED, BORDER } from "./theme";
 
 /** Section 12 — vision. */
 export function VisionSection() {
@@ -12,7 +12,7 @@ export function VisionSection() {
     { icon: <TrendingUp size={20} strokeWidth={1.6} />, title: "موجّه للتقدم",    desc: "كل متعلم يعرف أين هو وما يأتي بعده دائمًا." },
   ];
   return (
-    <section id="vision" dir="rtl" style={{ paddingBlock: "clamp(72px, 10vw, 100px)", paddingInline: "clamp(16px, 4vw, 28px)", background: BG_SOFT }}>
+    <section id="vision" dir="rtl" style={{ paddingBlock: "clamp(72px, 10vw, 100px)", paddingInline: "clamp(16px, 4vw, 28px)", background: `linear-gradient(180deg, ${BG} 0%, ${PRIMARY}12 100%)` }}>
       <div style={{ maxInlineSize: 1100, margin: "0 auto" }}>
         <FadeIn><SectionHeading tag="رؤيتنا" title="ما نبنيه" subtitle="خمسة مبادئ أساسية تُوجّه كل قرار نتخذه في تطوير منارة." center /></FadeIn>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(190px, 100%), 1fr))", gap: 16, marginTop: 56 }}>

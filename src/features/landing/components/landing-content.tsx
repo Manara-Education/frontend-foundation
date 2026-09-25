@@ -10,9 +10,7 @@ import { QuizSection } from "./quiz-section";
 import { AiHintSection } from "./ai-hint-section";
 import { ProgressSection } from "./progress-section";
 import { CoursesSection } from "./courses-section";
-import { InstructorsSection } from "./instructors-section";
 import { VisionSection } from "./vision-section";
-import { CtaSection } from "./cta-section";
 import { FONT } from "./theme";
 
 interface LandingContentProps {
@@ -37,9 +35,7 @@ export function LandingContent({ onRegister, onSignIn, courses, onRetryCourses }
         <AiHintSection />
         <ProgressSection />
         <CoursesSection state={courses} onRetry={onRetryCourses} />
-        <InstructorsSection onCta={onRegister} />
         <VisionSection />
-        <CtaSection onCta={onRegister} />
       </main>
       <LandingFooter />
     </div>

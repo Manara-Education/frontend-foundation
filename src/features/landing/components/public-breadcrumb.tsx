@@ -11,6 +11,7 @@ export function PublicBreadcrumb({ current }: { current: string }) {
         <li>
           <Link
             to={paths.landing}
+            replace
             className="focus-visible:outline-2 focus-visible:outline-offset-2"
             style={{ display: "inline-flex", alignItems: "center", minBlockSize: 44, paddingInline: 6, marginInline: -6, borderRadius: 8, color: TEXT_MUTED, textDecoration: "none", outlineColor: PRIMARY }}
           >

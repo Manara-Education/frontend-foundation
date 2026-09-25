@@ -117,7 +117,7 @@ export function PrivacyPage() {
       <LegalSection id="section-8" title="8. معلومات التواصل">
         <LegalParagraph>
           لأي سؤال بشأن هذه السياسة أو بشأن بياناتك، راسلنا من{" "}
-          <Link to={paths.contact} style={linkStyle}>
+          <Link to={paths.contact} replace style={linkStyle}>
             صفحة تواصل معنا
           </Link>
           . قناة بريد دعم مباشرة تُنشر هنا بمجرد اعتمادها من مالك المنصة.

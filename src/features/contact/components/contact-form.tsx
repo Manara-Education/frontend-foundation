@@ -142,7 +142,7 @@ export function ContactForm() {
 
           <p style={{ fontSize: 12.5, color: TEXT_LIGHT, lineHeight: 1.9, margin: 0, overflowWrap: "anywhere", fontFamily: FONT }}>
             نستخدم بياناتك للرد على رسالتك فقط. اقرأ{" "}
-            <Link to={paths.privacy} style={linkStyle}>
+            <Link to={paths.privacy} replace style={linkStyle}>
               سياسة الخصوصية
             </Link>
             . لا تشاركنا كلمة المرور أو بيانات بطاقتك البنكية.

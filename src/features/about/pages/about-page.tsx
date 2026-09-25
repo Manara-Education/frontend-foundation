@@ -107,6 +107,7 @@ export function AboutPage() {
           <div style={{ display: "flex", flexWrap: "wrap", gap: 14, justifyContent: "center" }}>
             <Link
               to={paths.courses}
+              replace
               className="focus-visible:outline-2 focus-visible:outline-offset-4"
               style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, minBlockSize: 52, paddingInline: 30, borderRadius: 14, background: "#FFFFFF", color: PRIMARY, fontWeight: 700, fontSize: 15, textDecoration: "none", outlineColor: "#FFFFFF" }}
             >
@@ -115,6 +116,7 @@ export function AboutPage() {
             </Link>
             <Link
               to={paths.contact}
+              replace
               className="focus-visible:outline-2 focus-visible:outline-offset-4"
               style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, minBlockSize: 52, paddingInline: 26, borderRadius: 14, background: "transparent", border: "1.5px solid rgba(255,255,255,0.45)", color: "#FFFFFF", fontWeight: 600, fontSize: 15, textDecoration: "none", outlineColor: "#FFFFFF" }}
             >

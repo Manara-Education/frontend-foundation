@@ -23,11 +23,12 @@ function PublicCourseShell({ children }: { children: ReactNode }) {
         className="flex items-center justify-between gap-4 flex-wrap"
         style={{ padding: "14px clamp(16px, 4vw, 40px)", borderBottom: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.8)" }}
       >
-        <Link to={paths.landing} aria-label="الصفحة الرئيسية" className={FOCUS_CLASS} style={{ textDecoration: "none", outlineColor: PRIMARY }}>
+        <Link to={paths.landing} replace aria-label="الصفحة الرئيسية" className={FOCUS_CLASS} style={{ textDecoration: "none", outlineColor: PRIMARY }}>
           <ManaraLogoFull size={30} color={PRIMARY} textColor={PRIMARY} />
         </Link>
         <Link
           to={paths.landing}
+          replace
           className={FOCUS_CLASS}
           style={{ display: "inline-flex", alignItems: "center", minBlockSize: 44, fontFamily: FONT, fontSize: 14, fontWeight: 600, color: PRIMARY, textDecoration: "none", outlineColor: PRIMARY }}
         >
@@ -174,7 +175,7 @@ export function PublicCourseContent({ state, onRetry }: PublicCourseContentProps
     return (
       <PublicCourseShell>
         <Notice icon={<SearchX size={22} strokeWidth={1.8} aria-hidden="true" />} title="الدورة غير متاحة" body="لم نعثر على هذه الدورة، أو أنها لم تعد معروضة.">
-          <Link to={paths.landing} className={FOCUS_CLASS} style={{ display: "inline-flex", alignItems: "center", minBlockSize: 44, fontFamily: FONT, fontSize: 14, fontWeight: 600, color: PRIMARY, outlineColor: PRIMARY }}>
+          <Link to={paths.landing} replace className={FOCUS_CLASS} style={{ display: "inline-flex", alignItems: "center", minBlockSize: 44, fontFamily: FONT, fontSize: 14, fontWeight: 600, color: PRIMARY, outlineColor: PRIMARY }}>
             العودة إلى الصفحة الرئيسية
           </Link>
         </Notice>

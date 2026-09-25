@@ -58,6 +58,7 @@ export function PublicHeader() {
       >
         <Link
           to={paths.landing}
+          replace
           aria-label="العودة إلى منارة"
           className="focus-visible:outline-2 focus-visible:outline-offset-2 rounded"
           style={{ textDecoration: "none", outlineColor: PRIMARY }}
@@ -74,6 +75,7 @@ export function PublicHeader() {
                 <li key={link.label}>
                   <Link
                     to={link.to}
+                    replace
                     aria-current={active ? "page" : undefined}
                     className="focus-visible:outline-2 focus-visible:outline-offset-2"
                     style={{ ...LINK_STYLE, color: active ? PRIMARY : TEXT_MUTED, outlineColor: PRIMARY }}

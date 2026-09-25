@@ -9,7 +9,6 @@ const NAV_LINKS = [
   { label: "المميزات",  href: "#features" },
   { label: "كيف يعمل", href: "#how-it-works" },
   { label: "الدورات",   href: "#courses" },
-  { label: "للمدرسين",  href: "#instructors" },
   { label: "عن منارة",  href: "#vision" },
 ];
 
