@@ -7,7 +7,7 @@ import type {
   CourseDetailData,
   SubscriptionPlanOption,
 } from "../types/course-details.types";
-import { CheckoutModal } from "./checkout-modal";
+import { CheckoutSheet } from "./checkout-sheet";
 
 interface SubscriptionStatusCardProps {
   course: CourseDetailData;
@@ -50,15 +50,21 @@ export function SubscriptionStatusCard({
   const checkout = (
     <AnimatePresence>
       {showCheckout && selectedPlan && (
-        <CheckoutModal
+        <CheckoutSheet
           course={course}
           kind="subscription"
+          mode="enrolled"
           amountLabel={selectedPlan.priceLabel}
-          termsLabel={selectedPlan.name}
+          termsLabel={`${selectedPlan.name} · وصول لمدة ${selectedPlan.durationLabel}`}
           planId={selectedPlan.id}
-          onSuccess={() => { setShowCheckout(false); onRenewed(); }}
-          onFailure={() => { setShowCheckout(false); setPaymentFailed(true); }}
-          onCancel={() => { setShowCheckout(false); setPaymentFailed(true); }}
+          onClose={(outcome) => {
+            setShowCheckout(false);
+            // Closing is not a failure; only a refusal the server confirmed shows the banner.
+            if (outcome === "confirmed-failure") setPaymentFailed(true);
+            if (outcome === "success") onRenewed();
+          }}
+          // Already on the course: "go to the course" is closing onto the refreshed page.
+          onGoToCourse={() => { setShowCheckout(false); onRenewed(); }}
         />
       )}
     </AnimatePresence>

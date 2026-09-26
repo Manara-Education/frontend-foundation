@@ -3,15 +3,20 @@ import { motion, AnimatePresence } from "motion/react";
 import { Sparkles, X } from "lucide-react";
 import { FONT, PRIMARY } from "../formatters/course-details.formatter";
 import type {
+  CourseDetailsMode,
   CourseDetailData,
   SubscriptionPlanOption,
 } from "../types/course-details.types";
-import { CheckoutModal } from "./checkout-modal";
+import { CheckoutSheet } from "./checkout-sheet";
 
 interface SubscriptionCTASectionProps {
   course: CourseDetailData;
   plans: SubscriptionPlanOption[];
+  mode: CourseDetailsMode;
+  /** Opens the course — only ever from the learner's explicit action. */
   onPay: () => void;
+  /** Re-reads the page, e.g. after a sheet that ended in success was closed. */
+  onRefresh: () => void;
   preferredPlanId?: number | null;
 }
 
@@ -22,7 +27,7 @@ interface SubscriptionCTASectionProps {
  * lengths are the backend's, and only the selected plan's **id** is submitted — the amount
  * charged and the window opened are decided server-side from that same plan row.
  */
-export function SubscriptionCTASection({ course, plans, onPay, preferredPlanId = null }: SubscriptionCTASectionProps) {
+export function SubscriptionCTASection({ course, plans, mode, onPay, onRefresh, preferredPlanId = null }: SubscriptionCTASectionProps) {
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(
     plans.some((plan) => plan.id === preferredPlanId) ? preferredPlanId : (plans[0]?.id ?? null),
   );
@@ -31,34 +36,26 @@ export function SubscriptionCTASection({ course, plans, onPay, preferredPlanId =
 
   const selectedPlan = plans.find((plan) => plan.id === selectedPlanId) ?? null;
 
-  function handleCancelPayment() {
+  // Closing the sheet is not a failure: the banner is for a refusal the server confirmed.
+  function handleSheetClosed(outcome: "none" | "success" | "confirmed-failure") {
     setShowCheckout(false);
-    setPaymentFailed(true);
-  }
-
-  function handleFailedPayment() {
-    setShowCheckout(false);
-    setPaymentFailed(true);
-  }
-
-  function handleSuccessPayment() {
-    setShowCheckout(false);
-    onPay();
+    if (outcome === "confirmed-failure") setPaymentFailed(true);
+    if (outcome === "success") onRefresh();
   }
 
   return (
     <>
       <AnimatePresence>
         {showCheckout && selectedPlan && (
-          <CheckoutModal
+          <CheckoutSheet
             course={course}
             kind="subscription"
+            mode={mode}
             amountLabel={selectedPlan.priceLabel}
-            termsLabel={selectedPlan.name}
+            termsLabel={`${selectedPlan.name} · وصول لمدة ${selectedPlan.durationLabel}`}
             planId={selectedPlan.id}
-            onSuccess={handleSuccessPayment}
-            onFailure={handleFailedPayment}
-            onCancel={handleCancelPayment}
+            onClose={handleSheetClosed}
+            onGoToCourse={onPay}
           />
         )}
       </AnimatePresence>
@@ -153,7 +150,7 @@ export function SubscriptionCTASection({ course, plans, onPay, preferredPlanId =
               <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${selectedPlanId === plan.id ? PRIMARY : "rgba(78,91,146,0.22)"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 {selectedPlanId === plan.id && <div style={{ width: 10, height: 10, borderRadius: "50%", background: PRIMARY }} />}
               </div>
-              <input type="radio" name="sub-plan" value={plan.id} checked={selectedPlanId === plan.id} onChange={() => setSelectedPlanId(plan.id)} style={{ display: "none" }} />
+              <input type="radio" name="sub-plan" value={plan.id} checked={selectedPlanId === plan.id} onChange={() => setSelectedPlanId(plan.id)} className="sr-only" />
               <div className="rs-longform" style={{ flex: "1 1 min(160px, 100%)", minWidth: 0 }}>
                 <div style={{ fontFamily: FONT, fontSize: 14, color: "#1F2937" }}>{plan.name}</div>
                 <div style={{ fontFamily: FONT, fontSize: 12, color: "#9BA3C4" }}>{plan.durationLabel}</div>

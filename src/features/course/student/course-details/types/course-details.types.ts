@@ -218,7 +218,25 @@ export type CourseDetailData = StudentCourseModel;
 
 // ── Checkout ──────────────────────────────────────────────────────────────────
 
-export type CheckoutStep = "form" | "processing" | "success";
+/**
+ * Where a checkout stands.
+ *
+ * - `review` — the order and contact details, before anything is sent.
+ * - `submitting` / `checking` — a checkout or a status read is in flight; the sheet cannot close.
+ * - `success` — the server confirmed access.
+ * - `failed` — the server answered and refused; nothing was granted.
+ * - `uncertain` — no answer, or a server fault: the outcome is unknown, and is never presented
+ *   as a failure or as "nothing was charged".
+ */
+export type CheckoutPhase = "review" | "submitting" | "success" | "failed" | "uncertain" | "checking";
+
+/** What a confirmed checkout reported. `simulated` is only `true` when the server said so. */
+export interface CheckoutOutcome {
+  paymentReference: string | null;
+  simulated: boolean;
+  /** Confirmed by re-reading the course rather than by the checkout's own answer. */
+  confirmedByStatusCheck: boolean;
+}
 
 /** Which of the three checkout paths the modal is running. */
 export type CheckoutKind = "free" | "purchase" | "subscription";

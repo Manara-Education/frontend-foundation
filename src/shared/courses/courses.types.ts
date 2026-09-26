@@ -710,6 +710,11 @@ export interface CheckoutResponse {
    * charged. Payments are simulated by the backend; its references are prefixed `sim_`.
    */
   paymentReference: string | null;
+  /**
+   * `true` when the gateway is the simulator and no money moved. Absent from older servers;
+   * absent is never read as "real".
+   */
+  simulated?: boolean;
 }
 
 /** Query parameter of the student course details endpoint. */

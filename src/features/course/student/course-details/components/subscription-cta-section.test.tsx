@@ -11,12 +11,12 @@ const course = { id: 42, title: "دورة" } as unknown as CourseDetailData;
 
 describe("a plan chosen before signing in", () => {
   it("is preselected when it is one of the plans the server returned", () => {
-    render(<SubscriptionCTASection course={course} plans={PLANS} preferredPlanId={8} onPay={vi.fn()} />);
+    render(<SubscriptionCTASection course={course} plans={PLANS} preferredPlanId={8} mode="browse" onPay={vi.fn()} onRefresh={vi.fn()} />);
     expect(screen.getByRole("button", { name: /اشترك الآن — ٣٠٠ ج.م/ })).toBeInTheDocument();
   });
 
   it("is ignored when it names no current plan", () => {
-    render(<SubscriptionCTASection course={course} plans={PLANS} preferredPlanId={999} onPay={vi.fn()} />);
+    render(<SubscriptionCTASection course={course} plans={PLANS} preferredPlanId={999} mode="browse" onPay={vi.fn()} onRefresh={vi.fn()} />);
     expect(screen.getByRole("button", { name: /اشترك الآن — ١٢٠ ج.م/ })).toBeInTheDocument();
   });
 });

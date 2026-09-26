@@ -1,96 +1,138 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ApiError } from "@/shared/api";
+import { useAuth } from "@/shared/auth";
 import { isCheckoutValid } from "../formatters/course-details.formatter";
 import {
-  enrollFree,
+  loadCourseDetail,
   purchaseCourse,
   subscribeToCourse,
 } from "../services/course-details.service";
 import type {
   CheckoutFormState,
   CheckoutKind,
-  CheckoutStep,
+  CheckoutOutcome,
+  CheckoutPhase,
+  CourseDetailsMode,
 } from "../types/course-details.types";
 
 interface UseCheckoutArgs {
   courseId: number;
-  kind: CheckoutKind;
-  /** The plan the learner chose. Required by the subscription path, ignored by the others. */
+  kind: Exclude<CheckoutKind, "free">;
+  /** The plan the learner chose. Required by the subscription path, ignored by the other. */
   planId?: number | null;
-  onSuccess: () => void;
-  /**
-   * Raised when the backend refuses the checkout. The screen already has a place to say so —
-   * the reference's "لم تكتمل عملية الدفع" notice on the CTA card — so a failure is reported
-   * through that rather than given a second surface of its own.
-   */
-  onFailure: () => void;
+  /** How the course page was opened, so a status check reads the course the same way. */
+  mode: CourseDetailsMode;
 }
 
-const EMPTY: CheckoutFormState = { name: "", email: "" };
+const REFUSED = "لم تكتمل العملية. راجع البيانات ثم حاول مرة أخرى.";
 
 /**
- * Drives the checkout modal.
+ * Drives the checkout sheet as a state machine: review → submitting → success, failed or
+ * uncertain.
  *
- * The three paths differ only in what they send: nothing for a free course, contact details
- * for a purchase, contact details plus the chosen plan's id for a subscription. What each one
- * costs, and how long it lasts, is the backend's decision — this hook has no figure to send
- * and none to check.
+ * What the checkout costs is the server's decision; nothing here sends or checks an amount.
+ * The server also makes a repeat safe: its idempotency key is fixed per learner, course and
+ * purpose, and a course the learner already holds is answered as held without charging again.
+ * That is what lets an uncertain outcome offer "check status" and a retry — the retry is the
+ * same logical checkout, not a new payment attempt.
+ *
+ * A ref, not only the phase, guards against a second submission: two clicks in one frame both
+ * read the same phase from their render.
  */
-export function useCheckout({ courseId, kind, planId, onSuccess, onFailure }: UseCheckoutArgs) {
-  const [step, setStep] = useState<CheckoutStep>("form");
-  const [form, setForm] = useState<CheckoutFormState>(EMPTY);
+export function useCheckout({ courseId, kind, planId, mode }: UseCheckoutArgs) {
+  const { user } = useAuth();
+  const [phase, setPhase] = useState<CheckoutPhase>("review");
+  const [form, setForm] = useState<CheckoutFormState>({ name: user?.fullName ?? "", email: user?.email ?? "" });
+  const [outcome, setOutcome] = useState<CheckoutOutcome | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [statusNotConfirmed, setStatusNotConfirmed] = useState(false);
+  const [offline, setOffline] = useState(() => typeof navigator !== "undefined" && navigator.onLine === false);
+  const inFlight = useRef(false);
 
-  const isFree = kind === "free";
+  // Advisory only: it explains a failure faster, it never decides an outcome.
+  useEffect(() => {
+    const update = () => setOffline(navigator.onLine === false);
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
 
-  function update<K extends keyof CheckoutFormState>(key: K, value: CheckoutFormState[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const canPay = isCheckoutValid(form, false) && (kind !== "subscription" || planId != null);
+  const busy = phase === "submitting" || phase === "checking";
+
+  async function submit() {
+    if (!canPay || inFlight.current) return;
+    inFlight.current = true;
+    setPhase("submitting");
+    setMessage(null);
+    setStatusNotConfirmed(false);
+    try {
+      const paymentMethod = { name: form.name.trim(), email: form.email.trim() || undefined };
+      const response =
+        kind === "subscription"
+          ? await subscribeToCourse(courseId, planId!, paymentMethod)
+          : await purchaseCourse(courseId, paymentMethod);
+      setOutcome({
+        paymentReference: response.paymentReference ?? null,
+        simulated: response.simulated === true,
+        confirmedByStatusCheck: false,
+      });
+      setPhase("success");
+    } catch (err) {
+      if (err instanceof ApiError && err.statusCode === 401) {
+        // The shared client has signed the app out; the route guard takes over.
+        setPhase("review");
+      } else if (err instanceof ApiError && err.statusCode >= 400 && err.statusCode < 500) {
+        setMessage(err.errors[0] ?? REFUSED);
+        setPhase("failed");
+      } else {
+        // No answer (offline, timeout, lost response) or a server fault: it may have completed.
+        setPhase("uncertain");
+      }
+    } finally {
+      inFlight.current = false;
+    }
   }
 
-  const setName = (v: string) => update("name", v);
-  const setEmail = (v: string) => update("email", v);
-
-  // A subscription cannot be paid for until a plan is selected; the selector always
-  // pre-selects one, so this only ever blocks a course whose plans failed to load.
-  const canPay = isCheckoutValid(form, isFree) && (kind !== "subscription" || planId != null);
-
-  async function handlePay() {
-    if (!canPay) return;
-    setStep("processing");
+  /** Asks the course, not the checkout, whether access now exists. Grants nothing. */
+  async function checkStatus() {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setPhase("checking");
     try {
-      // Exactly what PaymentMethodRequest accepts, and nothing more. The card fields that
-      // used to be here were dropped by Jackson on arrival, so sending them moved real card
-      // numbers and CVCs to a server with no acquirer and no PCI scope to achieve nothing.
-      const paymentMethod = {
-        name: form.name,
-        email: form.email || undefined,
-      };
-
-      if (kind === "free") {
-        await enrollFree(courseId);
-      } else if (kind === "subscription") {
-        await subscribeToCourse(courseId, planId!, paymentMethod);
+      const course = await loadCourseDetail(courseId, mode);
+      if (course.access.entitled) {
+        setOutcome({ paymentReference: null, simulated: false, confirmedByStatusCheck: true });
+        setPhase("success");
       } else {
-        await purchaseCourse(courseId, paymentMethod);
+        setStatusNotConfirmed(true);
+        setPhase("uncertain");
       }
-
-      setStep("success");
-      setTimeout(onSuccess, 1300);
-    } catch (err) {
-      // The backend refuses a plan that is not this course's, and a course that is not for
-      // sale. Both land on the same notice the reference already shows when a checkout does
-      // not complete.
-      console.error("Checkout failed", err instanceof ApiError ? err.errors : err);
-      setStep("form");
-      onFailure();
+    } catch {
+      setStatusNotConfirmed(false);
+      setPhase("uncertain");
+    } finally {
+      inFlight.current = false;
     }
   }
 
   return {
-    step,
+    phase,
+    busy,
     form,
     canPay,
-    setName,
-    setEmail,
-    handlePay,
+    offline,
+    outcome,
+    message,
+    statusNotConfirmed,
+    setName: (name: string) => setForm((prev) => ({ ...prev, name })),
+    setEmail: (email: string) => setForm((prev) => ({ ...prev, email })),
+    submit,
+    retry: submit,
+    checkStatus,
+    backToReview: () => setPhase("review"),
   };
 }
