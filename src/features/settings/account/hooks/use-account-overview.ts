@@ -53,5 +53,6 @@ export function useAccountOverview() {
     dismissNotice,
     openNameEditor: () => navigate(paths.settings.accountName),
     openPasswordEditor: () => navigate(paths.settings.accountPassword),
+    openEmailEditor: () => navigate(paths.settings.accountEmail),
   };
 }

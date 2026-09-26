@@ -6,6 +6,7 @@ import type { RouteHandle } from "@/shared/navigation/route-meta";
 import { paths } from "@/shared/navigation/paths";
 import { AccountOverviewPage } from "./account/pages/account-overview-page";
 import { NameEditorPage } from "./account/pages/name-editor-page";
+import { EmailEditorPage } from "./account/pages/email-editor-page";
 import { PasswordEditorPage } from "./account/pages/password-editor-page";
 import {
   InvoicesPendingPage,
@@ -60,6 +61,7 @@ export const accountRoutes: RouteObject[] = [
           { path: "account", Component: AccountOverviewPage },
           { path: "account/name", Component: NameEditorPage },
           { path: "account/password", Component: PasswordEditorPage },
+          { path: "account/email", Component: EmailEditorPage },
           { path: "billing", element: <Navigate to={paths.settings.subscriptions} replace /> },
           { path: "billing/subscriptions", Component: SubscriptionsPendingPage },
           { path: "billing/payment-methods", Component: PaymentMethodsPendingPage },
