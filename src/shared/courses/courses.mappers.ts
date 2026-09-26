@@ -170,6 +170,7 @@ export function mapInstructorCourseResponseToEditorState(
     id: dto.id,
     title: dto.title ?? "",
     subtitle: dto.subtitle ?? "",
+    categoryId: dto.categoryId ?? null,
     description: dto.description ?? "",
     image: dto.image ?? "",
     duration: dto.duration ?? null,
@@ -285,6 +286,8 @@ export function mapCourseEditorStateToCourseRequest(
     subtitle: state.subtitle.trim() || null,
     image: state.image.trim() || null,
     description: state.description.trim(),
+    // Always stated, like visibility: the editor holds the current value, so a save says what it is.
+    categoryId: state.categoryId,
     // What the server checks this save against. Omitted on create, where there is no revision
     // to be behind — `CourseService` only requires it on update.
     ...(state.revision !== null ? { expectedRevision: state.revision } : {}),
@@ -323,6 +326,7 @@ export function createEmptyCourseEditorState(): CourseEditorState {
     subtitle: "",
     description: "",
     image: "",
+    categoryId: null,
     duration: null,
     structure: "FLAT",
     lessons: [],

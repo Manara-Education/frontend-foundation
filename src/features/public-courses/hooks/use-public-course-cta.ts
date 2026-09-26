@@ -25,10 +25,13 @@ export type PublicCourseCta =
  * by the server, and still subject to the deployment's commerce mode. The remembered
  * destination is a local path built here, and is checked again by `postAuthPath` after sign-in.
  */
-export function usePublicCourseCta(courseId: number): PublicCourseCta {
+export function usePublicCourseCta(courseId: number, planId: number | null = null): PublicCourseCta {
   const { status, user } = useAuth();
   const navigate = useNavigate();
-  const destination = paths.student.exploreCourse(courseId);
+  // The chosen plan travels as a hint in the local path. The course screen re-reads the plans
+  // from the server and uses the hint only if it names one of them; it is never a price.
+  const destination =
+    paths.student.exploreCourse(courseId) + (planId != null ? `?plan=${encodeURIComponent(String(planId))}` : "");
   const viaSignIn = () => navigate(paths.login, { state: { from: destination } });
 
   if (status === "loading") return { kind: "continue", onContinue: viaSignIn };

@@ -398,6 +398,13 @@ export function useCourseEditor(mode: CourseEditorMode) {
     [mutate],
   );
 
+  const setCategoryId = useCallback(
+    (categoryId: number | null) => {
+      mutate((prev) => ({ ...prev, categoryId }));
+    },
+    [mutate],
+  );
+
   const setDescription = useCallback(
     (description: string) => {
       mutate((prev) => ({ ...prev, description }));
@@ -979,6 +986,7 @@ export function useCourseEditor(mode: CourseEditorMode) {
     // metadata
     setTitle,
     setDescription,
+    setCategoryId,
     setImage,
     clearImage,
     setStructure,

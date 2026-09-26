@@ -31,6 +31,7 @@ function courseState(modules: CourseModuleEditorState[]): CourseEditorState {
     subtitle: "",
     description: "وصف",
     image: "",
+    categoryId: null,
     duration: 0,
     structure: "MODULES",
     lessons: [],

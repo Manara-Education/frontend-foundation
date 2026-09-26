@@ -169,6 +169,8 @@ export interface CourseEditorState {
   subtitle: string;
   description: string;
   image: string;
+  /** The catalogue category; `null` for none. */
+  categoryId: number | null;
   /** Estimated total duration in minutes; `null` when the instructor left it blank. */
   duration: number | null;
   structure: CourseStructure;

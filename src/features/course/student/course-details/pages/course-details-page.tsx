@@ -24,7 +24,7 @@ export function CourseDetailsPage({
   mode = "enrolled",
   onEnrolled,
 }: CourseDetailsPageProps) {
-  const { isLoading, courseData, error, handleEnrolled, refreshProgression } =
+  const { isLoading, courseData, preferredPlanId, error, handleEnrolled, refreshProgression } =
     useCourseDetails({ courseId, mode, onEnrolled });
 
   return (
@@ -54,6 +54,7 @@ export function CourseDetailsPage({
             onLessonClick={onLessonClick}
             onEnrolled={handleEnrolled}
             onProgressionChanged={refreshProgression}
+            preferredPlanId={preferredPlanId}
           />
         )}
       </AnimatePresence>

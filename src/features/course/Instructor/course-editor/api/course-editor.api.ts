@@ -117,3 +117,14 @@ export function uploadFileRequest(file: File) {
     headers: { "Content-Type": "multipart/form-data" },
   });
 }
+
+/** The categories a course may be put in, in display order. Active ones only. */
+export function getCourseCategoriesRequest() {
+  return apiClient.get<ApiResponse<CourseCategoryResponse[]>>("v1/instructor/course-categories");
+}
+
+export interface CourseCategoryResponse {
+  id: number;
+  name: string;
+  color: string;
+}

@@ -33,6 +33,8 @@ import type { useCreateCourse } from "../hooks/use-create-course";
 import { ReviewSection } from "./review-section";
 import { StepIndicator } from "./step-indicator";
 import { SuccessOverlay } from "./success-overlay";
+import { CategoryField } from "@/features/course/Instructor/course-editor/components/category-field";
+import { useCourseCategories } from "@/features/course/Instructor/course-editor/hooks/use-course-categories";
 
 type CreateCourseController = ReturnType<typeof useCreateCourse>;
 
@@ -229,6 +231,7 @@ export function CourseEditorWizard({
   saveDraft,
 }: CreateCourseController) {
   const { state, errors, imageFile, imagePreview, purchasePriceInput, isSaving } = editor;
+  const categories = useCourseCategories();
   const coverPreview = imagePreview ?? (state.image || null);
 
   return (
@@ -319,6 +322,13 @@ export function CourseEditorWizard({
                     }}
                   />
                 </Field>
+                <CategoryField
+                  id="course-wizard-category"
+                  categories={categories}
+                  value={state.categoryId}
+                  onChange={editor.setCategoryId}
+                  selectStyle={{ ...inputStyle(state.categoryId != null, false), height: 50, padding: "0 14px" }}
+                />
                 <div className="ccw-image-field">
                   <ImageUpload
                     value={imageFile}

@@ -1,8 +1,9 @@
 import type { CSSProperties, ReactNode } from "react";
 import { BORDER, FONT, PRIMARY, TEXT, TEXT_MUTED } from "@/features/landing/components/theme";
 import { formatMoney, formatMoneySpoken, formatPlanTerm } from "../formatters/public-offer.formatter";
+import { usePlanSelection } from "../hooks/use-plan-selection";
 import { usePublicCourseCta, type PublicCourseCta } from "../hooks/use-public-course-cta";
-import type { PublicCourseDetail, PublicOffer } from "../types/public-courses.types";
+import type { PublicCourseDetail, PublicOffer, PublicPlan } from "../types/public-courses.types";
 import { OfferBadge } from "./offer-badge";
 
 const HEADING_ID = "public-course-offer-heading";
@@ -56,7 +57,7 @@ function Note({ children }: { children: ReactNode }) {
 /** What "go ahead" is called for this offer. */
 function actionLabel(offer: PublicOffer): string {
   if (offer.kind === "FREE") return "ابدأ الدورة";
-  if (offer.kind === "SUBSCRIPTION") return "اختر خطة الاشتراك";
+  if (offer.kind === "SUBSCRIPTION") return "اشترك الآن";
   return "متابعة للشراء";
 }
 
@@ -84,8 +85,9 @@ function Actions({ cta, offer }: { cta: PublicCourseCta; offer: PublicOffer }) {
  * and checkout would refuse it anyway.
  */
 export function PublicOfferPanel({ course }: { course: PublicCourseDetail }) {
-  const cta = usePublicCourseCta(course.id);
   const { offer } = course;
+  const selection = usePlanSelection(offer);
+  const cta = usePublicCourseCta(course.id, selection.selected?.id ?? null);
 
   return (
     <section
@@ -98,24 +100,8 @@ export function PublicOfferPanel({ course }: { course: PublicCourseDetail }) {
 
       <OfferBadge offer={offer} size="lg" />
 
-      {offer.kind === "SUBSCRIPTION" && (
-        <ul aria-label="خطط الاشتراك" style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
-          {offer.plans.map((plan) => (
-            <li
-              key={plan.id}
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", border: `1px solid ${BORDER}`, borderRadius: 14, padding: "10px 14px", fontFamily: FONT, fontSize: 14, color: TEXT }}
-            >
-              <span style={{ minInlineSize: 0, overflowWrap: "anywhere" }}>
-                {plan.name}
-                <span style={{ color: TEXT_MUTED }}> · لمدة {formatPlanTerm(plan)}</span>
-              </span>
-              <span style={{ fontWeight: 700, color: PRIMARY, whiteSpace: "nowrap" }}>
-                <span aria-hidden="true">{formatMoney(plan.price)}</span>
-                <span className="sr-only">{formatMoneySpoken(plan.price)}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
+      {offer.kind === "SUBSCRIPTION" && selection.selected && (
+        <PlanChooser plans={selection.plans} selected={selection.selected} onSelect={selection.select} />
       )}
 
       {offer.kind === "UNAVAILABLE" ? (
@@ -124,5 +110,66 @@ export function PublicOfferPanel({ course }: { course: PublicCourseDetail }) {
         <Actions cta={cta} offer={offer} />
       )}
     </section>
+  );
+}
+
+const PLANS_LEGEND_ID = "public-course-plans";
+
+/**
+ * The plans as a real radio group: arrow keys move between them and the selection is announced.
+ * The total is the selected plan's server price for a fixed term — not a renewal cadence.
+ */
+function PlanChooser({
+  plans,
+  selected,
+  onSelect,
+}: {
+  plans: readonly PublicPlan[];
+  selected: PublicPlan;
+  onSelect: (id: number) => void;
+}) {
+  return (
+    <fieldset style={{ border: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8, minInlineSize: 0 }}>
+      <legend id={PLANS_LEGEND_ID} style={{ fontFamily: FONT, fontSize: 13.5, fontWeight: 700, color: TEXT, marginBlockEnd: 8 }}>
+        اختر مدة الوصول
+      </legend>
+      {plans.map((plan) => {
+        const checked = plan.id === selected.id;
+        return (
+          <label
+            key={plan.id}
+            className="focus-within:ring-2 focus-within:ring-[#4E5B92]"
+            style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", border: `1.5px solid ${checked ? PRIMARY : BORDER}`, background: checked ? "rgba(78,91,146,0.06)" : "#FFFFFF", borderRadius: 14, padding: "10px 14px", fontFamily: FONT, fontSize: 14, color: TEXT, cursor: "pointer" }}
+          >
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 10, minInlineSize: 0 }}>
+              <input
+                type="radio"
+                name="public-course-plan"
+                value={plan.id}
+                checked={checked}
+                onChange={() => onSelect(plan.id)}
+                style={{ accentColor: PRIMARY, inlineSize: 16, blockSize: 16, margin: 0 }}
+              />
+              <span style={{ overflowWrap: "anywhere" }}>
+                {plan.name}
+                <span style={{ color: TEXT_MUTED }}> · لمدة {formatPlanTerm(plan)}</span>
+              </span>
+            </span>
+            <span style={{ fontWeight: 700, color: PRIMARY, whiteSpace: "nowrap" }}>
+              <span aria-hidden="true">{formatMoney(plan.price)}</span>
+              <span className="sr-only">{formatMoneySpoken(plan.price)}</span>
+            </span>
+          </label>
+        );
+      })}
+      <p aria-live="polite" style={{ display: "flex", justifyContent: "space-between", gap: 12, fontFamily: FONT, fontSize: 14, color: TEXT, margin: "6px 0 0", paddingBlockStart: 10, borderBlockStart: `1px solid ${BORDER}` }}>
+        <span>إجمالي الاشتراك</span>
+        <span style={{ fontWeight: 800, color: PRIMARY }}>
+          <span aria-hidden="true">{formatMoney(selected.price)}</span>
+          <span className="sr-only">{formatMoneySpoken(selected.price)}</span>
+          <span style={{ fontWeight: 600, color: TEXT_MUTED, fontSize: 12.5 }}> · وصول لمدة {formatPlanTerm(selected)}</span>
+        </span>
+      </p>
+    </fieldset>
   );
 }

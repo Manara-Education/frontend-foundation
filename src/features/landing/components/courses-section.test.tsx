@@ -33,7 +33,7 @@ beforeAll(() => {
 const egp = (amount: number) => ({ amount, currency: "EGP" as const });
 
 function course(id: number, title: string, offer: PublicOffer): PublicCourseSummary {
-  return { id, title, subtitle: null, imageUrl: null, instructorName: "مدرّبة تجريبية", durationSeconds: 3600, lessonCount: 4, offer };
+  return { id, title, subtitle: null, imageUrl: null, instructorName: "مدرّبة تجريبية", durationSeconds: 3600, lessonCount: 4, offer, category: null };
 }
 
 function page(items: PublicCourseSummary[], overrides: Partial<PublicCoursePage> = {}): PublicCoursePage {
@@ -153,5 +153,39 @@ describe("the landing courses section", () => {
     renderSection({ status: "ready", page: page(OFFERS.slice(0, 2), { totalItems: 30, totalPages: 15 }) });
 
     expect(screen.getByText("تُعرض هنا أحدث ٢ دورة من أصل ٣٠.")).toBeInTheDocument();
+  });
+});
+
+describe("carousel from md up", () => {
+  it("disables the arrow at each end, measured in RTL where scrolling runs negative", async () => {
+    // jsdom has no layout: give the track a width and a scroll range it can report.
+    const scrollWidth = vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(1200);
+    const clientWidth = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(400);
+    try {
+      const items = [1, 2, 3, 4, 5].map((id) => course(id, `دورة ${id}`, { kind: "FREE" }));
+      renderSection({ status: "ready", page: page(items) });
+
+      const previous = screen.getByRole("button", { name: "الدورات السابقة" });
+      const next = screen.getByRole("button", { name: "الدورات التالية" });
+      expect(previous).toBeDisabled();
+      expect(next).toBeEnabled();
+
+      const track = screen.getByRole("list", { name: "الدورات المتاحة" });
+      track.scrollLeft = -800; // the far end, in RTL
+      track.dispatchEvent(new Event("scroll"));
+      expect(await screen.findByRole("button", { name: "الدورات التالية" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "الدورات السابقة" })).toBeEnabled();
+
+      // Every fetched course stays in the list; the track only changes how many are in view.
+      expect(within(track).getAllByRole("listitem")).toHaveLength(5);
+    } finally {
+      scrollWidth.mockRestore();
+      clientWidth.mockRestore();
+    }
+  });
+
+  it("shows no arrows when everything already fits", () => {
+    renderSection({ status: "ready", page: page([course(1, "دورة", { kind: "FREE" })]) });
+    expect(screen.queryByRole("button", { name: "الدورات التالية" })).toBeNull();
   });
 });
