@@ -2,7 +2,13 @@ import { KeyRound, ShieldAlert } from "lucide-react";
 import { FAINT, FONT, INK, PRIMARY } from "../../components/settings-tokens";
 
 /** The password entry and the anti-phishing reminder. No "last changed" date is shown unless known. */
-export function SecurityCard({ onChangePassword }: { onChangePassword: () => void }) {
+export function SecurityCard({
+  onChangePassword,
+  passwordChangedOn,
+}: {
+  onChangePassword: () => void;
+  passwordChangedOn: string | null;
+}) {
   return (
     <section
       aria-labelledby="security-title"
@@ -16,7 +22,9 @@ export function SecurityCard({ onChangePassword }: { onChangePassword: () => voi
         </span>
         <div className="flex-1 min-w-0">
           <p style={{ fontSize: 14, fontWeight: 700, color: INK }}>كلمة المرور</p>
-          <p style={{ fontSize: 12, color: FAINT }}>استخدم كلمة مرور قوية لا تستعملها في أي موقع آخر.</p>
+          <p style={{ fontSize: 12, color: FAINT }}>
+            {passwordChangedOn ? `آخر تحديث: ${passwordChangedOn}` : "استخدم كلمة مرور قوية لا تستعملها في أي موقع آخر."}
+          </p>
         </div>
         <button
           type="button"

@@ -7,6 +7,30 @@ export function getProfileRequest() {
   return apiClient.get<ApiResponse<ProfileResponse>>(PROFILE_BASE_V1);
 }
 
+/**
+ * Answers with the updated profile. A server older than the avatar release answered with a
+ * message only, which is why the body type admits both.
+ */
 export function updateProfileRequest(data: UpdateProfileRequest) {
-  return apiClient.put<ApiResponse<MessageResponse>>(PROFILE_BASE_V1, data);
+  return apiClient.put<ApiResponse<ProfileResponse | MessageResponse>>(PROFILE_BASE_V1, data);
+}
+
+/** Replaces the caller's photo. Progress is reported by the browser's upload events. */
+export function uploadAvatarRequest(
+  image: Blob,
+  options: { onProgress?: (fraction: number | null) => void; signal?: AbortSignal } = {},
+) {
+  const form = new FormData();
+  form.append("file", image, image.type === "image/png" ? "avatar.png" : "avatar.jpg");
+  return apiClient.post<ApiResponse<ProfileResponse>>(`${PROFILE_BASE_V1}/avatar`, form, {
+    // The client defaults to JSON; the endpoint accepts multipart only (axios adds the boundary).
+    headers: { "Content-Type": "multipart/form-data" },
+    signal: options.signal,
+    onUploadProgress: (event) =>
+      options.onProgress?.(event.total ? Math.min(1, event.loaded / event.total) : null),
+  });
+}
+
+export function removeAvatarRequest() {
+  return apiClient.delete<ApiResponse<ProfileResponse>>(`${PROFILE_BASE_V1}/avatar`);
 }

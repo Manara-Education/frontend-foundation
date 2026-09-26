@@ -12,6 +12,9 @@ export interface AuthUser {
    * the server believes, and the API would refuse the next request anyway.
    */
   requiresPasswordReset: boolean;
+
+  /** Served URL of the account's photo; absent or null when it has none, or from an older server. */
+  avatarUrl?: string | null;
 }
 
 export type AuthStatus = "loading" | "authenticated" | "anonymous";

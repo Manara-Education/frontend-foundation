@@ -14,6 +14,10 @@ export interface AccountOverview {
   email: string;
   roleLabel: string;
   memberSince: string;
+  avatarUrl: string | null;
+  emailVerified: boolean;
+  /** Shown only when the server knows it. */
+  passwordChangedOn: string | null;
 }
 
 export type LoadState = "loading" | "ready" | "error";

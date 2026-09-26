@@ -6,6 +6,7 @@ import { isInstructorRole } from "@/shared/auth/roles";
 import { towardInlineEnd, useDirection } from "@/shared/direction";
 import type { NavSectionId } from "@/shared/navigation/paths";
 import { getNavSectionsForRole } from "./nav-sections";
+import { UserAvatar } from "@/shared/identity";
 
 const PRIMARY = "#4E5B92";
 
@@ -21,6 +22,7 @@ interface SidebarProps {
   onLogout: () => void;
   role?: string;
   fullName?: string;
+  avatarUrl?: string | null;
   /**
    * How the sidebar is being presented.
    *
@@ -41,6 +43,7 @@ export function Sidebar({
   onLogout,
   role,
   fullName,
+  avatarUrl,
   variant = "persistent",
   onNavigate,
 }: SidebarProps) {
@@ -117,20 +120,7 @@ export function Sidebar({
           flexShrink: 0,
         }}
       >
-        <div
-          className="rounded-full flex items-center justify-center flex-shrink-0"
-          style={{
-            width: 42,
-            height: 42,
-            background: "linear-gradient(135deg, #4E5B92 0%, #6B7AB8 100%)",
-            color: "white",
-            fontWeight: 700,
-            fontSize: 17,
-            boxShadow: "0 2px 8px rgba(78,91,146,0.25)",
-          }}
-        >
-          أ
-        </div>
+        <UserAvatar fullName={fullName} avatarUrl={avatarUrl} size={42} fontSize={16} />
         <div className="min-w-0">
           <div
             style={{ fontWeight: 600, fontSize: 14, color: "#1E2340", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}

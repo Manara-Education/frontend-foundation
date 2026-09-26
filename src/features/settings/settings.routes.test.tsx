@@ -4,7 +4,9 @@ import { createMemoryRouter, Outlet, RouterProvider, useLocation } from "react-r
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/api";
 import type { AuthUser } from "@/shared/auth";
-import { getProfile, updateProfile } from "@/features/profile/services/profile.service";
+import { getProfile, removeAvatar, updateProfile, uploadAvatar } from "@/features/profile/services/profile.service";
+import type { Profile } from "@/features/profile/types/profile.types";
+import { loadPhoto, renderCrop } from "./account/services/photo.service";
 import { changePasswordRequest } from "./account/api/account.api";
 import { accountRoutes } from "./settings.routes";
 
@@ -15,7 +17,11 @@ import { accountRoutes } from "./settings.routes";
 vi.mock("@/features/profile/services/profile.service", () => ({
   getProfile: vi.fn(),
   updateProfile: vi.fn(),
+  uploadAvatar: vi.fn(),
+  removeAvatar: vi.fn(),
 }));
+// jsdom decodes no images, so the file checks and the canvas render are stubbed at their seam.
+vi.mock("./account/services/photo.service", () => ({ loadPhoto: vi.fn(), renderCrop: vi.fn() }));
 vi.mock("./account/api/account.api", () => ({ changePasswordRequest: vi.fn() }));
 vi.mock("@/features/profile/pages/profile-view", () => ({
   ProfileView: () => <p>instructor profile screen</p>,
@@ -24,19 +30,37 @@ vi.mock("@/features/profile/pages/profile-view", () => ({
 const session = vi.hoisted(() => ({
   user: null as AuthUser | null,
   refreshUser: vi.fn(async () => null),
+  setUser: vi.fn(),
 }));
 
 vi.mock("@/shared/auth", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/shared/auth")>();
   return {
     ...actual,
-    useAuth: () => ({ status: "authenticated", user: session.user, refreshUser: session.refreshUser }),
+    useAuth: () => ({
+      status: "authenticated",
+      user: session.user,
+      refreshUser: session.refreshUser,
+      setUser: session.setUser,
+    }),
   };
 });
 
 const profile = vi.mocked(getProfile);
 const rename = vi.mocked(updateProfile);
 const changePassword = vi.mocked(changePasswordRequest);
+const upload = vi.mocked(uploadAvatar);
+const removePhoto = vi.mocked(removeAvatar);
+
+const SARA: Profile = {
+  fullName: "سارة أحمد",
+  email: "sara@example.com",
+  roleLabel: "طالب نشط",
+  memberSince: "سبتمبر 2026",
+  avatarUrl: null,
+  emailVerified: false,
+  passwordChangedOn: null,
+};
 
 function signIn(role: string) {
   session.user = { fullName: "سارة أحمد", email: "sara@example.com", role, requiresPasswordReset: false };
@@ -70,12 +94,7 @@ const where = () => screen.getByTestId("where").textContent;
 beforeEach(() => {
   vi.clearAllMocks();
   signIn("STUDENT");
-  profile.mockResolvedValue({
-    fullName: "سارة أحمد",
-    email: "sara@example.com",
-    roleLabel: "طالب نشط",
-    memberSince: "سبتمبر 2026",
-  });
+  profile.mockResolvedValue(SARA);
 });
 
 describe("addresses", () => {
@@ -121,6 +140,13 @@ describe("account overview", () => {
     expect(screen.queryByText(/آخر تحديث/)).not.toBeInTheDocument();
   });
 
+  it("shows the verified badge and password date only when the server reports them", async () => {
+    profile.mockResolvedValue({ ...SARA, emailVerified: true, passwordChangedOn: "١ سبتمبر ٢٠٢٦" });
+    openAt("/settings/account");
+    expect(await screen.findByText("موثّق")).toBeInTheDocument();
+    expect(screen.getByText("آخر تحديث: ١ سبتمبر ٢٠٢٦")).toBeInTheDocument();
+  });
+
   it("offers a retry when the profile cannot be loaded", async () => {
     profile.mockRejectedValueOnce(new Error("offline"));
     openAt("/settings/account");
@@ -132,7 +158,7 @@ describe("account overview", () => {
 describe("name editor", () => {
   it("cannot save an unchanged, blank or over-long name, and saves a trimmed one", async () => {
     const user = userEvent.setup();
-    rename.mockResolvedValue("ok");
+    rename.mockResolvedValue({ ...SARA, fullName: "سارة محمود" });
     openAt("/settings/account/name");
 
     const field = await screen.findByLabelText("الاسم الكامل");
@@ -153,13 +179,13 @@ describe("name editor", () => {
 
     await waitFor(() => expect(where()).toBe("/settings/account"));
     expect(rename).toHaveBeenCalledWith({ fullName: "سارة محمود" });
-    expect(session.refreshUser).toHaveBeenCalled();
+    expect(session.setUser).toHaveBeenCalledWith(expect.objectContaining({ fullName: "سارة محمود" }));
     expect(await screen.findByText("تم حفظ الاسم بنجاح.")).toBeInTheDocument();
   });
 
   it("keeps the typed name after a failed save, and lets the person retry", async () => {
     const user = userEvent.setup();
-    rename.mockRejectedValueOnce(new Error("network")).mockResolvedValueOnce("ok");
+    rename.mockRejectedValueOnce(new Error("network")).mockResolvedValueOnce({ ...SARA, fullName: "سارة محمود" });
     openAt("/settings/account/name");
 
     const field = await screen.findByLabelText("الاسم الكامل");
@@ -234,5 +260,70 @@ describe("password editor", () => {
     await waitFor(() => expect(where()).toBe("/settings/account"));
     expect(changePassword).toHaveBeenCalledWith({ currentPassword: "current password", newPassword: STRONG });
     expect(await screen.findByText(/تم تغيير كلمة المرور/)).toBeInTheDocument();
+  });
+});
+
+describe("profile photo", () => {
+  const PHOTO = { url: "blob:photo", width: 800, height: 600 };
+
+  it("refuses an unsupported file with the reason, and uploads nothing", async () => {
+    const user = userEvent.setup({ applyAccept: false });
+    vi.mocked(loadPhoto).mockResolvedValue({ error: "صيغة الملف غير مدعومة. استخدم صورة JPG أو PNG أو WebP." });
+    openAt("/settings/account");
+    await user.click(await screen.findByRole("button", { name: "إضافة صورة" }));
+    await user.upload(screen.getByLabelText("اختيار صورة"), new File(["x"], "a.gif", { type: "image/gif" }));
+    expect(await screen.findByText(/صيغة الملف غير مدعومة/)).toBeInTheDocument();
+    expect(upload).not.toHaveBeenCalled();
+  });
+
+  it("uploads the cropped photo and shows it everywhere without a reload", async () => {
+    const user = userEvent.setup();
+    vi.mocked(loadPhoto).mockResolvedValue(PHOTO);
+    vi.mocked(renderCrop).mockResolvedValue(new Blob(["jpeg"], { type: "image/jpeg" }));
+    upload.mockResolvedValue({ ...SARA, avatarUrl: "/uploads/new.jpg" });
+    openAt("/settings/account");
+
+    await user.click(await screen.findByRole("button", { name: "إضافة صورة" }));
+    await user.upload(screen.getByLabelText("اختيار صورة"), new File(["x"], "me.png", { type: "image/png" }));
+    await user.click(await screen.findByRole("button", { name: "تكبير" }));
+    await user.click(screen.getByRole("button", { name: "حفظ الصورة" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    const [, crop] = vi.mocked(renderCrop).mock.calls[0];
+    expect(crop.zoom).toBeGreaterThan(1);
+    expect(session.setUser).toHaveBeenCalledWith(expect.objectContaining({ avatarUrl: "/uploads/new.jpg" }));
+    expect(screen.getByRole("button", { name: "تغيير الصورة" })).toBeInTheDocument();
+  });
+
+  it("keeps the dialog and the chosen photo when the server refuses it", async () => {
+    const user = userEvent.setup();
+    vi.mocked(loadPhoto).mockResolvedValue(PHOTO);
+    vi.mocked(renderCrop).mockResolvedValue(new Blob(["jpeg"], { type: "image/jpeg" }));
+    upload.mockRejectedValueOnce(new ApiError(400, ["الصورة صغيرة جدًا"]));
+    openAt("/settings/account");
+
+    await user.click(await screen.findByRole("button", { name: "إضافة صورة" }));
+    await user.upload(screen.getByLabelText("اختيار صورة"), new File(["x"], "me.png", { type: "image/png" }));
+    await user.click(await screen.findByRole("button", { name: "حفظ الصورة" }));
+
+    expect(await screen.findByText("الصورة صغيرة جدًا")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "حفظ الصورة" })).toBeEnabled();
+    expect(session.setUser).not.toHaveBeenCalled();
+  });
+
+  it("removes the photo only after confirmation", async () => {
+    const user = userEvent.setup();
+    profile.mockResolvedValue({ ...SARA, avatarUrl: "/uploads/old.jpg" });
+    removePhoto.mockResolvedValue(SARA);
+    openAt("/settings/account");
+
+    await user.click(await screen.findByRole("button", { name: "تغيير الصورة" }));
+    await user.click(screen.getByRole("button", { name: "حذف الصورة" }));
+    expect(removePhoto).not.toHaveBeenCalled();
+    await user.click(within(screen.getByRole("alertdialog", { name: "تأكيد حذف الصورة" })).getByRole("button", { name: "حذف" }));
+
+    await waitFor(() => expect(removePhoto).toHaveBeenCalledTimes(1));
+    expect(session.setUser).toHaveBeenCalledWith(expect.objectContaining({ avatarUrl: null }));
+    expect(await screen.findByRole("button", { name: "إضافة صورة" })).toBeInTheDocument();
   });
 });
