@@ -27,6 +27,7 @@ export type {
 
 export type {
   CheckoutRequest,
+  CheckoutQuoteResponse,
   CheckoutResponse,
   ContentChangeResponse,
   ContentChangeState,

@@ -2,7 +2,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/shared/api";
-import { loadCourseDetail, purchaseCourse, subscribeToCourse } from "../services/course-details.service";
+import { MemoryRouter } from "react-router";
+import { downloadReceiptPdf } from "@/features/settings/billing/services/billing.service";
+import { getCheckoutQuote, loadCourseDetail, purchaseCourse, subscribeToCourse } from "../services/course-details.service";
 import type { CourseDetailData } from "../types/course-details.types";
 import { CheckoutSheet } from "./checkout-sheet";
 import { PaymentCTASection } from "./payment-cta-section";
@@ -16,7 +18,9 @@ vi.mock("../services/course-details.service", () => ({
   subscribeToCourse: vi.fn(),
   enrollFree: vi.fn(),
   loadCourseDetail: vi.fn(),
+  getCheckoutQuote: vi.fn(),
 }));
+vi.mock("@/features/settings/billing/services/billing.service", () => ({ downloadReceiptPdf: vi.fn() }));
 vi.mock("@/shared/auth", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/shared/auth")>();
   return {
@@ -28,6 +32,12 @@ vi.mock("@/shared/auth", async (importOriginal) => {
 const purchase = vi.mocked(purchaseCourse);
 const subscribe = vi.mocked(subscribeToCourse);
 const reload = vi.mocked(loadCourseDetail);
+const quote = vi.mocked(getCheckoutQuote);
+const QUOTE = {
+  courseId: 42, planId: null, accessType: "PURCHASE" as const, subtotal: 450, discount: 0, amount: 450, currency: "EGP",
+  accessKind: "PERPETUAL" as const, accessDuration: null, accessUnit: null, renewalMode: null,
+  payable: true, unavailableReason: null, simulated: false,
+};
 
 const COURSE = { id: 42, title: "أساسيات الجبر", image: "", accessType: "PURCHASE", purchasePriceLabel: "٤٥٠ ج.م" } as unknown as CourseDetailData;
 
@@ -35,14 +45,20 @@ function open(overrides: Partial<Parameters<typeof CheckoutSheet>[0]> = {}) {
   const onClose = vi.fn();
   const onGoToCourse = vi.fn();
   render(
-    <CheckoutSheet course={COURSE} kind="purchase" mode="browse" amountLabel="٤٥٠ ج.م" termsLabel="شراء مرة واحدة · وصول دائم" onClose={onClose} onGoToCourse={onGoToCourse} {...overrides} />,
+    <MemoryRouter>
+    <CheckoutSheet course={COURSE} kind="purchase" mode="browse" amountLabel="٤٥٠ ج.م" termsLabel="شراء مرة واحدة · وصول دائم" onClose={onClose} onGoToCourse={onGoToCourse} {...overrides} />
+    </MemoryRouter>,
   );
   return { onClose, onGoToCourse };
 }
 
 const confirm = () => screen.getByRole("button", { name: /تأكيد ودفع ٤٥٠ ج.م/ });
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  // An older server has no quote; the sheet falls back to the page's offer.
+  quote.mockRejectedValue(new ApiError(404, ["not found"]));
+});
 
 describe("checkout sheet", () => {
   it("prefills the contact details and summarises the order without inventing a method picker", () => {
@@ -155,7 +171,44 @@ describe("checkout sheet", () => {
 
 describe("purchase card", () => {
   it("makes no refund promise the platform cannot keep", () => {
-    render(<PaymentCTASection course={COURSE} mode="browse" onPay={vi.fn()} onRefresh={vi.fn()} />);
+    render(<MemoryRouter><PaymentCTASection course={COURSE} mode="browse" onPay={vi.fn()} onRefresh={vi.fn()} /></MemoryRouter>);
     expect(screen.queryByText(/استرداد/)).toBeNull();
+  });
+});
+
+describe("with the server's quote", () => {
+  it("prices from the quote and says it is a simulation before anything is sent", async () => {
+    quote.mockResolvedValue({ ...QUOTE, amount: 400, simulated: true });
+    open();
+    expect(await screen.findByRole("button", { name: /تأكيد ودفع ٤٠٠ ج.م/ })).toBeEnabled();
+    expect(screen.getByText("محاكاة دفع — لا تُجرى أي عملية خصم فعلية")).toBeInTheDocument();
+    expect(purchase).not.toHaveBeenCalled();
+  });
+
+  it("does not offer to pay when the server says payments are unavailable", async () => {
+    quote.mockResolvedValue({ ...QUOTE, payable: false, unavailableReason: "PAYMENTS_UNAVAILABLE" });
+    open();
+    expect(await screen.findByText(/الدفع غير متاح حاليًا على منارة/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /تأكيد ودفع/ })).toBeDisabled();
+  });
+
+  it("shows the recorded amount and receipt, and downloads it through the shared path", async () => {
+    const user = userEvent.setup();
+    quote.mockResolvedValue(QUOTE);
+    purchase.mockResolvedValue({
+      enrollmentId: 1, courseId: 42, accessType: "PURCHASE", access: null, paymentReference: "sim_1", simulated: true,
+      transactionId: "5b2c1f0e-1d2a-4f6b-9c11-2f0f8a7d6e11", transactionStatus: "PAID", amount: 450, currency: "EGP",
+      paidAt: "2026-09-27T12:00:00", receiptNumber: "DEMO-2026-000042",
+    });
+    vi.mocked(downloadReceiptPdf).mockResolvedValue();
+    open();
+    await user.click(await screen.findByRole("button", { name: /تأكيد ودفع ٤٥٠ ج.م/ }));
+
+    expect(await screen.findByText("DEMO-2026-000042")).toBeInTheDocument();
+    expect(screen.getByText("٤٥٠ ج.م", { selector: "strong" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "عرض الإيصال" })).toHaveAttribute(
+      "href", "/settings/billing/invoices?tx=5b2c1f0e-1d2a-4f6b-9c11-2f0f8a7d6e11");
+    await user.click(screen.getByRole("button", { name: "تحميل الإيصال" }));
+    expect(downloadReceiptPdf).toHaveBeenCalledWith("DEMO-2026-000042");
   });
 });

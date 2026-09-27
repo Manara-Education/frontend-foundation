@@ -234,6 +234,10 @@ export type CheckoutPhase = "review" | "submitting" | "success" | "failed" | "un
 export interface CheckoutOutcome {
   paymentReference: string | null;
   simulated: boolean;
+  /** What the server recorded as charged, formatted; null when it reported none. */
+  amountLabel: string | null;
+  receiptNumber: string | null;
+  transactionId: string | null;
   /** Confirmed by re-reading the course rather than by the checkout's own answer. */
   confirmedByStatusCheck: boolean;
 }

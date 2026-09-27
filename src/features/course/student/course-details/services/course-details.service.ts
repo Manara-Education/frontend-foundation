@@ -36,3 +36,5 @@ export function subscribeToCourse(
 ): Promise<CheckoutResponse> {
   return api.processCheckout(courseId, { planId, paymentMethod });
 }
+
+export { getCheckoutQuote } from "../api/course-details.api";

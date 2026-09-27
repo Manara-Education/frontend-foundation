@@ -1,5 +1,5 @@
 import { apiClient, unwrap, type ApiResponse } from "@/shared/api";
-import type { CheckoutRequest, CheckoutResponse } from "@/shared/courses";
+import type { CheckoutQuoteResponse, CheckoutRequest, CheckoutResponse } from "@/shared/courses";
 import type {
   CourseDetailsApiResponse,
   CourseDetailsMode,
@@ -37,6 +37,15 @@ export async function processCheckout(
   const response = await apiClient.post<ApiResponse<CheckoutResponse>>(
     `/${STUDENT_COURSE_BASE_V1}/${courseId}/checkout`,
     request,
+  );
+  return unwrap(response);
+}
+
+/** The server's price and terms for a checkout, before anything is charged. */
+export async function getCheckoutQuote(courseId: number, planId: number | null): Promise<CheckoutQuoteResponse> {
+  const response = await apiClient.post<ApiResponse<CheckoutQuoteResponse>>(
+    `/${STUDENT_COURSE_BASE_V1}/${courseId}/checkout/quote`,
+    planId != null ? { planId } : {},
   );
   return unwrap(response);
 }

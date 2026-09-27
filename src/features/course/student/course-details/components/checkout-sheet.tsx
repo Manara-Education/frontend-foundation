@@ -1,5 +1,8 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { motion } from "motion/react";
+import { Link } from "react-router";
+import { downloadReceiptPdf } from "@/features/settings/billing/services/billing.service";
+import { paths } from "@/shared/navigation/paths";
 import { AlertTriangle, BookOpen, CheckCircle2, Loader2, Lock, WifiOff, X, XCircle } from "lucide-react";
 import { FONT, PRIMARY } from "../formatters/course-details.formatter";
 import { useCheckout } from "../hooks/use-checkout";
@@ -39,6 +42,8 @@ const FOCUSABLE = ["a[href]", "button:not([disabled])", "input:not([disabled])",
 export function CheckoutSheet({ course, kind, mode, amountLabel, termsLabel, planId, onClose, onGoToCourse }: CheckoutSheetProps) {
   const checkout = useCheckout({ courseId: course.id, kind, planId, mode });
   const { phase, busy } = checkout;
+  // The server's figure once it has answered; the page's offer until then.
+  const shownAmount = checkout.quotedAmount ?? amountLabel;
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const [imageFailed, setImageFailed] = useState(false);
@@ -154,12 +159,26 @@ export function CheckoutSheet({ course, kind, mode, amountLabel, termsLabel, pla
               <p className="rs-longform" style={{ fontSize: 13.5, fontWeight: 700, color: INK, margin: 0 }}>{course.title}</p>
               <p style={{ fontSize: 12, color: MUTED, margin: 0 }}>{termsLabel}</p>
             </div>
-            <span style={{ fontSize: 16, fontWeight: 800, color: PRIMARY, whiteSpace: "nowrap" }}>{amountLabel}</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: PRIMARY, whiteSpace: "nowrap" }}>{shownAmount}</span>
           </section>
 
           {checkout.offline && (phase === "review" || phase === "uncertain") && (
             <Banner tone="warning" icon={<WifiOff size={15} aria-hidden="true" />}>
               لا يوجد اتصال بالإنترنت. تحقّق من اتصالك قبل المتابعة.
+            </Banner>
+          )}
+
+          {phase === "review" && checkout.quote?.simulated && (
+            <Banner tone="warning" icon={<AlertTriangle size={15} aria-hidden="true" />}>
+              محاكاة دفع — لا تُجرى أي عملية خصم فعلية
+            </Banner>
+          )}
+
+          {phase === "review" && checkout.quote && !checkout.quote.payable && (
+            <Banner tone="danger" icon={<XCircle size={15} aria-hidden="true" />}>
+              {checkout.quote.unavailableReason === "ALREADY_ENTITLED"
+                ? "لديك وصول إلى هذه الدورة بالفعل."
+                : "الدفع غير متاح حاليًا على منارة، لذلك لا يمكن إتمام الشراء الآن."}
             </Banner>
           )}
 
@@ -196,7 +215,7 @@ export function CheckoutSheet({ course, kind, mode, amountLabel, termsLabel, pla
         </div>
 
         <div className="rs-sheet__footer flex flex-col gap-2" style={{ padding: "10px 20px 18px" }}>
-          <Actions checkout={checkout} onClose={closeWith} onGoToCourse={onGoToCourse} amountLabel={amountLabel} />
+          <Actions checkout={checkout} onClose={closeWith} onGoToCourse={onGoToCourse} amountLabel={shownAmount} />
         </div>
       </motion.div>
     </motion.div>
@@ -215,6 +234,12 @@ function SuccessView({ outcome }: { outcome: CheckoutOutcome }) {
           محاكاة دفع — لا تُجرى أي عملية خصم فعلية
         </p>
       )}
+      {outcome.amountLabel && (
+        <p style={{ fontSize: 13, color: INK, margin: 0 }}>
+          المبلغ المسجّل: <strong>{outcome.amountLabel}</strong>
+        </p>
+      )}
+      {outcome.receiptNumber && <ReceiptActions outcome={outcome} />}
       {outcome.paymentReference && (
         <p style={{ fontSize: 12.5, color: MUTED, margin: 0 }}>
           المرجع: <span dir="ltr" style={{ unicodeBidi: "isolate", fontWeight: 700, color: INK }}>{outcome.paymentReference}</span>
@@ -317,5 +342,49 @@ function Secondary({ onClick, disabled, children }: { onClick: () => void; disab
     >
       {children}
     </button>
+  );
+}
+
+/** The receipt from checkout: open it in Settings, or download it through the same path Settings uses. */
+function ReceiptActions({ outcome }: { outcome: CheckoutOutcome }) {
+  const [state, setState] = useState<"idle" | "downloading" | "failed">("idle");
+  const download = async () => {
+    if (!outcome.receiptNumber || state === "downloading") return;
+    setState("downloading");
+    try {
+      await downloadReceiptPdf(outcome.receiptNumber);
+      setState("idle");
+    } catch {
+      setState("failed");
+    }
+  };
+  return (
+    <div className="flex flex-col items-center gap-1.5" style={{ fontSize: 12.5 }}>
+      <p style={{ color: MUTED, margin: 0 }}>
+        رقم الإيصال: <span dir="ltr" style={{ unicodeBidi: "isolate", fontWeight: 700, color: INK }}>{outcome.receiptNumber}</span>
+      </p>
+      <div className="flex flex-wrap justify-center gap-3">
+        {outcome.transactionId && (
+          <Link
+            to={`${paths.settings.invoices}?tx=${encodeURIComponent(outcome.transactionId)}`}
+            className="rounded-lg px-2 py-1 outline-none focus-visible:ring-2 focus-visible:ring-[#4E5B92]"
+            style={{ fontWeight: 700, color: PRIMARY }}
+          >
+            عرض الإيصال
+          </Link>
+        )}
+        <button
+          type="button"
+          onClick={() => void download()}
+          disabled={state === "downloading"}
+          className="rounded-lg px-2 py-1 outline-none focus-visible:ring-2 focus-visible:ring-[#4E5B92]"
+          style={{ fontFamily: FONT, fontSize: "inherit", fontWeight: 700, color: PRIMARY, background: "transparent", border: "none", cursor: "pointer" }}
+        >
+          {state === "downloading" ? "جارٍ التحميل…" : "تحميل الإيصال"}
+        </button>
+      </div>
+      {state === "failed" && <p role="alert" style={{ color: DANGER, margin: 0 }}>تعذّر تحميل الإيصال.</p>}
+      <p style={{ color: MUTED, margin: 0 }}>تجد هذه العملية أيضًا في الإعدادات ← الفواتير والمدفوعات.</p>
+    </div>
   );
 }
