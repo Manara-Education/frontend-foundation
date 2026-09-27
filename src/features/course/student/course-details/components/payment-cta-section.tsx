@@ -2,13 +2,17 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Sparkles, ShieldCheck, X } from "lucide-react";
 import { FONT, PRIMARY } from "../formatters/course-details.formatter";
-import type { CourseDetailData } from "../types/course-details.types";
-import { CheckoutModal } from "./checkout-modal";
+import type { CourseDetailData, CourseDetailsMode } from "../types/course-details.types";
+import { CheckoutSheet } from "./checkout-sheet";
 import { enrollFree } from "../services/course-details.service";
 
 interface PaymentCTASectionProps {
   course: CourseDetailData;
+  mode: CourseDetailsMode;
+  /** Opens the course — only ever from the learner's explicit action. */
   onPay: () => void;
+  /** Re-reads the page, e.g. after a sheet that ended in success was closed. */
+  onRefresh: () => void;
 }
 
 /**
@@ -18,25 +22,17 @@ interface PaymentCTASectionProps {
  * also has no purchase price, and reading "free" off a null would have offered it away. A
  * `SUBSCRIPTION` course never reaches this card — it has its own, with a plan selector.
  */
-export function PaymentCTASection({ course, onPay }: PaymentCTASectionProps) {
+export function PaymentCTASection({ course, mode, onPay, onRefresh }: PaymentCTASectionProps) {
   const isFree = course.accessType === "FREE";
   const [showCheckout, setShowCheckout] = useState(false);
   const [paymentFailed, setPaymentFailed] = useState(false);
   const [isEnrollingFree, setIsEnrollingFree] = useState(false);
 
-  function handleCancelPayment() {
+  // Closing the sheet is not a failure: the banner is for a refusal the server confirmed.
+  function handleSheetClosed(outcome: "none" | "success" | "confirmed-failure") {
     setShowCheckout(false);
-    setPaymentFailed(true);
-  }
-
-  function handleFailedPayment() {
-    setShowCheckout(false);
-    setPaymentFailed(true);
-  }
-
-  function handleSuccessPayment() {
-    setShowCheckout(false);
-    onPay();
+    if (outcome === "confirmed-failure") setPaymentFailed(true);
+    if (outcome === "success") onRefresh();
   }
 
   async function handleButtonClick() {
@@ -64,14 +60,14 @@ export function PaymentCTASection({ course, onPay }: PaymentCTASectionProps) {
     <>
       <AnimatePresence>
         {showCheckout && (
-          <CheckoutModal
+          <CheckoutSheet
             course={course}
             kind="purchase"
+            mode={mode}
             amountLabel={course.purchasePriceLabel ?? ""}
-            termsLabel="شراء مرة واحدة"
-            onSuccess={handleSuccessPayment}
-            onFailure={handleFailedPayment}
-            onCancel={handleCancelPayment}
+            termsLabel="شراء مرة واحدة · وصول دائم"
+            onClose={handleSheetClosed}
+            onGoToCourse={onPay}
           />
         )}
       </AnimatePresence>
@@ -120,7 +116,7 @@ export function PaymentCTASection({ course, onPay }: PaymentCTASectionProps) {
               </div>
               <div className="rs-longform" style={{ flex: "1 1 min(180px, 100%)", minWidth: 0 }}>
                 <div style={{ fontFamily: FONT, fontSize: 13, color: "#DC2626", marginBottom: 1 }}>
-                  لم تكتمل عملية الدفع
+                  {isFree ? "لم يكتمل الانضمام إلى الدورة" : "لم تكتمل العملية"}
                 </div>
                 <div style={{ fontFamily: FONT, fontSize: 11, color: "#9BA3C4" }}>
                   يمكنك المحاولة مرة أخرى في أي وقت
@@ -222,7 +218,7 @@ export function PaymentCTASection({ course, onPay }: PaymentCTASectionProps) {
         <p className="rs-longform" style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4", textAlign: "center", margin: "12px 0 0" }}>
           {isFree
             ? "وصول فوري — لا تحتاج إلى بطاقة ائتمانية"
-            : "ضمان استرداد المبلغ خلال ٧ أيام · اتصال مشفّر"}
+            : "اتصال مشفّر · يُحتسب السعر من خادم منارة"}
         </p>
       </motion.div>
     </>

@@ -69,10 +69,12 @@ export function CourseDetailsForm({
               course={courseData}
               plans={subscriptionPlans}
               preferredPlanId={preferredPlanId}
+              mode={mode}
               onPay={onEnrolled}
+              onRefresh={onProgressionChanged}
             />
           ) : (
-            <PaymentCTASection course={courseData} onPay={onEnrolled} />
+            <PaymentCTASection course={courseData} mode={mode} onPay={onEnrolled} onRefresh={onProgressionChanged} />
           )}
 
           <BrowseCurriculumSection
