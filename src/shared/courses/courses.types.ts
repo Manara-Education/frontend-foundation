@@ -715,6 +715,31 @@ export interface CheckoutResponse {
    * absent is never read as "real".
    */
   simulated?: boolean;
+  /** Ledger fields (additive; null when this call charged nothing). */
+  transactionId?: string | null;
+  transactionStatus?: string | null;
+  amount?: number | null;
+  currency?: string | null;
+  paidAt?: string | null;
+  receiptNumber?: string | null;
+}
+
+/** The server's order summary for a checkout. Authorises nothing; checkout re-prices. */
+export interface CheckoutQuoteResponse {
+  courseId: number;
+  planId: number | null;
+  accessType: CourseAccessType;
+  subtotal: number;
+  discount: number;
+  amount: number;
+  currency: string | null;
+  accessKind: "PERPETUAL" | "FIXED_TERM";
+  accessDuration: number | null;
+  accessUnit: string | null;
+  renewalMode: "FIXED" | null;
+  payable: boolean;
+  unavailableReason: "PAYMENTS_UNAVAILABLE" | "ALREADY_ENTITLED" | null;
+  simulated: boolean;
 }
 
 /** Query parameter of the student course details endpoint. */

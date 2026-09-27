@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { ApiError } from "@/shared/api";
 import { useAuth } from "@/shared/auth";
 import { isCheckoutValid } from "../formatters/course-details.formatter";
+import type { CheckoutQuoteResponse } from "@/shared/courses";
+import { formatMoney } from "@/features/settings/billing/formatters/billing.formatter";
 import {
+  getCheckoutQuote,
   loadCourseDetail,
   purchaseCourse,
   subscribeToCourse,
@@ -48,6 +51,19 @@ export function useCheckout({ courseId, kind, planId, mode }: UseCheckoutArgs) {
   const [statusNotConfirmed, setStatusNotConfirmed] = useState(false);
   const [offline, setOffline] = useState(() => typeof navigator !== "undefined" && navigator.onLine === false);
   const inFlight = useRef(false);
+  // The server's price and terms. `null` while loading or if the server gave none; the sheet then
+  // shows the page's offer, which checkout re-prices anyway.
+  const [quote, setQuote] = useState<CheckoutQuoteResponse | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCheckoutQuote(courseId, kind === "subscription" ? (planId ?? null) : null)
+      .then((answer) => !cancelled && setQuote(answer))
+      .catch(() => !cancelled && setQuote(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [courseId, kind, planId]);
 
   // Advisory only: it explains a failure faster, it never decides an outcome.
   useEffect(() => {
@@ -60,7 +76,8 @@ export function useCheckout({ courseId, kind, planId, mode }: UseCheckoutArgs) {
     };
   }, []);
 
-  const canPay = isCheckoutValid(form, false) && (kind !== "subscription" || planId != null);
+  const refusedByQuote = quote !== null && !quote.payable;
+  const canPay = isCheckoutValid(form, false) && (kind !== "subscription" || planId != null) && !refusedByQuote;
   const busy = phase === "submitting" || phase === "checking";
 
   async function submit() {
@@ -79,6 +96,9 @@ export function useCheckout({ courseId, kind, planId, mode }: UseCheckoutArgs) {
         paymentReference: response.paymentReference ?? null,
         simulated: response.simulated === true,
         confirmedByStatusCheck: false,
+        amountLabel: formatMoney(response.amount ?? null, response.currency ?? null),
+        receiptNumber: response.receiptNumber ?? null,
+        transactionId: response.transactionId ?? null,
       });
       setPhase("success");
     } catch (err) {
@@ -105,7 +125,14 @@ export function useCheckout({ courseId, kind, planId, mode }: UseCheckoutArgs) {
     try {
       const course = await loadCourseDetail(courseId, mode);
       if (course.access.entitled) {
-        setOutcome({ paymentReference: null, simulated: false, confirmedByStatusCheck: true });
+        setOutcome({
+          paymentReference: null,
+          simulated: false,
+          confirmedByStatusCheck: true,
+          amountLabel: null,
+          receiptNumber: null,
+          transactionId: null,
+        });
         setPhase("success");
       } else {
         setStatusNotConfirmed(true);
@@ -122,6 +149,8 @@ export function useCheckout({ courseId, kind, planId, mode }: UseCheckoutArgs) {
   return {
     phase,
     busy,
+    quote,
+    quotedAmount: quote ? formatMoney(quote.amount, quote.currency) : null,
     form,
     canPay,
     offline,
