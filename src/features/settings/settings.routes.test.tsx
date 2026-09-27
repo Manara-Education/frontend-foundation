@@ -27,6 +27,12 @@ vi.mock("@/features/profile/services/profile.service", () => ({
 }));
 // jsdom decodes no images, so the file checks and the canvas render are stubbed at their seam.
 vi.mock("./account/services/photo.service", () => ({ loadPhoto: vi.fn(), renderCrop: vi.fn() }));
+vi.mock("./billing/api/billing.api", () => ({
+  getBillingCapabilitiesRequest: vi.fn().mockResolvedValue({ data: { status: "success", data: {
+    commerceMode: "FREE_ONLY", provider: null, oneTimeCheckout: false, simulated: false, methodTypes: [],
+    savedMethods: false, recurringCharges: false, statusRefresh: false, refunds: false,
+  } } }),
+}));
 vi.mock("./account/api/account.api", () => ({ changePasswordRequest: vi.fn() }));
 vi.mock("./account/api/email-change.api", () => ({
   startEmailChangeRequest: vi.fn(),
@@ -134,8 +140,8 @@ describe("addresses", () => {
       expect.arrayContaining(["طرق الدفع"]),
     );
     expect(screen.queryByText("نظرة عامة")).not.toBeInTheDocument();
-    // An unavailable section says so and offers nothing to act on.
-    expect(screen.getAllByText("قريبًا").length).toBeGreaterThan(0);
+    // An unavailable section says why, in the server's terms, and offers nothing to act on.
+    expect(await screen.findByText(/الدفع الإلكتروني غير مفعّل/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /إضافة/ })).not.toBeInTheDocument();
   });
 });

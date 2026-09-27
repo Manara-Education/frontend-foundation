@@ -177,3 +177,15 @@ export interface TransactionFilters {
   range: DateRange;
   page: number;
 }
+
+export interface BillingCapabilitiesResponse {
+  commerceMode: "FREE_ONLY" | "DEMONSTRATION" | "LIVE";
+  provider: string | null;
+  oneTimeCheckout: boolean;
+  simulated: boolean;
+  methodTypes: string[];
+  savedMethods: boolean;
+  recurringCharges: boolean;
+  statusRefresh: boolean;
+  refunds: boolean;
+}

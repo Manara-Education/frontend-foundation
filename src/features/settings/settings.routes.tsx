@@ -8,8 +8,7 @@ import { AccountOverviewPage } from "./account/pages/account-overview-page";
 import { NameEditorPage } from "./account/pages/name-editor-page";
 import { EmailEditorPage } from "./account/pages/email-editor-page";
 import { PasswordEditorPage } from "./account/pages/password-editor-page";
-import { InvoicesPage, SubscriptionsPage } from "./billing/pages/billing-pages";
-import { PaymentMethodsPendingPage } from "./billing/pages/billing-pending-pages";
+import { InvoicesPage, PaymentMethodsPage, SubscriptionsPage } from "./billing/pages/billing-pages";
 import { SettingsPage } from "./pages/settings-page";
 
 /** Typed so a misspelt key is a compile error, as in the app route table. */
@@ -61,7 +60,7 @@ export const accountRoutes: RouteObject[] = [
           { path: "account/email", Component: EmailEditorPage },
           { path: "billing", element: <Navigate to={paths.settings.subscriptions} replace /> },
           { path: "billing/subscriptions", Component: SubscriptionsPage },
-          { path: "billing/payment-methods", Component: PaymentMethodsPendingPage },
+          { path: "billing/payment-methods", Component: PaymentMethodsPage },
           { path: "billing/invoices", Component: InvoicesPage },
           { path: "*", element: <Navigate to={paths.settings.account} replace /> },
         ],
