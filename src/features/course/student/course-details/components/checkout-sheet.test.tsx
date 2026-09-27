@@ -170,9 +170,11 @@ describe("checkout sheet", () => {
 });
 
 describe("purchase card", () => {
-  it("makes no refund promise the platform cannot keep", () => {
+  it("makes no refund promise of its own, and links to the published policy", () => {
     render(<MemoryRouter><PaymentCTASection course={COURSE} mode="browse" onPay={vi.fn()} onRefresh={vi.fn()} /></MemoryRouter>);
-    expect(screen.queryByText(/استرداد/)).toBeNull();
+    // No promise of its own — only a link to the published terms (14-day policy, terms §7).
+    expect(screen.queryByText(/ضمان|خلال ٧ أيام/)).toBeNull();
+    expect(screen.getByRole("link", { name: "سياسة الإلغاء والاسترداد" })).toHaveAttribute("href", "/terms#section-6");
   });
 });
 

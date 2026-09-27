@@ -87,7 +87,8 @@ function toSubscriptionRow(dto: SubscriptionPageResponse["items"][number]): Subs
     id: dto.id,
     courseTitle: dto.course.title,
     courseImage: dto.course.imageUrl,
-    planLabel: `${dto.plan.name} · ${planTerm(dto.plan.duration, dto.plan.unit)}`,
+    // Not "·": beside an Arabic-Indic digit it reads as a zero ("· ٣" looks like "٣٠").
+    planLabel: `${dto.plan.name}، لمدة ${planTerm(dto.plan.duration, dto.plan.unit)}`,
     priceLabel: formatMoney(dto.pricePaid, dto.currency),
     periodLabel: `${formatDate(dto.startsAt)} — ${formatDate(dto.expiresAt)}`,
     expiresLabel: formatDate(dto.expiresAt),
