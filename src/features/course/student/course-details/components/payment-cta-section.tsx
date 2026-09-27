@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { Link } from "react-router";
+import { PUBLIC_BUSINESS_FACTS } from "@/shared/business/public-business-facts";
 import { Sparkles, ShieldCheck, X } from "lucide-react";
 import { FONT, PRIMARY } from "../formatters/course-details.formatter";
 import type { CourseDetailData, CourseDetailsMode } from "../types/course-details.types";
@@ -216,9 +218,17 @@ export function PaymentCTASection({ course, mode, onPay, onRefresh }: PaymentCTA
         </motion.button>
 
         <p className="rs-longform" style={{ fontFamily: FONT, fontSize: 11, color: "#B0B7D4", textAlign: "center", margin: "12px 0 0" }}>
-          {isFree
-            ? "وصول فوري — لا تحتاج إلى بطاقة ائتمانية"
-            : "اتصال مشفّر · يُحتسب السعر من خادم منارة"}
+          {isFree ? (
+            "وصول فوري — لا تحتاج إلى بطاقة ائتمانية"
+          ) : (
+            <>
+              اتصال مشفّر · يُحتسب السعر من خادم منارة ·{" "}
+              {/* A pointer to the published policy, not a restatement of it. */}
+              <Link to={PUBLIC_BUSINESS_FACTS.legalLinks.refundPolicy} style={{ color: PRIMARY, textDecoration: "underline" }}>
+                سياسة الإلغاء والاسترداد
+              </Link>
+            </>
+          )}
         </p>
       </motion.div>
     </>
