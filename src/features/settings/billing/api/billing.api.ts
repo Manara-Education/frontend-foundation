@@ -1,5 +1,6 @@
 import { apiClient, type ApiResponse } from "@/shared/api";
 import type {
+  BillingCapabilitiesResponse,
   ReceiptResponse,
   SubscriptionPageResponse,
   TransactionDetailResponse,
@@ -35,4 +36,8 @@ export function getReceiptPdfRequest(number: string) {
 
 export function getSubscriptionsRequest(page: number, size: number) {
   return apiClient.get<ApiResponse<SubscriptionPageResponse>>(`${BASE}/subscriptions`, { params: { page, size } });
+}
+
+export function getBillingCapabilitiesRequest() {
+  return apiClient.get<ApiResponse<BillingCapabilitiesResponse>>(`${BASE}/billing/capabilities`);
 }
