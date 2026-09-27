@@ -52,6 +52,36 @@ export interface TransactionDetailResponse {
   refundedAmount: number | null;
   gatewayReference: string | null;
   subscriptionTerm: { subscriptionId: number; startsAt: string; expiresAt: string } | null;
+  /** Absent from servers that predate refund requests; read as UNAVAILABLE. */
+  refundEligibility?: RefundEligibility;
+}
+
+/** Whether a refund request can be made now, or the first reason it cannot. Not a statement that one is owed. */
+export type RefundEligibility =
+  | "ELIGIBLE"
+  | "UNAVAILABLE"
+  | "NOT_LIVE"
+  | "NOT_PAID"
+  | "NO_REFUNDABLE_AMOUNT"
+  | "WINDOW_CLOSED"
+  | "REQUEST_OPEN";
+
+export type RefundReason = "ACCESS_PROBLEM" | "NOT_AS_DESCRIBED" | "DUPLICATE_CHARGE" | "CHANGED_MIND" | "OTHER";
+
+/** Review state only — whether money came back is the transaction's refundedAmount. */
+export type RefundRequestStatus = "SUBMITTED" | "APPROVED" | "REJECTED";
+
+export interface RefundRequestResponse {
+  reference: string;
+  transactionReference: string;
+  reason: RefundReason | null;
+  note: string | null;
+  amount: number;
+  currency: string;
+  status: RefundRequestStatus;
+  createdAt: string;
+  decidedAt: string | null;
+  decisionNote: string | null;
 }
 
 export interface ReceiptResponse {
@@ -132,6 +162,18 @@ export interface TransactionDetail {
   refundedLabel: MoneyLabel;
   gatewayReference: string | null;
   termLabel: string | null;
+  refundEligibility: RefundEligibility;
+}
+
+export interface RefundRequest {
+  reference: string;
+  reasonLabel: string | null;
+  note: string | null;
+  amountLabel: MoneyLabel;
+  status: RefundRequestStatus;
+  statusLabel: string;
+  createdLabel: string;
+  decisionNote: string | null;
 }
 
 export interface Receipt {
@@ -188,4 +230,5 @@ export interface BillingCapabilitiesResponse {
   recurringCharges: boolean;
   statusRefresh: boolean;
   refunds: boolean;
+  refundRequests?: boolean;
 }

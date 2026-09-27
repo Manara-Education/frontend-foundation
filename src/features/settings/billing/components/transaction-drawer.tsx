@@ -2,6 +2,7 @@ import { Download, Loader2 } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/shared/components/sheet";
 import { BORDER, DANGER, FAINT, FONT, INK, MUTED, PRIMARY } from "../../components/settings-tokens";
 import type { DrawerState } from "../hooks/use-transaction-drawer";
+import { RefundRequestPanel } from "./refund-request-panel";
 import type { Receipt, TransactionDetail } from "../types/billing.types";
 
 interface TransactionDrawerProps {
@@ -27,6 +28,7 @@ export function TransactionDrawer({ open, state, close, download, downloading, d
           {state.status === "ready" && (
             <>
               <Detail detail={state.detail} />
+              <RefundRequestPanel key={state.detail.row.reference} detail={state.detail} />
               {state.receipt ? (
                 <ReceiptPanel receipt={state.receipt} download={download} downloading={downloading} failed={downloadFailed} />
               ) : (
@@ -85,7 +87,7 @@ function ReceiptPanel({ receipt, download, downloading, failed }: { receipt: Rec
         <p style={{ fontSize: 14, fontWeight: 700, color: INK }}>{receipt.simulated ? "إيصال تجريبي" : "إيصال دفع"}</p>
         <span dir="ltr" style={{ unicodeBidi: "isolate", fontSize: 12.5, color: MUTED }}>{receipt.number}</span>
       </div>
-      <p style={{ fontSize: 12.5, color: MUTED }}>{receipt.issuedLabel} · {receipt.customerName}</p>
+      <p style={{ fontSize: 12.5, color: MUTED }}>{receipt.issuedLabel}، {receipt.customerName}</p>
       <p style={{ fontSize: 11.5, color: FAINT }}>إيصال غير ضريبي.</p>
       <button
         type="button"

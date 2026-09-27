@@ -1,5 +1,5 @@
 import { formatPlanTerm } from "@/features/public-courses/formatters/public-offer.formatter";
-import type { DateRange, Provenance, TransactionStatus } from "../types/billing.types";
+import type { DateRange, Provenance, RefundReason, RefundRequestStatus, TransactionStatus } from "../types/billing.types";
 
 export const STATUS_LABELS: Record<TransactionStatus, string> = {
   PAID: "مدفوعة",
@@ -67,3 +67,18 @@ export function rangeStart(range: DateRange, today = new Date()): string | null 
   if (range === "1y") start.setFullYear(start.getFullYear() - 1);
   return `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
 }
+
+export const REFUND_REASON_LABELS: Record<RefundReason, string> = {
+  ACCESS_PROBLEM: "لا أستطيع الوصول إلى الدورة",
+  NOT_AS_DESCRIBED: "المحتوى لا يطابق الوصف",
+  DUPLICATE_CHARGE: "تم الدفع مرتين",
+  CHANGED_MIND: "غيّرت رأيي",
+  OTHER: "سبب آخر",
+};
+
+/** Review state, worded so that none of them reads as "your money is back". */
+export const REFUND_REQUEST_STATUS_LABELS: Record<RefundRequestStatus, string> = {
+  SUBMITTED: "قيد المراجعة",
+  APPROVED: "تمت الموافقة — بانتظار إتمام الاسترداد",
+  REJECTED: "مرفوض",
+};

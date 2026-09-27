@@ -1,13 +1,23 @@
 import {
+  createRefundRequestRequest,
   getReceiptPdfRequest,
   getReceiptRequest,
+  getRefundRequestsRequest,
   getSubscriptionsRequest,
   getTransactionRequest,
   getTransactionsRequest,
 } from "../api/billing.api";
 import { rangeStart } from "../formatters/billing.formatter";
-import { toReceipt, toSubscriptionPage, toTransactionDetail, toTransactionPage } from "../mappers/billing.mapper";
-import type { Receipt, SubscriptionPage, TransactionDetail, TransactionFilters, TransactionPage } from "../types/billing.types";
+import { toReceipt, toRefundRequest, toSubscriptionPage, toTransactionDetail, toTransactionPage } from "../mappers/billing.mapper";
+import type {
+  Receipt,
+  RefundReason,
+  RefundRequest,
+  SubscriptionPage,
+  TransactionDetail,
+  TransactionFilters,
+  TransactionPage,
+} from "../types/billing.types";
 
 export const TRANSACTIONS_PAGE_SIZE = 10;
 
@@ -35,6 +45,21 @@ export async function getReceipt(number: string): Promise<Receipt> {
 export async function getSubscriptions(page = 0): Promise<SubscriptionPage> {
   const { data: body } = await getSubscriptionsRequest(page, 20);
   return toSubscriptionPage(body.data!);
+}
+
+export async function getRefundRequests(reference: string): Promise<RefundRequest[]> {
+  const { data: body } = await getRefundRequestsRequest(reference);
+  return (body.data ?? []).map(toRefundRequest);
+}
+
+/** Submits a request for review. The server decides the amount; nothing here names one. */
+export async function submitRefundRequest(reference: string, reason: RefundReason | null, note: string): Promise<RefundRequest> {
+  const trimmed = note.trim();
+  const { data: body } = await createRefundRequestRequest(reference, {
+    ...(reason ? { reason } : {}),
+    ...(trimmed ? { note: trimmed } : {}),
+  });
+  return toRefundRequest(body.data!);
 }
 
 /**
