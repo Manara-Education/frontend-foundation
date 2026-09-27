@@ -38,4 +38,40 @@ export interface PasswordEditorErrors {
 export type PasswordFieldId = "currentPassword" | "newPassword" | "confirmPassword";
 
 /** One notice the overview shows after an editor closes with a saved change. */
-export type AccountNotice = "name-saved" | "password-changed";
+export type AccountNotice = "name-saved" | "password-changed" | "email-changed";
+
+/* ── Email change ─────────────────────────────────────────── */
+
+export interface EmailChangeStartRequest {
+  currentPassword: string;
+  newEmail: string;
+}
+
+export interface EmailChangeChallengeResponse {
+  requestId: string;
+  maskedEmail: string;
+  codeLength: number;
+  expiresAt: string;
+  resendAvailableAt: string;
+  /** Relative to the server's clock at response time; preferred over the zone-less timestamps. */
+  expiresInSeconds?: number;
+  resendAvailableInSeconds?: number;
+}
+
+/** A challenge with its deadlines on this device's clock (epoch milliseconds). */
+export interface EmailChallenge {
+  requestId: string;
+  maskedEmail: string;
+  codeLength: number;
+  expiresAt: number;
+  resendAvailableAt: number;
+}
+
+export type EmailStep = "password" | "email" | "code" | "done";
+
+export interface EmailEditorErrors {
+  currentPassword?: string;
+  newEmail?: string;
+  code?: string;
+  general?: string;
+}

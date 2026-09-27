@@ -66,6 +66,7 @@ export const paths = {
     account: "/settings/account",
     accountName: "/settings/account/name",
     accountPassword: "/settings/account/password",
+    accountEmail: "/settings/account/email",
     billing: "/settings/billing",
     subscriptions: "/settings/billing/subscriptions",
     paymentMethods: "/settings/billing/payment-methods",

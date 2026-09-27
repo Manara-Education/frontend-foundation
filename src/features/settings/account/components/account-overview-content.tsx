@@ -11,6 +11,7 @@ import { VerifiedBadge } from "./verified-badge";
 const NOTICES: Record<AccountNotice, string> = {
   "name-saved": "تم حفظ الاسم بنجاح.",
   "password-changed": "تم تغيير كلمة المرور. سُجِّل خروجك من أجهزتك الأخرى.",
+  "email-changed": "تم تغيير بريدك الإلكتروني. أرسلنا تنبيهًا إلى بريدك السابق.",
 };
 
 interface AccountOverviewContentProps {
@@ -22,6 +23,7 @@ interface AccountOverviewContentProps {
   openNameEditor: () => void;
   openPasswordEditor: () => void;
   openPhotoEditor: () => void;
+  openEmailEditor: () => void;
 }
 
 export function AccountOverviewContent({
@@ -33,6 +35,7 @@ export function AccountOverviewContent({
   openNameEditor,
   openPasswordEditor,
   openPhotoEditor,
+  openEmailEditor,
 }: AccountOverviewContentProps) {
   if (loadState === "error") return <LoadFailure onRetry={retry} />;
   if (loadState === "loading" || !account) {
@@ -60,8 +63,8 @@ export function AccountOverviewContent({
                 {account.emailVerified ? <VerifiedBadge /> : null}
               </span>
             }
+            onEdit={openEmailEditor}
             editLabel="تغيير"
-            unavailableNote="تغيير البريد قريبًا"
           />
         </div>
       </section>
