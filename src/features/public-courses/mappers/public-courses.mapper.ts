@@ -1,5 +1,13 @@
 import { SUBSCRIPTION_UNITS, type SubscriptionUnit } from "@/shared/courses";
 import { PublicCourseError } from "../services/public-course.error";
+import {
+  CATEGORY_COLORS,
+  type CategoryColor,
+  type PublicCategory,
+  type PublicInstructor,
+  type PublicOutlineGroup,
+  type PublicOutlineLesson,
+} from "../types/public-courses.types";
 import type {
   Money,
   PublicCourseDetail,
@@ -132,13 +140,60 @@ export function toPublicCourseSummary(raw: unknown): PublicCourseSummary | null 
     durationSeconds: isPositiveInteger(raw.durationSeconds) ? raw.durationSeconds : null,
     lessonCount: isCount(raw.lessonCount) ? raw.lessonCount : null,
     offer: toPublicOffer(raw.offer),
+    category: toCategory(raw.category),
   };
+}
+
+/** Optional: anything malformed is simply absent, never a guessed category. */
+function toCategory(raw: unknown): PublicCategory | null {
+  if (!isRecord(raw)) return null;
+  const name = text(raw.name);
+  if (!isPositiveInteger(raw.id) || !name || !CATEGORY_COLORS.includes(raw.color as CategoryColor)) return null;
+  return { id: raw.id, name, color: raw.color as CategoryColor };
+}
+
+function toInstructor(raw: unknown): PublicInstructor | null {
+  if (!isRecord(raw)) return null;
+  const name = text(raw.name);
+  if (!name) return null;
+  return { name, avatarUrl: safeImageUrl(raw.avatarUrl), headline: text(raw.headline) };
+}
+
+function toOutlineLesson(raw: unknown): PublicOutlineLesson | null {
+  if (!isRecord(raw)) return null;
+  const title = text(raw.title);
+  if (!isPositiveInteger(raw.id) || !title) return null;
+  return { id: raw.id, title, durationSeconds: isPositiveInteger(raw.durationSeconds) ? raw.durationSeconds : null };
+}
+
+/** Unreadable lessons are dropped; a group left with nothing to show is dropped unless it is a titled module. */
+function toOutline(raw: unknown): PublicOutlineGroup[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((group): PublicOutlineGroup | null => {
+      if (!isRecord(group)) return null;
+      const lessons = (Array.isArray(group.lessons) ? group.lessons : [])
+        .map(toOutlineLesson)
+        .filter((lesson): lesson is PublicOutlineLesson => lesson !== null);
+      const title = text(group.moduleTitle);
+      if (!title && lessons.length === 0) return null;
+      return { title, lessons };
+    })
+    .filter((group): group is PublicOutlineGroup => group !== null);
 }
 
 export function toPublicCourseDetail(raw: unknown): PublicCourseDetail {
   const summary = toPublicCourseSummary(raw);
   if (!summary || !isRecord(raw)) throw new PublicCourseError("malformed");
-  return { ...summary, description: text(raw.description) };
+  return {
+    ...summary,
+    description: text(raw.description),
+    // An older server sends no instructor object; its name alone still makes a card.
+    instructor:
+      toInstructor(raw.instructor) ??
+      (summary.instructorName ? { name: summary.instructorName, avatarUrl: null, headline: null } : null),
+    outline: toOutline(raw.outline),
+  };
 }
 
 export function toPublicCoursePage(raw: unknown): PublicCoursePage {

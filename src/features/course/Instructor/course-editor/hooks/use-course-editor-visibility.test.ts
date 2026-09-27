@@ -27,6 +27,7 @@ function courseState(overrides: Partial<CourseEditorState> = {}): CourseEditorSt
     subtitle: "",
     description: "وصف",
     image: "",
+    categoryId: null,
     duration: 0,
     structure: "FLAT",
     lessons: [],

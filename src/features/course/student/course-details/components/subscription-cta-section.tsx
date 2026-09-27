@@ -12,6 +12,7 @@ interface SubscriptionCTASectionProps {
   course: CourseDetailData;
   plans: SubscriptionPlanOption[];
   onPay: () => void;
+  preferredPlanId?: number | null;
 }
 
 /**
@@ -21,8 +22,10 @@ interface SubscriptionCTASectionProps {
  * lengths are the backend's, and only the selected plan's **id** is submitted — the amount
  * charged and the window opened are decided server-side from that same plan row.
  */
-export function SubscriptionCTASection({ course, plans, onPay }: SubscriptionCTASectionProps) {
-  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(plans[0]?.id ?? null);
+export function SubscriptionCTASection({ course, plans, onPay, preferredPlanId = null }: SubscriptionCTASectionProps) {
+  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(
+    plans.some((plan) => plan.id === preferredPlanId) ? preferredPlanId : (plans[0]?.id ?? null),
+  );
   const [showCheckout, setShowCheckout] = useState(false);
   const [paymentFailed, setPaymentFailed] = useState(false);
 

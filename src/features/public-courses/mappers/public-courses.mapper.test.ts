@@ -183,6 +183,7 @@ describe("toPublicCourseSummary", () => {
       durationSeconds: 5400,
       lessonCount: 12,
       offer: { kind: "PURCHASE", price: { amount: 450, currency: "EGP" } },
+      category: null,
     });
   });
 
@@ -268,5 +269,38 @@ describe("toPublicCoursePage", () => {
     ["a missing total", { totalItems: undefined }],
   ])("refuses a page with %s", (_label, overrides) => {
     expect(() => toPublicCoursePage(page(overrides))).toThrow(expect.objectContaining({ kind: "malformed" }));
+  });
+});
+
+describe("catalogue fields", () => {
+  const base = { id: 5, title: "دورة", offer: { accessType: "FREE", pricingStatus: "FREE", currency: null, purchasePrice: null, plans: [] } };
+
+  it("keeps a valid category and drops one with an unknown colour or missing name", () => {
+    expect(toPublicCourseSummary({ ...base, category: { id: 2, name: "لغات", color: "rose" } })?.category).toEqual({ id: 2, name: "لغات", color: "rose" });
+    expect(toPublicCourseSummary({ ...base, category: { id: 2, name: "لغات", color: "#ff0000" } })?.category).toBeNull();
+    expect(toPublicCourseSummary({ ...base, category: { id: 2, color: "rose" } })?.category).toBeNull();
+    expect(toPublicCourseSummary(base)?.category).toBeNull();
+  });
+
+  it("drops unreadable outline entries without dropping the course", () => {
+    const detail = toPublicCourseDetail({
+      ...base,
+      outline: [
+        { moduleTitle: null, lessons: [{ id: 1, title: "أول", durationSeconds: 0 }, { id: "x", title: "بلا معرّف" }, { id: 2, title: "  " }] },
+        { moduleTitle: null, lessons: [] },
+        "garbage",
+        { moduleTitle: "وحدة فارغة", lessons: [] },
+      ],
+    });
+    expect(detail.outline).toEqual([
+      { title: null, lessons: [{ id: 1, title: "أول", durationSeconds: null }] },
+      { title: "وحدة فارغة", lessons: [] },
+    ]);
+  });
+
+  it("falls back to the instructor's name when an older server sends no instructor object", () => {
+    expect(toPublicCourseDetail({ ...base, instructorName: "أ. سمير" }).instructor).toEqual({ name: "أ. سمير", avatarUrl: null, headline: null });
+    expect(toPublicCourseDetail({ ...base, instructor: { name: "أ. سمير", avatarUrl: "javascript:alert(1)", headline: null } }).instructor?.avatarUrl).toBeNull();
+    expect(toPublicCourseDetail(base).instructor).toBeNull();
   });
 });

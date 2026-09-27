@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
 import { ApiError } from "@/shared/api";
 import { loadCourseDetail } from "../services/course-details.service";
 import type { CourseDetailData, CourseDetailsMode } from "../types/course-details.types";
@@ -14,6 +15,11 @@ export function useCourseDetails({ courseId, mode, onEnrolled }: UseCourseDetail
   const [courseData, setCourseData] = useState<CourseDetailData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
+  // A plan chosen on the public page, carried here in the address. Only a hint: the section that
+  // offers plans uses it only if it names one of the plans the server just returned.
+  const [searchParams] = useSearchParams();
+  const hinted = Number(searchParams.get("plan"));
+  const preferredPlanId = Number.isSafeInteger(hinted) && hinted > 0 ? hinted : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -63,6 +69,7 @@ export function useCourseDetails({ courseId, mode, onEnrolled }: UseCourseDetail
   return {
     isLoading,
     courseData,
+    preferredPlanId,
     mode,
     error,
     handleEnrolled,

@@ -30,6 +30,8 @@ import {
   TAB_INPUT_BASE,
 } from "@/features/course/Instructor/course-editor/components/editor-theme";
 import type { CourseTab, useAddLessons } from "../hooks/use-add-lessons";
+import { CategoryField } from "@/features/course/Instructor/course-editor/components/category-field";
+import { useCourseCategories } from "@/features/course/Instructor/course-editor/hooks/use-course-categories";
 
 type CourseEditorController = ReturnType<typeof useAddLessons>;
 
@@ -75,6 +77,7 @@ export function CourseEditorTabs({
   onFinish,
 }: CourseEditorTabsProps) {
   const { state, totalLessons, imagePreview, purchasePriceInput } = editor;
+  const categories = useCourseCategories();
   const [imgDragging, setImgDragging] = useState(false);
   const imgFileRef = useRef<HTMLInputElement>(null);
 
@@ -403,6 +406,15 @@ export function CourseEditorTabs({
                   }}
                 />
               </div>
+
+              {/* Category */}
+              <CategoryField
+                id="course-editor-category"
+                categories={categories}
+                value={state.categoryId}
+                onChange={editor.setCategoryId}
+                selectStyle={{ ...TAB_INPUT_BASE, height: 44, padding: "0 13px" }}
+              />
 
               {/* Image */}
               <div className="rs-longform" style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>

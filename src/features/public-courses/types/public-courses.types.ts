@@ -46,11 +46,39 @@ export interface PublicCourseSummaryResponse {
   durationSeconds: number | null;
   lessonCount: number | null;
   offer: PublicCourseOfferResponse;
+  /** Absent on servers older than the catalogue release. */
+  category?: PublicCategoryResponse | null;
+}
+
+export interface PublicCategoryResponse {
+  id: number;
+  name: string;
+  color: string;
+}
+
+export interface PublicInstructorResponse {
+  name: string | null;
+  avatarUrl: string | null;
+  headline: string | null;
+}
+
+export interface PublicOutlineLessonResponse {
+  id: number;
+  title: string;
+  durationSeconds: number | null;
+  preview: boolean;
+}
+
+export interface PublicOutlineModuleResponse {
+  moduleTitle: string | null;
+  lessons: PublicOutlineLessonResponse[];
 }
 
 export interface PublicCourseDetailResponse extends PublicCourseSummaryResponse {
   /** Plain text. Rendered as text, never as HTML. */
   description: string | null;
+  instructor?: PublicInstructorResponse | null;
+  outline?: PublicOutlineModuleResponse[];
 }
 
 export interface PublicCoursePageResponse {
@@ -110,10 +138,42 @@ export interface PublicCourseSummary {
   durationSeconds: number | null;
   lessonCount: number | null;
   offer: PublicOffer;
+  category: PublicCategory | null;
+}
+
+/** The colour tokens the server may name; anything else is dropped with the category. */
+export const CATEGORY_COLORS = ["indigo", "teal", "amber", "rose", "violet", "emerald", "sky", "slate"] as const;
+export type CategoryColor = (typeof CATEGORY_COLORS)[number];
+
+export interface PublicCategory {
+  id: number;
+  name: string;
+  color: CategoryColor;
+}
+
+export interface PublicInstructor {
+  name: string;
+  avatarUrl: string | null;
+  headline: string | null;
+}
+
+export interface PublicOutlineLesson {
+  id: number;
+  title: string;
+  durationSeconds: number | null;
+}
+
+export interface PublicOutlineGroup {
+  /** null for a course whose lessons are not grouped into modules. */
+  title: string | null;
+  lessons: readonly PublicOutlineLesson[];
 }
 
 export interface PublicCourseDetail extends PublicCourseSummary {
   description: string | null;
+  instructor: PublicInstructor | null;
+  /** Empty when the server sent no usable outline; the page then omits the section. */
+  outline: readonly PublicOutlineGroup[];
 }
 
 export interface PublicCoursePage {

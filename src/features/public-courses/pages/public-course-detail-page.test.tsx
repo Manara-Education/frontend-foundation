@@ -96,7 +96,8 @@ describe("opening a public course page", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: PURCHASE.title })).toBeInTheDocument();
     expect(screen.getByText("من المعادلات إلى الدوال")).toBeInTheDocument();
-    expect(screen.getByText("تقديم: مدرّبة تجريبية")).toBeInTheDocument();
+    // The instructor is named under the title and again on the instructor card.
+    expect(within(screen.getByRole("region", { name: "المدرّس" })).getByText("مدرّبة تجريبية")).toBeInTheDocument();
     expect(screen.getByText(/١٢ درس/)).toBeInTheDocument();
     expect(screen.getByText(/١ ساعة ٣٠ دقيقة/)).toBeInTheDocument();
     expect(screen.getByText(/سطر أول عن الدورة/)).toBeInTheDocument();
@@ -153,13 +154,16 @@ describe("prices", () => {
 
     const offer = await screen.findByRole("region", { name: "السعر والوصول" });
     expect(within(offer).getByText("يبدأ من ٤٠ ج.م")).toBeInTheDocument();
-    const plans = within(within(offer).getByRole("list", { name: "خطط الاشتراك" })).getAllByRole("listitem");
+    const group = within(offer).getByRole("group", { name: "اختر مدة الوصول" });
+    const plans = within(group).getAllByRole("radio");
     expect(plans).toHaveLength(2);
-    expect(plans[0]).toHaveTextContent("شهري");
-    expect(plans[0]).toHaveTextContent("لمدة ١ شهر");
-    expect(plans[0]).toHaveTextContent("١٢٠ ج.م");
-    expect(plans[1]).toHaveTextContent("أسبوعي");
-    expect(plans[1]).toHaveTextContent("٤٠ ج.م");
+    expect(plans[0].closest("label")).toHaveTextContent("شهري");
+    expect(plans[0].closest("label")).toHaveTextContent("لمدة ١ شهر");
+    expect(plans[0].closest("label")).toHaveTextContent("١٢٠ ج.م");
+    expect(plans[1].closest("label")).toHaveTextContent("أسبوعي");
+    expect(plans[1].closest("label")).toHaveTextContent("٤٠ ج.م");
+    // The cheapest plan is chosen to begin with.
+    expect(plans[1]).toBeChecked();
   });
 
   it.each([
@@ -290,5 +294,75 @@ describe("failures", () => {
     renderAt("/courses/42");
 
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("انتظر قليلًا"));
+  });
+});
+
+describe("catalogue sections", () => {
+  const OUTLINED = {
+    ...PURCHASE,
+    imageUrl: "/uploads/cover.jpg",
+    category: { id: 3, name: "الرياضيات", color: "teal" },
+    instructor: { name: "مدرّبة تجريبية", avatarUrl: null, headline: "مدرّسة رياضيات منذ عشر سنوات" },
+    outline: [
+      { moduleTitle: "الوحدة الأولى", lessons: [{ id: 1, title: "المعادلات الخطية", durationSeconds: 600, preview: false }] },
+      { moduleTitle: "الوحدة الثانية", lessons: [] },
+    ],
+  };
+
+  it("shows the breadcrumb, category, locked outline and instructor card from the server", async () => {
+    respond(OUTLINED);
+    renderAt("/courses/42");
+
+    const trail = await screen.findByRole("navigation", { name: "مسار التنقل" });
+    expect(within(trail).getByRole("link", { name: "الرئيسية" })).toBeInTheDocument();
+    expect(within(trail).getByText(PURCHASE.title)).toHaveAttribute("aria-current", "page");
+    expect(screen.getByText("الرياضيات")).toBeInTheDocument();
+
+    const outline = screen.getByRole("region", { name: "محتوى الدورة" });
+    expect(within(outline).getByRole("heading", { name: "الوحدة الأولى" })).toBeInTheDocument();
+    expect(within(outline).getByText("المعادلات الخطية")).toBeInTheDocument();
+    expect(within(outline).getByText("(مقفل)")).toBeInTheDocument();
+    expect(within(outline).getByText("لا توجد دروس في هذه الوحدة بعد.")).toBeInTheDocument();
+    // Nothing in the outline is a link or a play control.
+    expect(within(outline).queryByRole("link")).toBeNull();
+    expect(within(outline).queryByRole("button")).toBeNull();
+
+    const instructor = screen.getByRole("region", { name: "المدرّس" });
+    expect(within(instructor).getByText("مدرّسة رياضيات منذ عشر سنوات")).toBeInTheDocument();
+  });
+
+  it("omits the outline instead of inventing lessons when the server sends none", async () => {
+    respond({ ...PURCHASE, outline: [] });
+    renderAt("/courses/42");
+    await screen.findByRole("heading", { level: 1, name: PURCHASE.title });
+    expect(screen.queryByRole("region", { name: "محتوى الدورة" })).toBeNull();
+  });
+
+  it("carries the chosen plan to sign-in as a hint in the course address", async () => {
+    const user = userEvent.setup();
+    respond({
+      ...PURCHASE,
+      offer: {
+        accessType: "SUBSCRIPTION",
+        pricingStatus: "PRICED",
+        currency: "EGP",
+        purchasePrice: null,
+        plans: [
+          { id: 7, name: "شهري", duration: 1, unit: "MONTH", price: 120 },
+          { id: 8, name: "فصلي", duration: 3, unit: "MONTH", price: 300 },
+        ],
+      },
+    });
+    renderAt("/courses/42");
+
+    const termly = await screen.findByRole("radio", { name: /فصلي/ });
+    await user.click(termly);
+    // The unit comes from the plan itself — three months, never "/شهر".
+    expect(screen.getByText(/وصول لمدة ٣/)).toBeInTheDocument();
+    expect(screen.queryByText(/\/شهر/)).toBeNull();
+    expect(screen.queryByText(/شهريًا|يتجدد/)).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "سجّل الدخول للمتابعة" }));
+    expect(screen.getByTestId("arrived")).toHaveTextContent("login /login from=/student/explore/42?plan=8");
   });
 });

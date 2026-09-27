@@ -58,6 +58,7 @@ function courseState(
     subtitle: "",
     description: "وصف",
     image: "",
+    categoryId: null,
     duration: 0,
     structure,
     lessons,

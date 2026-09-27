@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
-import { AlertTriangle, BookOpen, Clock, RotateCw, SearchX } from "lucide-react";
+import { AlertTriangle, BookOpen, ChevronLeft, Clock, RotateCw, SearchX, User } from "lucide-react";
 import { LandingFooter } from "@/features/landing/components/landing-footer";
 import { BORDER, FONT, PRIMARY, TEXT, TEXT_LIGHT, TEXT_MUTED } from "@/features/landing/components/theme";
 import { Spinner } from "@/shared/components";
@@ -9,6 +9,9 @@ import { paths } from "@/shared/navigation";
 import { useDocumentTitleOverride } from "@/shared/navigation/document-title";
 import { formatDurationSeconds, formatLessonCount } from "../formatters/public-offer.formatter";
 import type { PublicCourseDetail, PublicCourseDetailState, PublicCourseFailure } from "../types/public-courses.types";
+import { CategoryChip } from "./category-chip";
+import { CourseOutline } from "./course-outline";
+import { InstructorCard } from "./instructor-card";
 import { PublicOfferPanel } from "./public-offer-panel";
 
 const FOCUS_CLASS = "focus-visible:outline-2 focus-visible:outline-offset-2 rounded";
@@ -73,13 +76,64 @@ function CourseDocumentTitle({ title }: { title: string }) {
   return null;
 }
 
-function CourseCover({ imageUrl }: { imageUrl: string }) {
-  const [failed, setFailed] = useState(false);
-  if (failed) return null;
+/** الرئيسية › الدورات › {title}. The last crumb is the current page and is not a link. */
+function Breadcrumb({ title }: { title: string }) {
+  const crumb = { fontFamily: FONT, fontSize: 13, color: TEXT_LIGHT, textDecoration: "none", outlineColor: PRIMARY } as const;
   return (
-    <div style={{ borderRadius: 22, overflow: "hidden", aspectRatio: "16 / 9", maxInlineSize: "100%", background: "linear-gradient(135deg, #EAECF5 0%, #DDE0F0 100%)" }}>
-      {/* Decorative: the title right below names the course. */}
-      <img src={imageUrl} alt="" onError={() => setFailed(true)} style={{ display: "block", inlineSize: "100%", blockSize: "100%", objectFit: "cover" }} />
+    <nav aria-label="مسار التنقل" style={{ marginBlockEnd: 18 }}>
+      <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
+        <li><Link to={paths.landing} replace className={FOCUS_CLASS} style={crumb}>الرئيسية</Link></li>
+        <li aria-hidden="true" style={{ color: TEXT_LIGHT, display: "inline-flex" }}><ChevronLeft size={14} /></li>
+        <li><Link to={paths.courses} replace className={FOCUS_CLASS} style={crumb}>الدورات</Link></li>
+        <li aria-hidden="true" style={{ color: TEXT_LIGHT, display: "inline-flex" }}><ChevronLeft size={14} /></li>
+        <li aria-current="page" style={{ ...crumb, color: TEXT, fontWeight: 600, maxInlineSize: "min(60vw, 420px)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {title}
+        </li>
+      </ol>
+    </nav>
+  );
+}
+
+function MetaList({ lessons, duration, onImage }: { lessons: string | null; duration: string | null; onImage: boolean }) {
+  if (!lessons && !duration) return null;
+  const item = { display: "inline-flex", alignItems: "center", gap: 6, fontFamily: FONT, fontSize: 13, color: onImage ? "rgba(255,255,255,0.88)" : TEXT_MUTED } as const;
+  return (
+    <ul aria-label="معلومات الدورة" style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexWrap: "wrap", gap: 16 }}>
+      {lessons && <li style={item}><BookOpen size={14} aria-hidden="true" /> {lessons}</li>}
+      {duration && <li style={item}><Clock size={14} aria-hidden="true" /> {duration}</li>}
+    </ul>
+  );
+}
+
+/**
+ * The course's heading. With a cover: a 280px image under a dark gradient carrying the category,
+ * title, instructor and facts in white. Without one — or if the image fails — the same content on
+ * the page background, so nothing depends on the picture loading.
+ */
+function CourseHero({ course, lessons, duration }: { course: PublicCourseDetail; lessons: string | null; duration: string | null }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const onImage = !!course.imageUrl && !imageFailed;
+  const inner = (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, minInlineSize: 0 }}>
+      {course.category && <span><CategoryChip category={course.category} onImage={onImage} /></span>}
+      <h1 id={TITLE_ID} style={{ fontFamily: FONT, fontWeight: 800, fontSize: "clamp(22px, 4vw, 32px)", color: onImage ? "#FFFFFF" : TEXT, lineHeight: 1.45, margin: 0, overflowWrap: "anywhere" }}>
+        {course.title}
+      </h1>
+      {course.instructor && (
+        <p style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: FONT, fontSize: 13.5, color: onImage ? "rgba(255,255,255,0.9)" : TEXT_LIGHT, margin: 0 }}>
+          <User size={14} aria-hidden="true" /> {course.instructor.name}
+        </p>
+      )}
+      <MetaList lessons={lessons} duration={duration} onImage={onImage} />
+    </div>
+  );
+  if (!onImage) return inner;
+  return (
+    <div style={{ position: "relative", borderRadius: 22, overflow: "hidden", blockSize: 280, maxInlineSize: "100%", background: "#2D3563" }}>
+      {/* Decorative: the title on top of it names the course. */}
+      <img src={course.imageUrl!} alt="" onError={() => setImageFailed(true)} style={{ position: "absolute", inset: 0, inlineSize: "100%", blockSize: "100%", objectFit: "cover" }} />
+      <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(20,24,48,0.15) 0%, rgba(20,24,48,0.55) 45%, rgba(20,24,48,0.88) 100%)" }} />
+      <div style={{ position: "absolute", insetInline: 0, insetBlockEnd: 0, padding: "clamp(16px, 4vw, 26px)" }}>{inner}</div>
     </div>
   );
 }
@@ -91,40 +145,21 @@ function PublicCourseView({ course }: { course: PublicCourseDetail }) {
   return (
     <>
       <CourseDocumentTitle title={course.title} />
+      <Breadcrumb title={course.title} />
       {/*
-        Title, then price, then description — in reading order on every width. On a wide screen
-        the price panel moves beside the text and stays in view; on a phone it comes straight
-        after the title, where a visitor looks for it.
+        Heading, then price, then the rest — in reading order on every width. On a wide screen the
+        price panel moves beside the text and stays in view; on a phone it comes straight after the
+        heading, where a visitor looks for it.
       */}
       <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-8">
         <header className="rs-longform lg:col-start-1 lg:row-start-1" style={{ display: "flex", flexDirection: "column", gap: 14, minInlineSize: 0 }}>
-          {course.imageUrl && <CourseCover imageUrl={course.imageUrl} />}
-          {course.instructorName && (
-            <p style={{ fontFamily: FONT, fontSize: 13, color: TEXT_LIGHT, margin: 0 }}>تقديم: {course.instructorName}</p>
-          )}
-          <h1 id={TITLE_ID} style={{ fontFamily: FONT, fontWeight: 800, fontSize: "clamp(24px, 4vw, 34px)", color: TEXT, lineHeight: 1.45, margin: 0, overflowWrap: "anywhere" }}>
-            {course.title}
-          </h1>
+          <CourseHero course={course} lessons={lessons} duration={duration} />
           {course.subtitle && (
             <p style={{ fontFamily: FONT, fontSize: 16, color: TEXT_MUTED, lineHeight: 1.9, margin: 0, overflowWrap: "anywhere" }}>{course.subtitle}</p>
           )}
-          {(lessons || duration) && (
-            <ul aria-label="معلومات الدورة" style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexWrap: "wrap", gap: 16 }}>
-              {lessons && (
-                <li style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: FONT, fontSize: 13, color: TEXT_MUTED }}>
-                  <BookOpen size={14} aria-hidden="true" /> {lessons}
-                </li>
-              )}
-              {duration && (
-                <li style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: FONT, fontSize: 13, color: TEXT_MUTED }}>
-                  <Clock size={14} aria-hidden="true" /> {duration}
-                </li>
-              )}
-            </ul>
-          )}
         </header>
 
-        <aside className="lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-6" style={{ minInlineSize: 0 }}>
+        <aside className="lg:col-start-2 lg:row-start-1 lg:row-span-4 lg:sticky lg:top-6" style={{ minInlineSize: 0 }}>
           <PublicOfferPanel course={course} />
         </aside>
 
@@ -142,6 +177,16 @@ function PublicCourseView({ course }: { course: PublicCourseDetail }) {
               {course.description}
             </p>
           </section>
+        )}
+
+        <div className="lg:col-start-1 lg:row-start-3" style={{ minInlineSize: 0 }}>
+          <CourseOutline outline={course.outline} />
+        </div>
+
+        {course.instructor && (
+          <div className="lg:col-start-1 lg:row-start-4" style={{ minInlineSize: 0 }}>
+            <InstructorCard instructor={course.instructor} />
+          </div>
         )}
       </div>
     </>

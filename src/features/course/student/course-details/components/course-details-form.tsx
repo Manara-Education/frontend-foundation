@@ -20,6 +20,8 @@ interface CourseDetailsFormProps {
   onLessonClick?: (lessonId: number) => void;
   onEnrolled: () => void;
   onProgressionChanged: () => void;
+  /** A plan the visitor picked before signing in; ignored unless it is one of `subscriptionPlans`. */
+  preferredPlanId?: number | null;
 }
 
 export function CourseDetailsForm({
@@ -31,6 +33,7 @@ export function CourseDetailsForm({
   onLessonClick,
   onEnrolled,
   onProgressionChanged,
+  preferredPlanId = null,
 }: CourseDetailsFormProps) {
   const { access, accessType, subscriptionPlans } = courseData;
 
@@ -65,6 +68,7 @@ export function CourseDetailsForm({
             <SubscriptionCTASection
               course={courseData}
               plans={subscriptionPlans}
+              preferredPlanId={preferredPlanId}
               onPay={onEnrolled}
             />
           ) : (

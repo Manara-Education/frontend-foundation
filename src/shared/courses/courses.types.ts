@@ -307,6 +307,8 @@ export interface LearnerCourseModuleResponse {
 export interface CourseRequest {
   title: string;
   subtitle?: string | null;
+  /** The catalogue category; `null` uncategorises. Omitted leaves it unchanged. */
+  categoryId?: number | null;
   image?: string | null;
   description: string;
   /**
@@ -476,6 +478,8 @@ export interface InstructorCourseResponse {
   studentsCount: number | null;
   instructorId: number;
   instructorName: string | null;
+  /** Absent from servers older than the catalogue release. */
+  categoryId?: number | null;
   structure: CourseStructure | null;
   status: CourseStatus | null;
   /**

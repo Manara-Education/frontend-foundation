@@ -34,3 +34,16 @@ export function uploadAvatarRequest(
 export function removeAvatarRequest() {
   return apiClient.delete<ApiResponse<ProfileResponse>>(`${PROFILE_BASE_V1}/avatar`);
 }
+
+export interface InstructorProfileResponse {
+  headline: string | null;
+}
+
+/** The instructor's public headline (instructors only; other roles are answered 404). */
+export function getInstructorProfileRequest() {
+  return apiClient.get<ApiResponse<InstructorProfileResponse>>(`${PROFILE_BASE_V1}/instructor`);
+}
+
+export function updateInstructorProfileRequest(headline: string) {
+  return apiClient.put<ApiResponse<InstructorProfileResponse>>(`${PROFILE_BASE_V1}/instructor`, { headline });
+}
