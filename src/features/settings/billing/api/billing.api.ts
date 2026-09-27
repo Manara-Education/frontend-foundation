@@ -1,6 +1,8 @@
 import { apiClient, type ApiResponse } from "@/shared/api";
 import type {
   BillingCapabilitiesResponse,
+  RefundReason,
+  RefundRequestResponse,
   ReceiptResponse,
   SubscriptionPageResponse,
   TransactionDetailResponse,
@@ -40,4 +42,15 @@ export function getSubscriptionsRequest(page: number, size: number) {
 
 export function getBillingCapabilitiesRequest() {
   return apiClient.get<ApiResponse<BillingCapabilitiesResponse>>(`${BASE}/billing/capabilities`);
+}
+
+export function getRefundRequestsRequest(reference: string) {
+  return apiClient.get<ApiResponse<RefundRequestResponse[]>>(`${BASE}/transactions/${encodeURIComponent(reference)}/refund-requests`);
+}
+
+export function createRefundRequestRequest(reference: string, body: { reason?: RefundReason; note?: string }) {
+  return apiClient.post<ApiResponse<RefundRequestResponse>>(
+    `${BASE}/transactions/${encodeURIComponent(reference)}/refund-requests`,
+    body,
+  );
 }

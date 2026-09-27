@@ -1,4 +1,6 @@
 import {
+  REFUND_REASON_LABELS,
+  REFUND_REQUEST_STATUS_LABELS,
   STATUS_LABELS,
   accessLabel,
   formatDate,
@@ -10,6 +12,8 @@ import {
 import type {
   Receipt,
   ReceiptResponse,
+  RefundRequest,
+  RefundRequestResponse,
   SubscriptionPage,
   SubscriptionPageResponse,
   SubscriptionRow,
@@ -65,6 +69,20 @@ export function toTransactionDetail(dto: TransactionDetailResponse): Transaction
     termLabel: dto.subscriptionTerm
       ? `${formatDate(dto.subscriptionTerm.startsAt)} — ${formatDate(dto.subscriptionTerm.expiresAt)}`
       : null,
+    refundEligibility: dto.refundEligibility ?? "UNAVAILABLE",
+  };
+}
+
+export function toRefundRequest(dto: RefundRequestResponse): RefundRequest {
+  return {
+    reference: dto.reference,
+    reasonLabel: dto.reason ? (REFUND_REASON_LABELS[dto.reason] ?? dto.reason) : null,
+    note: dto.note,
+    amountLabel: formatMoney(dto.amount, dto.currency),
+    status: dto.status,
+    statusLabel: REFUND_REQUEST_STATUS_LABELS[dto.status] ?? dto.status,
+    createdLabel: formatDateTime(dto.createdAt),
+    decisionNote: dto.decisionNote,
   };
 }
 
