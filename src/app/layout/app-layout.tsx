@@ -122,6 +122,7 @@ export function AppLayout() {
       activeSection={meta.section}
       role={user?.role}
       fullName={user?.fullName}
+      avatarUrl={user?.avatarUrl}
       onLogout={logout}
     />
   );
@@ -320,6 +321,7 @@ export function AppLayout() {
                 activeSection={meta.section}
                 role={user?.role}
                 fullName={user?.fullName}
+                avatarUrl={user?.avatarUrl}
                 onLogout={logout}
                 variant="drawer"
                 onNavigate={() => setMenuOpen(false)}

@@ -12,7 +12,7 @@ const SAVE_FAILED = "تعذّر حفظ الاسم. تحقّق من اتصالك 
 
 export function useNameEditor() {
   const navigate = useNavigate();
-  const { refreshUser } = useAuth();
+  const { user, setUser } = useAuth();
 
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [savedName, setSavedName] = useState("");
@@ -57,10 +57,9 @@ export function useNameEditor() {
     setSaveState("saving");
     setErrors({});
     try {
-      await renameAccount(value);
-      // The header and sidebar read the session user; ask the server for it rather than
-      // assuming what the rename did.
-      await refreshUser().catch(() => null);
+      const profile = await renameAccount(value);
+      // The shell reads the session user; give it what the server answered, not what was typed.
+      if (user) setUser({ ...user, fullName: profile.fullName, avatarUrl: profile.avatarUrl });
       guard.release();
       navigate(paths.settings.account, { state: { notice: "name-saved" } });
     } catch (err) {

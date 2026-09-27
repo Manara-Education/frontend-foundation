@@ -7,6 +7,11 @@ export interface ProfileResponse {
   email: string;
   role: string;
   createdAt: string;
+  /** The fields below are absent on servers older than the avatar release. */
+  avatarUrl?: string | null;
+  emailVerified?: boolean;
+  /** null: unknown — the account predates the record. Never a guessed date. */
+  passwordChangedAt?: string | null;
 }
 
 export interface UpdateProfileRequest {
@@ -20,6 +25,11 @@ export interface Profile {
   email: string;
   roleLabel: string;
   memberSince: string;
+  avatarUrl: string | null;
+  /** True only when the server says so; an older server's silence is not verification. */
+  emailVerified: boolean;
+  /** Display date of the last password change, or null when the server does not know it. */
+  passwordChangedOn: string | null;
 }
 
 /* ── Component props ──────────────────────────────────────── */

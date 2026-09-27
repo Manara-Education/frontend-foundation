@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "@/shared/auth";
+import type { Profile } from "@/features/profile/types/profile.types";
 import { useLocation, useNavigate } from "react-router";
 import { paths } from "@/shared/navigation/paths";
-import { getAccountOverview } from "../services/account.service";
+import { getAccountOverview, toAccountOverview } from "../services/account.service";
 import type { AccountNotice, AccountOverview, LoadState } from "../types/account.types";
 
 export function useAccountOverview() {
@@ -9,6 +11,8 @@ export function useAccountOverview() {
   const location = useLocation();
   const [account, setAccount] = useState<AccountOverview | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const { user, setUser } = useAuth();
 
   const notice = (location.state as { notice?: AccountNotice } | null)?.notice ?? null;
 
@@ -28,8 +32,21 @@ export function useAccountOverview() {
     navigate(location.pathname, { replace: true, state: null });
   }, [navigate, location.pathname]);
 
+  /** A photo change answers with the whole profile; the screen and the shell both adopt it. */
+  const onPhotoSaved = useCallback(
+    (profile: Profile) => {
+      setAccount(toAccountOverview(profile));
+      if (user) setUser({ ...user, fullName: profile.fullName, avatarUrl: profile.avatarUrl });
+    },
+    [user, setUser],
+  );
+
   return {
     account,
+    photoOpen,
+    openPhotoEditor: () => setPhotoOpen(true),
+    closePhotoEditor: () => setPhotoOpen(false),
+    onPhotoSaved,
     loadState,
     retry: load,
     notice,
