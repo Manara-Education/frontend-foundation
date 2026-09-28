@@ -71,7 +71,7 @@ RUN npm run build
 # stdlib advisories and nothing else. The `go get` line below is what fixes the
 # other six, and it is the part that has to be maintained by hand until Caddy
 # bumps them upstream.
-FROM golang:1.27.1-alpine@sha256:4cb7ac979db5fcc41cae44b2227ba5ab8a51e8807f40d9ba4dee20a0ad960b5b AS caddybuild
+FROM golang:1.27.1-alpine@sha256:8a5910f31396cd4d89662f56c68b3ae31d374308270a1c3bd96672ee5ed43414 AS caddybuild
 
 # The scanned binary reported Go stdlib v1.26.3. The eleven stdlib advisories
 # are fixed across 1.26.4 and 1.26.6, so any toolchain from 1.26.6 on clears
@@ -277,7 +277,7 @@ RUN /out/caddy version && go version -m /out/caddy | grep -E 'golang.org/x/(cryp
 # stops the base from changing underneath a build without a reviewed diff.
 # A digest pin does NOT discover newer images on its own — see
 # .github/dependabot.yml, which is what proposes the bump.
-FROM caddy:2.11.4-alpine@sha256:de23def33b17fb5d1290b0f6c2add1d70780e52341896c00a4c8a2a2fe9d355e AS runtime
+FROM caddy:2.11.4-alpine@sha256:6aeddd44c3078b0f9a35206472a11420648a79c184603ef95957d0a20044cb2b AS runtime
 
 # --- OS packages -----------------------------------------------------------
 # The base image ships Alpine 3.23.5, whose curl/libcurl (8.19.0-r0), OpenSSL
