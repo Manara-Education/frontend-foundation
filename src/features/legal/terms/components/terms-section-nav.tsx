@@ -2,7 +2,8 @@ import { BORDER, FONT, PRIMARY, TEXT, TEXT_MUTED } from "@/features/landing/comp
 import type { TermsSection } from "../types/terms.types";
 
 interface TermsSectionNavProps {
-  sections: TermsSection[];
+  /** Only what a contents entry needs, so the privacy policy's sections fit as well. */
+  sections: Pick<TermsSection, "id" | "number" | "title">[];
 }
 
 const NAV_HEADING_ID = "terms-contents-heading";

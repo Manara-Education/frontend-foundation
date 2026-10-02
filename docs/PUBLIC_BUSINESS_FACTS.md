@@ -29,7 +29,7 @@ never be added to it.
 | Egyptian support phone | **Pending** | — | Owner input required |
 | Terms and Conditions link | Published | `/terms` | Existing public route; versioned Terms 1.0 |
 | Cancellation and refund link | Published | `/terms#section-6` | Section 6 "الإلغاء والاسترداد" of the immutable Terms 1.0; the test ties the link to that section's title |
-| Privacy Policy link | **Pending** | — | TECH-48 (Phase 3). Terms §10 already refers to a published privacy policy. |
+| Privacy Policy link | **Pending** | `/privacy` once published | The text and version now come from the backend (`GET /api/v1/privacy-policy/current`, backend `docs/api/PRIVACY_POLICY_API.md`). Version 1.0 is written but held as a backend *candidate* until its blockers clear: no MX for `manara-edu.com`, so `privecy@manara-edu.com` cannot receive mail; 7-day backups not yet on the host; no deletion procedure. While pending, `privacyPolicyHref()` returns `null` and no page links to `/privacy`. |
 
 ## What is needed to finish
 
@@ -65,7 +65,7 @@ numbers, `mailto:`/`tel:` links and legal-page links.
 | `index.html` | `<title>منارة</title>` | Brand | Static HTML can't import the module, so it stays as is. A test asserts it equals `brand.arabic`. |
 | Login, register and forgot-password email fields | `placeholder="example@manara.com"` | **Domain not known to be Manara's** | Replaced by `name@example.com` (RFC 2606 reserved). A sign-in form must not suggest an address on a domain nobody has confirmed belongs to Manara. |
 | Terms 1.0, §§3, 5, 7, 8, 11 | "وسائل التواصل المنشورة بالموقع" and similar | Refers generically to the published channels | No conflict. The immutable text names no channel, so approved facts can be published without a new Terms version. |
-| Terms 1.0, §10 | Refers to "سياسة الخصوصية المنشورة على الموقع" | Legal reference | Recorded as a gap. There is no privacy page yet (TECH-48, Phase 3). |
+| Terms 1.0, §10 | Refers to "سياسة الخصوصية المنشورة على الموقع" | Legal reference | Still a gap until Privacy Policy 1.0 is published on the backend. The `/privacy` route exists and renders the backend's published version, or says that none is published yet. |
 | Rich-content editor | `mailto:`/`tel:` in the allowed link schemes | Editor capability, not a contact | Out of scope |
 
 ### Conflicting support domains outside the public site
@@ -85,3 +85,23 @@ frontend task):
 Change it only in `public-business-facts.ts`, with the approval record, in a pull request that
 links the approval evidence. The immutable, versioned Terms text is never edited to match a new
 contact. It refers to the published channels generically, so it stays correct.
+
+## Publishing the privacy policy
+
+Publication is two releases, backend first:
+
+1. **Backend.** Mark the version `PUBLISHED` in `PrivacyPolicyCatalog`, with its effective date and
+   content hash (see backend `docs/api/PRIVACY_POLICY_API.md`), then tag and release.
+2. **Frontend.** Set `legalLinks.privacyPolicy` to
+   `{ status: "approved", value: paths.privacy, approval: { approvedBy, approvedOn, evidence } }`.
+   The evidence is the owner's publication approval and the backend release that published the
+   version. Then tag and release. The footer and the contact form link to it through
+   `privacyPolicyHref()`, with no other change.
+
+The page works without step 2. `/privacy` is a public route and renders whatever the backend has
+published. Step 2 only decides whether other pages link to it.
+
+Operator facts the owner supplied on 2026-10-02 appear in the backend policy text, not in this
+module: operator name "Manara EDU", owner Hamed Mohamed, privacy contact `privecy@manara-edu.com`
+(the owner's spelling, kept on purpose). `legalName` here stays pending. It is the registered or
+trading name for the footer, and nothing establishes that "Manara EDU" is a registered name.

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useLocation } from "react-router";
-import type { TermsDocument } from "../types/terms.types";
 
 /**
  * The section a URL fragment names, if the document actually has it.
@@ -43,9 +42,10 @@ function prefersReducedMotion(): boolean {
  * Keyboard focus follows the viewport to the section, as it does for an ordinary in-page
  * anchor, so a screen reader or keyboard user continues from the clause they were sent to.
  *
- * @param document the rendered terms, or `null` while nothing is on screen yet
+ * @param document the rendered document (the terms or the privacy policy), or `null` while nothing
+ *   is on screen yet. Only its section ids are read.
  */
-export function useSectionAnchor(document: TermsDocument | null): void {
+export function useSectionAnchor(document: { sections: readonly { id: string }[] } | null): void {
   const location = useLocation();
   const scrolledFor = useRef<string | null>(null);
 

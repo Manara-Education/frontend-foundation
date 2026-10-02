@@ -80,12 +80,27 @@ export const PUBLIC_BUSINESS_FACTS: PublicBusinessFacts = {
   legalLinks: {
     terms: paths.terms,
     refundPolicy: `${paths.terms}#section-6`,
+    /*
+      The text and its version now come from the backend (GET /api/v1/privacy-policy/current).
+      This fact only records whether the site may *link* to it. It flips to "approved" in the
+      same release that publishes a version on the backend — see docs/PUBLIC_BUSINESS_FACTS.md.
+    */
     privacyPolicy: {
       status: "pending",
-      missing: "An approved Privacy Policy page (TECH-48, Phase 3). Terms §10 already refers to one.",
+      missing:
+        "Privacy Policy 1.0 is written and served by the backend, but held unpublished until its blockers clear: a mailbox that receives privecy@manara-edu.com (manara-edu.com has no MX record), seven-day backups confirmed on the host, and an operational deletion procedure.",
     },
   },
 };
+
+/**
+ * Where the site may link to the privacy policy, or `null` while no version is published.
+ * Every privacy link — footer, contact form, anything added later — goes through this, so none
+ * of them can point visitors at a policy that is not in force.
+ */
+export function privacyPolicyHref(facts: PublicBusinessFacts = PUBLIC_BUSINESS_FACTS): string | null {
+  return facts.legalLinks.privacyPolicy.status === "approved" ? facts.legalLinks.privacyPolicy.value : null;
+}
 
 export interface ContactChannel {
   kind: "email" | "phone";

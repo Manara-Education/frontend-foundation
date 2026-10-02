@@ -3,6 +3,7 @@ import indexHtml from "../../../index.html?raw";
 import { TERMS_1_0 } from "@/features/legal/terms/content";
 import {
   approvedContactChannels,
+  privacyPolicyHref,
   PUBLIC_BUSINESS_FACTS,
   type PublicBusinessFacts,
   type PublicFact,
@@ -103,5 +104,22 @@ describe("approvedContactChannels", () => {
       supportPhone: { status: "pending", missing: "not yet" },
     };
     expect(approvedContactChannels(pending).map((channel) => channel.kind)).toEqual(["email"]);
+  });
+});
+
+describe("privacyPolicyHref", () => {
+  it("gives no link while the policy is pending", () => {
+    expect(
+      privacyPolicyHref({ ...FACTS, legalLinks: { ...FACTS.legalLinks, privacyPolicy: { status: "pending", missing: "x" } } }),
+    ).toBeNull();
+  });
+
+  it("gives the approved path once the policy is published", () => {
+    expect(
+      privacyPolicyHref({
+        ...FACTS,
+        legalLinks: { ...FACTS.legalLinks, privacyPolicy: { status: "approved", value: "/privacy", approval: APPROVAL } },
+      }),
+    ).toBe("/privacy");
   });
 });

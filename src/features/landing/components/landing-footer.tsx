@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router";
 import { ArrowLeft, ArrowUp, Mail, Phone } from "lucide-react";
 import {
   approvedContactChannels,
+  privacyPolicyHref,
   PUBLIC_BUSINESS_FACTS,
   type ContactChannel,
   type PublicBusinessFacts,
@@ -52,6 +53,7 @@ interface LandingFooterProps {
 
 export function LandingFooter({ facts = PUBLIC_BUSINESS_FACTS }: LandingFooterProps) {
   const channels = approvedContactChannels(facts);
+  const privacyHref = privacyPolicyHref(facts);
   const [year] = useState(() => new Date().getFullYear());
   // This footer is on the landing page and on every secondary public page. Leaving the landing
   // page pushes, so Back returns here; moving between the secondary pages replaces, so touring
@@ -96,7 +98,9 @@ export function LandingFooter({ facts = PUBLIC_BUSINESS_FACTS }: LandingFooterPr
           <nav aria-label="السياسات والشروط" style={{ flex: "1 1 200px", minInlineSize: 0 }}>
             <ColumnHeading>السياسات والشروط</ColumnHeading>
             <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-              <li><Link to={paths.privacy} replace={!onLanding} className={LINK_CLASS} style={NAV_LINK_STYLE}>سياسة الخصوصية</Link></li>
+              {privacyHref && (
+                <li><Link to={privacyHref} replace={!onLanding} className={LINK_CLASS} style={NAV_LINK_STYLE}>سياسة الخصوصية</Link></li>
+              )}
               <li><Link to={paths.security} replace={!onLanding} className={LINK_CLASS} style={NAV_LINK_STYLE}>سياسة الأمان</Link></li>
               <li><Link to={facts.legalLinks.terms} replace={!onLanding} className={LINK_CLASS} style={NAV_LINK_STYLE}>الشروط والأحكام</Link></li>
               <li><Link to={facts.legalLinks.refundPolicy} replace={!onLanding} className={LINK_CLASS} style={NAV_LINK_STYLE}>سياسة الإلغاء والاسترداد</Link></li>
