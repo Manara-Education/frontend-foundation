@@ -1,6 +1,7 @@
 export {
   PUBLIC_BUSINESS_FACTS,
   approvedContactChannels,
+  privacyPolicyHref,
   type ContactChannel,
   type FactApproval,
   type PublicBusinessFacts,

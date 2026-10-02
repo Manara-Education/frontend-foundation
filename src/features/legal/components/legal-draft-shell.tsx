@@ -21,7 +21,10 @@ interface LegalDraftShellProps {
 }
 
 /**
- * The shell Privacy and Security share: a "draft, not yet approved" badge (this task's own
+ * The shell for a legal page still in draft — today only Security. The privacy policy no longer
+ * uses it: its text comes from the backend and is shown only once published.
+ *
+ * A "draft, not yet approved" badge (this task's own
  * content rule — neither page's text is evidence of legal approval), a sticky table of
  * contents, and the same public header/footer every secondary page uses.
  *

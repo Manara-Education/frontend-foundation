@@ -187,10 +187,11 @@
 
 	encode zstd gzip
 
-	log {
-		output stderr
-		format console
-	}
+	# No `log` directive, deliberately: without one Caddy writes no access log,
+	# so no record of each visitor's IP address, URL and user agent is kept.
+	# The privacy policy says no page-visit log is kept; adding a `log` block
+	# here makes that false and requires a new policy version first. Caddy's
+	# own runtime messages (startup, certificates, errors) still go to stderr.
 }
 
 # -----------------------------------------------------------------------------

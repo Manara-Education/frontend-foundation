@@ -50,12 +50,34 @@ describe("the footer's policy navigation", () => {
     expect(PUBLIC_BUSINESS_FACTS.legalLinks.refundPolicy).toBe("/terms#section-6");
   });
 
-  it("links the new privacy and security pages", () => {
+  it("links the security page", () => {
     renderFooter();
     const nav = screen.getByRole("navigation", { name: "السياسات والشروط" });
 
-    expect(within(nav).getByRole("link", { name: "سياسة الخصوصية" })).toHaveAttribute("href", "/privacy");
     expect(within(nav).getByRole("link", { name: "سياسة الأمان" })).toHaveAttribute("href", "/security");
+  });
+
+  it("does not link a privacy policy that has not been published", () => {
+    renderFooter({
+      ...PUBLIC_BUSINESS_FACTS,
+      legalLinks: { ...PUBLIC_BUSINESS_FACTS.legalLinks, privacyPolicy: { status: "pending", missing: "test" } },
+    });
+    const nav = screen.getByRole("navigation", { name: "السياسات والشروط" });
+
+    expect(within(nav).queryByRole("link", { name: "سياسة الخصوصية" })).toBeNull();
+  });
+
+  it("links the privacy policy through the shared facts once it is published", () => {
+    renderFooter({
+      ...PUBLIC_BUSINESS_FACTS,
+      legalLinks: {
+        ...PUBLIC_BUSINESS_FACTS.legalLinks,
+        privacyPolicy: { status: "approved", value: "/privacy", approval: APPROVAL },
+      },
+    });
+    const nav = screen.getByRole("navigation", { name: "السياسات والشروط" });
+
+    expect(within(nav).getByRole("link", { name: "سياسة الخصوصية" })).toHaveAttribute("href", "/privacy");
   });
 
   it("takes an anonymous visitor to the refund section of the terms", async () => {

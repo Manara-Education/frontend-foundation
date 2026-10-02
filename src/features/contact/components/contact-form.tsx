@@ -1,7 +1,7 @@
 import { AlertCircle, CheckCircle2, Send } from "lucide-react";
 import { Link } from "react-router";
 import { BORDER, FONT, PRIMARY, TEXT, TEXT_LIGHT, TEXT_MUTED } from "@/features/landing/components/theme";
-import { paths } from "@/shared/navigation/paths";
+import { privacyPolicyHref } from "@/shared/business";
 import { CONTACT_TOPICS } from "../types/contact.types";
 import { useContactForm } from "../hooks/use-contact-form";
 
@@ -32,6 +32,8 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 }
 
 export function ContactForm() {
+  // Linked only once a version is published; see `privacyPolicyHref`.
+  const privacyHref = privacyPolicyHref();
   const { form, errors, status, onName, onEmail, onTopic, onMessage, handleSubmit, resetForm } = useContactForm();
 
   return (
@@ -141,11 +143,17 @@ export function ContactForm() {
           </div>
 
           <p style={{ fontSize: 12.5, color: TEXT_LIGHT, lineHeight: 1.9, margin: 0, overflowWrap: "anywhere", fontFamily: FONT }}>
-            نستخدم بياناتك للرد على رسالتك فقط. اقرأ{" "}
-            <Link to={paths.privacy} replace style={linkStyle}>
-              سياسة الخصوصية
-            </Link>
-            . لا تشاركنا كلمة المرور أو بيانات بطاقتك البنكية.
+            نستخدم بياناتك للرد على رسالتك فقط.
+            {privacyHref && (
+              <>
+                {" "}اقرأ{" "}
+                <Link to={privacyHref} replace style={linkStyle}>
+                  سياسة الخصوصية
+                </Link>
+                .
+              </>
+            )}{" "}
+            لا تشاركنا كلمة المرور أو بيانات بطاقتك البنكية.
           </p>
 
           <div>
