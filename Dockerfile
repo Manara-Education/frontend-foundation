@@ -277,7 +277,7 @@ RUN /out/caddy version && go version -m /out/caddy | grep -E 'golang.org/x/(cryp
 # stops the base from changing underneath a build without a reviewed diff.
 # A digest pin does NOT discover newer images on its own — see
 # .github/dependabot.yml, which is what proposes the bump.
-FROM caddy:2.11.4-alpine@sha256:6aeddd44c3078b0f9a35206472a11420648a79c184603ef95957d0a20044cb2b AS runtime
+FROM caddy:2.11.7-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f AS runtime
 
 # --- OS packages -----------------------------------------------------------
 # The base image ships Alpine 3.23.5, whose curl/libcurl (8.19.0-r0), OpenSSL
