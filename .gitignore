@@ -8,7 +8,12 @@ pnpm-debug.log*
 lerna-debug.log*
 
 .cursor
-.claude
+.claude/*
+# The vendored security-audit skill is shared and CI-verified; every other
+# local agent file (settings.local.json, personal skills, worktrees) is not.
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/security-audit/
 
 node_modules
 dist
