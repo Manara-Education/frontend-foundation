@@ -205,7 +205,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
@@ -339,7 +339,7 @@ jobs:
       # the artifact `deps-osv` consumes, so the data the gate reasons about is
       # provably the data whose freshness was recorded.
       - name: Upload the intelligence snapshot
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: intelligence-${{ matrix.assess.slug }}
           path: intel/
@@ -369,7 +369,7 @@ jobs:
       # "Intelligence manifest is missing" for a manifest that had been
       # generated perfectly well.
       - name: Upload the manifest for the gate
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: report-intelligence-${{ matrix.assess.slug }}
           path: reports/
@@ -377,7 +377,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload the SBOM as the inventory of record
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sbom-${{ matrix.assess.slug }}
           path: sbom/
@@ -429,7 +429,7 @@ jobs:
         run: bash "$SECURITY_TOOLING/install-scanner.sh" osv-scanner
 
       - name: Download the recorded intelligence snapshot
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: intelligence-${{ matrix.assess.slug }}
           path: intel
@@ -550,7 +550,7 @@ jobs:
 
       - name: Upload the report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: report-deps-osv-${{ matrix.assess.slug }}
           path: reports/
@@ -651,7 +651,7 @@ jobs:
 
       - name: Upload the report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: report-deps-trivy-${{ matrix.assess.slug }}
           path: reports/
@@ -745,7 +745,7 @@ jobs:
 
       - name: Upload the report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: report-config-trivy-${{ matrix.assess.slug }}
           path: reports/
@@ -857,7 +857,7 @@ jobs:
 
       - name: Upload the report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: report-image-trivy-${{ matrix.assess.slug }}
           path: reports/
@@ -973,7 +973,7 @@ jobs:
 
       - name: Upload the report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: report-sast-codeql-${{ matrix.assess.slug }}
           path: reports/
@@ -1106,7 +1106,7 @@ jobs:
 
       - name: Upload the report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: report-secrets-gitleaks-${{ matrix.assess.slug }}
           path: reports/
@@ -1194,7 +1194,7 @@ jobs:
 
       - name: Upload the report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: report-deps-diff-review-${{ matrix.assess.slug }}
           path: reports/
@@ -1299,7 +1299,7 @@ jobs:
       # The untrusted half: what is being judged.
       # ---------------------------------------------------------------------
       - name: Download every report
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: report-*
           merge-multiple: true
@@ -1575,7 +1575,7 @@ jobs:
       # of docs/security/SECURITY_CI.md for what that does and does not preserve.
       - name: Upload the assessment
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           # Named to match backend-foundation exactly. The two repositories used
           # to disagree — `security-assessment` here, `security-gate-verdict`
