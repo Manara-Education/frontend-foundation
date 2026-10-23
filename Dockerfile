@@ -71,7 +71,7 @@ RUN npm run build
 # stdlib advisories and nothing else. The `go get` line below is what fixes the
 # other six, and it is the part that has to be maintained by hand until Caddy
 # bumps them upstream.
-FROM golang:1.27.1-alpine@sha256:8a5910f31396cd4d89662f56c68b3ae31d374308270a1c3bd96672ee5ed43414 AS caddybuild
+FROM golang:1.27.3-alpine@sha256:b8c9b82affbbb82a020bbcf998dad2ba9516944ac7e883524642a481a9505e9c AS caddybuild
 
 # The scanned binary reported Go stdlib v1.26.3. The eleven stdlib advisories
 # are fixed across 1.26.4 and 1.26.6, so any toolchain from 1.26.6 on clears
@@ -79,7 +79,10 @@ FROM golang:1.27.1-alpine@sha256:8a5910f31396cd4d89662f56c68b3ae31d374308270a1c3
 # docker updates, so the FROM line above is the only place that names the
 # toolchain, and the Security Gate's scan of the compiled binary is what shows
 # its stdlib is clean.
-ARG CADDY_VERSION=v2.11.4
+# Kept equal to the runtime image's Caddy tag below. v2.11.7 brings
+# klauspost/compress v1.20.1 (CVE-2026-63209 needs >= v1.18.7) and
+# cel-go v0.32.0 upstream, which clears the cel-go note further down.
+ARG CADDY_VERSION=v2.11.7
 
 WORKDIR /caddy
 
@@ -141,7 +144,14 @@ WORKDIR /caddy
 # Newer releases exist (x/crypto v0.57.0, x/net v0.59.0, x/text v0.42.0). This
 # set is preferred because every extra version is API-change risk inside
 # quic-go and Caddy's TLS stack that only a failed build would catch.
-ARG X_CRYPTO=v0.56.0
+# 2026-10: x/net CVE-2026-78669 needs >= v0.60.0, above the v0.59.0 Caddy
+# v2.11.7 asks for, so x/net now joins the pinned set. It is a floor raised
+# ABOVE what MVS picks, which is the direction that cannot conflict; the two
+# failures above came from pins below it. x/crypto moves to v0.57.0 because
+# Caddy v2.11.7 and x/net v0.60.0 both require it: `go get` sets a version
+# exactly, so an older pin would downgrade Caddy to satisfy it.
+ARG X_CRYPTO=v0.57.0
+ARG X_NET=v0.60.0
 ARG GRPC=v1.83.2
 
 # CEL-GO IS DELIBERATELY NOT UPGRADED, AND THIS IS THE RECORD OF WHY.
@@ -194,16 +204,17 @@ GO
 go mod init manara/caddy
 go get "github.com/caddyserver/caddy/v2@${CADDY_VERSION}"
 
-# The security bumps — the two modules whose own advisories need a version
-# higher than Caddy asks for. x/net and x/text are deliberately absent: they
-# are pulled up by these two through minimal version selection, and pinning
-# them here is what broke the build twice (see the note above the ARGs).
+# The security bumps — the modules whose own advisories need a version
+# higher than Caddy asks for. x/text is deliberately absent: it is pulled up
+# through minimal version selection. x/net was absent too until its own
+# advisory floor rose above Caddy's (see the note above the ARGs).
 #
-# `go get` raises a module to at least the version named, and MVS keeps the
-# higher of the two, so neither of these can be silently undone by a transitive
-# requirement asking for something older.
+# `go get` sets each module to the version named, upgrading or DOWNGRADING
+# whatever else it must. Each pin therefore has to be at or above what Caddy
+# requires, and the check on caddy/v2 below proves Caddy was not downgraded.
 go get \
   "golang.org/x/crypto@${X_CRYPTO}" \
+  "golang.org/x/net@${X_NET}" \
   "google.golang.org/grpc@${GRPC}"
 go mod tidy
 
@@ -246,10 +257,12 @@ check() { # module  advisory-minimum
 # The floors below are the ADVISORY minimums for the branch this build is on,
 # which is not always the number the advisory headline quotes — see the grpc
 # and x/crypto notes above.
+check github.com/caddyserver/caddy/v2 2.11.7
 check golang.org/x/crypto     0.56.0
-check golang.org/x/net        0.56.0
+check golang.org/x/net        0.60.0
 check golang.org/x/text       0.39.0
 check google.golang.org/grpc  1.83.2
+check github.com/klauspost/compress 1.18.7
 SH
 
 # -trimpath keeps build-host paths out of the binary. CGO is off so the result
@@ -277,7 +290,7 @@ RUN /out/caddy version && go version -m /out/caddy | grep -E 'golang.org/x/(cryp
 # stops the base from changing underneath a build without a reviewed diff.
 # A digest pin does NOT discover newer images on its own — see
 # .github/dependabot.yml, which is what proposes the bump.
-FROM caddy:2.11.4-alpine@sha256:6aeddd44c3078b0f9a35206472a11420648a79c184603ef95957d0a20044cb2b AS runtime
+FROM caddy:2.11.7-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f AS runtime
 
 # --- OS packages -----------------------------------------------------------
 # The base image ships Alpine 3.23.5, whose curl/libcurl (8.19.0-r0), OpenSSL
