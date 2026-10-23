@@ -1173,7 +1173,12 @@ jobs:
           gh api "repos/$REPO/dependency-graph/compare/${BASE_SHA}...${HEAD_SHA}" \
             > diff.json
 
+          # Only packages the change ADDS. A removed package's advisories are
+          # being fixed by this PR, not introduced by it; counting them blocked
+          # every upgrade on the version it replaced. The backend gate filters
+          # the same way.
           jq '[ .[]
+                | select(.change_type == "added")
                 | . as $c
                 | ($c.vulnerabilities // [])[]
                 | {
