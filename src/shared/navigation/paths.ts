@@ -51,8 +51,26 @@ export const paths = {
   resetPassword: "/reset-password",
   otp: "/otp",
 
-  /** Shared by both roles — the profile screen is the same page for either of them. */
+  /**
+   * The instructor's profile screen. A student who opens it is sent to Settings, which
+   * replaced the student profile; see `settings` below.
+   */
   profile: "/profile",
+
+  /**
+   * The student's Settings. Every section has its own address, so back/forward, refresh and
+   * shared links land on the section they name rather than on a default tab.
+   */
+  settings: {
+    root: "/settings",
+    account: "/settings/account",
+    accountName: "/settings/account/name",
+    accountPassword: "/settings/account/password",
+    billing: "/settings/billing",
+    subscriptions: "/settings/billing/subscriptions",
+    paymentMethods: "/settings/billing/payment-methods",
+    invoices: "/settings/billing/invoices",
+  },
   accessDenied: "/access-denied",
 
   student: {
@@ -93,7 +111,8 @@ export type NavSectionId =
   | "instructor-courses"
   | "instructor-create"
   | "instructor-banners"
-  | "profile";
+  | "profile"
+  | "settings";
 
 /** Where a signed-in user belongs when no more specific destination is known. */
 export function homePathForRole(role: string | null | undefined): string {
