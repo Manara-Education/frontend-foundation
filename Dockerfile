@@ -150,9 +150,13 @@ WORKDIR /caddy
 # failures above came from pins below it. x/crypto moves to v0.57.0 because
 # Caddy v2.11.7 and x/net v0.60.0 both require it: `go get` sets a version
 # exactly, so an older pin would downgrade Caddy to satisfy it.
+#
+# 2026-10: go-jose/v4 CVE-2026-116587 needs >= v4.1.6, above the v4.1.5 Caddy
+# v2.11.7 asks for. Another floor raised above MVS, so it cannot conflict.
 ARG X_CRYPTO=v0.57.0
 ARG X_NET=v0.60.0
 ARG GRPC=v1.83.2
+ARG GO_JOSE_V4=v4.1.6
 
 # CEL-GO IS DELIBERATELY NOT UPGRADED, AND THIS IS THE RECORD OF WHY.
 #
@@ -215,7 +219,8 @@ go get "github.com/caddyserver/caddy/v2@${CADDY_VERSION}"
 go get \
   "golang.org/x/crypto@${X_CRYPTO}" \
   "golang.org/x/net@${X_NET}" \
-  "google.golang.org/grpc@${GRPC}"
+  "google.golang.org/grpc@${GRPC}" \
+  "github.com/go-jose/go-jose/v4@${GO_JOSE_V4}"
 go mod tidy
 
 # ASSERT THE RESULT, DO NOT TRUST THE REQUEST.
@@ -263,6 +268,7 @@ check golang.org/x/net        0.60.0
 check golang.org/x/text       0.39.0
 check google.golang.org/grpc  1.83.2
 check github.com/klauspost/compress 1.18.7
+check github.com/go-jose/go-jose/v4 4.1.6
 SH
 
 # -trimpath keeps build-host paths out of the binary. CGO is off so the result
