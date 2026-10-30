@@ -184,6 +184,15 @@ ARG GO_JOSE_V4=v4.1.6
 # upstream: when Caddy moves to a cel-go at or above v0.30.0, this resolves
 # itself and the gate will show it.
 
+# GO-JOSE V3 IS KNOWINGLY LEFT STANDING, UNDER AN EXCEPTION THAT EXPIRES.
+#
+# CVE-2026-116587 has no v3 fix: v3.0.5 is the newest release and is listed as
+# last affected. It cannot be pinned away or left out of the build, because
+# caddytls itself links it through smallstep/certificates and go.step.sm/crypto.
+# EXC-2026-001 in .github/security/exceptions.yml records why it is not reachable
+# here, and it blocks again on 2027-01-25. When smallstep moves to v4
+# (smallstep/crypto#441), this resolves itself and the entry should be removed.
+
 # The standard module set is what makes this Caddy equivalent to the official
 # binary: file_server, reverse_proxy, encode, headers, the TLS/ACME stack and
 # the rest. Dropping it would silently produce a Caddy that cannot run this
