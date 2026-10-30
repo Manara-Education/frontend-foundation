@@ -150,9 +150,13 @@ WORKDIR /caddy
 # failures above came from pins below it. x/crypto moves to v0.57.0 because
 # Caddy v2.11.7 and x/net v0.60.0 both require it: `go get` sets a version
 # exactly, so an older pin would downgrade Caddy to satisfy it.
+#
+# 2026-10: go-jose/v4 CVE-2026-116587 needs >= v4.1.6, above the v4.1.5 Caddy
+# v2.11.7 asks for. Another floor raised above MVS, so it cannot conflict.
 ARG X_CRYPTO=v0.57.0
 ARG X_NET=v0.60.0
 ARG GRPC=v1.83.2
+ARG GO_JOSE_V4=v4.1.6
 
 # CEL-GO IS DELIBERATELY NOT UPGRADED, AND THIS IS THE RECORD OF WHY.
 #
@@ -179,6 +183,15 @@ ARG GRPC=v1.83.2
 # exception was written for it and no threshold was lowered. The right fix is
 # upstream: when Caddy moves to a cel-go at or above v0.30.0, this resolves
 # itself and the gate will show it.
+
+# GO-JOSE V3 IS KNOWINGLY LEFT STANDING, UNDER AN EXCEPTION THAT EXPIRES.
+#
+# CVE-2026-116587 has no v3 fix: v3.0.5 is the newest release and is listed as
+# last affected. It cannot be pinned away or left out of the build, because
+# caddytls itself links it through smallstep/certificates and go.step.sm/crypto.
+# EXC-2026-001 in .github/security/exceptions.yml records why it is not reachable
+# here, and it blocks again on 2027-01-25. When smallstep moves to v4
+# (smallstep/crypto#441), this resolves itself and the entry should be removed.
 
 # The standard module set is what makes this Caddy equivalent to the official
 # binary: file_server, reverse_proxy, encode, headers, the TLS/ACME stack and
@@ -215,7 +228,8 @@ go get "github.com/caddyserver/caddy/v2@${CADDY_VERSION}"
 go get \
   "golang.org/x/crypto@${X_CRYPTO}" \
   "golang.org/x/net@${X_NET}" \
-  "google.golang.org/grpc@${GRPC}"
+  "google.golang.org/grpc@${GRPC}" \
+  "github.com/go-jose/go-jose/v4@${GO_JOSE_V4}"
 go mod tidy
 
 # ASSERT THE RESULT, DO NOT TRUST THE REQUEST.
@@ -263,6 +277,7 @@ check golang.org/x/net        0.60.0
 check golang.org/x/text       0.39.0
 check google.golang.org/grpc  1.83.2
 check github.com/klauspost/compress 1.18.7
+check github.com/go-jose/go-jose/v4 4.1.6
 SH
 
 # -trimpath keeps build-host paths out of the binary. CGO is off so the result
@@ -290,7 +305,7 @@ RUN /out/caddy version && go version -m /out/caddy | grep -E 'golang.org/x/(cryp
 # stops the base from changing underneath a build without a reviewed diff.
 # A digest pin does NOT discover newer images on its own — see
 # .github/dependabot.yml, which is what proposes the bump.
-FROM caddy:2.11.7-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f AS runtime
+FROM caddy:2.11.7-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f AS runtime
 
 # --- OS packages -----------------------------------------------------------
 # The base image ships Alpine 3.23.5, whose curl/libcurl (8.19.0-r0), OpenSSL
