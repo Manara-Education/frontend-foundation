@@ -4,9 +4,9 @@
 # a bounded time. It is not a suppression list and it is not a place to silence
 # a scanner that is being inconvenient.
 #
-# THE FILE IS INTENTIONALLY EMPTY. Nothing currently in either repository has an
-# approved exception. The known blocking findings are being FIXED, not excepted:
-# see the remediation pull requests referenced in docs/security/SECURITY_CI.md.
+# Findings are FIXED wherever a fix exists: see the remediation pull requests
+# referenced in docs/security/SECURITY_CI.md. The entries at the bottom of this
+# file are the only approved exceptions in this repository.
 #
 # Every entry must carry all of these, or the gate fails with
 # `invalid_exception` — a half-filled exception is treated as no exception:
@@ -47,4 +47,28 @@
 #     approval: https://github.com/Manara-Education/backend-foundation/pull/000#pullrequestreview-000
 #     expires: 2026-01-01
 
-exceptions: []
+exceptions:
+  - id: EXC-2026-001
+    scope:
+      finding: CVE-2026-116587
+      component: github.com/go-jose/go-jose/v3
+      version: "v3.0.5"
+      path: usr/bin/caddy
+      repository: Manara-Education/frontend-foundation
+    reason: >-
+      A CPU-exhaustion denial of service when go-jose parses an RSA JWK from an
+      untrusted source. No v3 release fixes it: v3.0.5 is the newest and is listed
+      as last affected. Caddy cannot drop the module, because caddytls links it
+      through smallstep/certificates and go.step.sm/crypto (smallstep/crypto#441
+      tracks the move to v4). The prerequisite that is absent is an untrusted JWK
+      reaching that parser: from reading Caddy v2.11.7, only the ACME server
+      (http.handlers.acme_server, smallstep acme/api) feeds request data to it.
+      This image does not enable that server. `caddy adapt` of the Caddyfile, with
+      the production hostname, gives only the http app, with the handlers encode,
+      file_server, headers, reverse_proxy, rewrite, static_response, subroute and
+      vars, and no acme_server, pki or tls internal. The Caddyfile is root-owned and
+      read-only in the image, and the admin API stays on its default localhost
+      listener. The go-jose/v4 finding is fixed, not excepted (v4.1.6).
+    owner: Hamed-mohamed-Git
+    approval: PENDING
+    expires: 2027-01-25
