@@ -29,7 +29,7 @@ never be added to it.
 | Egyptian support phone | **Pending** | — | Owner input required |
 | Terms and Conditions link | Published | `/terms` | Existing public route; versioned Terms 1.0 |
 | Cancellation and refund link | Published | `/terms#section-6` | Section 6 "الإلغاء والاسترداد" of the immutable Terms 1.0; the test ties the link to that section's title |
-| Privacy Policy link | **Pending** | `/privacy` once published | The text and version now come from the backend (`GET /api/v1/privacy-policy/current`, backend `docs/api/PRIVACY_POLICY_API.md`). Version 1.0 is written but held as a backend *candidate* until its blockers clear: no MX for `manara-edu.com`, so `privecy@manara-edu.com` cannot receive mail; 7-day backups not yet on the host; no deletion procedure. While pending, `privacyPolicyHref()` returns `null` and no page links to `/privacy`. |
+| Privacy Policy link | **Approved** — owner Hamed Mohamed, 2026-10-02 | `/privacy` | The text and version come from the backend (`GET /api/v1/privacy-policy/current`, backend `docs/api/PRIVACY_POLICY_API.md`). The footer and contact form link to it through `privacyPolicyHref()`. |
 
 ## What is needed to finish
 

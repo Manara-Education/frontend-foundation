@@ -81,14 +81,17 @@ export const PUBLIC_BUSINESS_FACTS: PublicBusinessFacts = {
     terms: paths.terms,
     refundPolicy: `${paths.terms}#section-6`,
     /*
-      The text and its version now come from the backend (GET /api/v1/privacy-policy/current).
-      This fact only records whether the site may *link* to it. It flips to "approved" in the
-      same release that publishes a version on the backend — see docs/PUBLIC_BUSINESS_FACTS.md.
+      The text and its version come from the backend (GET /api/v1/privacy-policy/current).
+      This fact only records whether the site may *link* to it — see docs/PUBLIC_BUSINESS_FACTS.md.
     */
     privacyPolicy: {
-      status: "pending",
-      missing:
-        "Privacy Policy 1.0 is written and served by the backend, but held unpublished until its blockers clear: a mailbox that receives privecy@manara-edu.com (manara-edu.com has no MX record), seven-day backups confirmed on the host, and an operational deletion procedure.",
+      status: "approved",
+      value: paths.privacy,
+      approval: {
+        approvedBy: "Owner, Hamed Mohamed",
+        approvedOn: "2026-10-02",
+        evidence: "Owner's direct instruction to publish the privacy policy link, 2026-10-02.",
+      },
     },
   },
 };
