@@ -70,5 +70,5 @@ exceptions:
       read-only in the image, and the admin API stays on its default localhost
       listener. The go-jose/v4 finding is fixed, not excepted (v4.1.6).
     owner: Hamed-mohamed-Git
-    approval: PENDING
+    approval: https://github.com/Manara-Education/frontend-foundation/pull/165#issuecomment-6522453972
     expires: 2027-01-25
