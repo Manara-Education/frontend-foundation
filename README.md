@@ -6,7 +6,8 @@
 
 <h1>Manara · Frontend</h1>
 
-<p><strong>The part of Manara you can see and click: an online school where teachers share courses and students learn.</strong></p>
+<p><strong>The website of Manara, an online school where instructors publish courses and students learn.</strong><br>
+Everything you see and click on <a href="https://manara-edu.com">manara-edu.com</a> comes from this repo.</p>
 
 <p>
   <img src="https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React 19">
@@ -19,11 +20,16 @@
 </p>
 
 <p>
-  <a href="https://github.com/Manara-Education/backend-foundation"><strong>See the backend »</strong></a>
+  <a href="https://github.com/Manara-Education/frontend-foundation/actions/workflows/ci.yml"><img src="https://github.com/Manara-Education/frontend-foundation/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI"></a>
+  <a href="https://github.com/Manara-Education/frontend-foundation/actions/workflows/security.yml"><img src="https://github.com/Manara-Education/frontend-foundation/actions/workflows/security.yml/badge.svg?branch=develop" alt="Security"></a>
+</p>
+
+<p>
+  <a href="https://manara-edu.com"><strong>Visit Manara »</strong></a>
+  ·
+  <a href="https://github.com/Manara-Education/backend-foundation">See the backend</a>
   ·
   <a href="https://github.com/Manara-Education/frontend-foundation/issues">Report a bug</a>
-  ·
-  <a href="https://github.com/Manara-Education/frontend-foundation/issues">Request a feature</a>
 </p>
 
 </div>
@@ -35,12 +41,11 @@
     <li><a href="#-about-the-project">About the project</a></li>
     <li><a href="#-getting-started">Getting started</a></li>
     <li><a href="#-usage">Usage</a></li>
-    <li><a href="#-project-structure">Project structure</a></li>
-    <li><a href="#-how-login-works-developer-notes">How login works (developer notes)</a></li>
+    <li><a href="#%EF%B8%8F-configuration">Configuration</a></li>
+    <li><a href="#-how-it-reaches-users">How it reaches users</a></li>
+    <li><a href="#%EF%B8%8F-project-structure">Project structure</a></li>
     <li><a href="#-contributing">Contributing</a></li>
-    <li><a href="#-security">Security</a></li>
-    <li><a href="#-team">Team</a></li>
-    <li><a href="#-acknowledgments">Acknowledgments</a></li>
+    <li><a href="#%EF%B8%8F-security">Security</a></li>
   </ol>
 </details>
 
@@ -70,13 +75,13 @@ When you click a button, the dining room writes your order on a slip and passes 
 
 ## 💡 About the project
 
-A **React 19 + TypeScript** single-page app, built with **Vite**.
+A **React 19 + TypeScript** single-page app, built with **Vite**. The interface is in **Arabic** and lays out right-to-left.
 
 ### ✨ What you can do
 
 **🌍 Everyone**
-- Visit the landing page, About, Contact, Security, Terms and Privacy pages
-- Explore the public course catalog and open any course to see what's inside
+- Visit the landing page, and the About, Contact, Security and Terms pages
+- Browse the public course catalog and open any course to see what's inside
 - Sign up, verify your email with a one-time code, log in, and reset a forgotten password
 
 **🧑‍🎓 Students**
@@ -95,9 +100,10 @@ A **React 19 + TypeScript** single-page app, built with **Vite**.
 ### 🌟 Nice details
 
 - 📱 **Responsive**: works on phones, tablets and desktops
-- ↔️ **Both directions**: layouts work left-to-right and right-to-left
+- ↔️ **Both directions**: layouts work right-to-left and left-to-right
 - ✍️ **Rich text** for course content, powered by Tiptap
 - 🎬 **Video lessons** from YouTube and Vimeo
+- 🔗 **Shareable addresses**: every page, including each course editor tab, has its own link
 
 ### 🧰 Built with
 
@@ -109,7 +115,7 @@ A **React 19 + TypeScript** single-page app, built with **Vite**.
 | [React Router](https://reactrouter.com/) | Moves between pages without reloading |
 | [Axios](https://axios-http.com/) | Talks to the backend |
 | [Tiptap](https://tiptap.dev/) | The rich text editor |
-| [Vitest](https://vitest.dev/) | Runs the tests |
+| [Vitest](https://vitest.dev/) + [Testing Library](https://testing-library.com/) | Runs the tests |
 | [Docker](https://www.docker.com/) + [Caddy](https://caddyserver.com/) | Packages and serves the built website |
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -120,7 +126,7 @@ A **React 19 + TypeScript** single-page app, built with **Vite**.
 
 ### Prerequisites
 
-- [Node.js 24](https://nodejs.org/) (see [`.nvmrc`](.nvmrc))
+- [Node.js 24](https://nodejs.org/) (the exact version is in [`.nvmrc`](.nvmrc), so `nvm use` picks it up)
 
 ### Installation
 
@@ -129,9 +135,11 @@ A **React 19 + TypeScript** single-page app, built with **Vite**.
    git clone https://github.com/Manara-Education/frontend-foundation.git
    cd frontend-foundation
    ```
-2. **Install the packages** (`npm ci` installs exactly what's in the lockfile)
+2. **Install the packages.** `npm ci` installs exactly what's in the lockfile.
    ```sh
+   nvm use
    npm ci
+   cp .env.example .env
    ```
 3. **Start it.** Pick one:
 
@@ -144,14 +152,14 @@ A **React 19 + TypeScript** single-page app, built with **Vite**.
    curl 'localhost:8081/api/__mock/role?as=instructor'
    ```
 
-   **🅱️ Real mode.** First start the [backend](https://github.com/Manara-Education/backend-foundation) on port `8081`, then:
+   **🅱️ Real mode.** First start the [backend](https://github.com/Manara-Education/backend-foundation#-getting-started) on port `8081`, then:
    ```sh
    npm run dev
    ```
 4. **Open** <http://localhost:5173> 🎉
 
 > [!NOTE]
-> The dev server sends every `/api` and `/uploads` request to `http://localhost:8081`, which is where the backend (or the fake one) listens.
+> The dev server forwards every `/api` and `/uploads` request to `http://localhost:8081`, where the backend (or the fake one) listens.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -163,10 +171,53 @@ A **React 19 + TypeScript** single-page app, built with **Vite**.
 |---|---|
 | `npm run dev` | Starts the website on <http://localhost:5173> |
 | `npm run dev:mock` | Starts the website plus a fake backend with sample data |
+| `npm run mock-api` | Starts only the fake backend, on port `8081` |
 | `npm run typecheck` | Checks all the TypeScript types (strict) |
 | `npm test` | Runs the tests once |
 | `npm run test:watch` | Re-runs the tests every time you save |
 | `npm run build` | Builds the production website into `dist/` |
+
+Before you push, run the same three checks CI runs:
+
+```sh
+npm run typecheck && npm test && npm run build
+```
+
+> [!TIP]
+> Run `typecheck` as well as `build`. Vite removes TypeScript types without checking them, so `npm run build` alone can succeed on code with type errors.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+---
+
+## ⚙️ Configuration
+
+There is one setting, in [`.env.example`](.env.example):
+
+| Variable | What it sets | Value |
+|---|---|---|
+| `VITE_API_BASE_URL` | The address every API call starts with | `/api` |
+
+Keep it as the relative path `/api`. In development Vite forwards it to the backend, and in production Caddy does.
+
+> [!WARNING]
+> Vite builds every `VITE_` variable into the JavaScript that ships to the browser, where anyone can read it. **Never put a secret in `.env`.**
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+---
+
+## 🌐 How it reaches users
+
+```text
+Browser ──► Caddy (this repo's Docker image)
+              ├── /api/*, /uploads/*  ──► backend
+              └── everything else     ──► the built website (dist/)
+```
+
+The [`Dockerfile`](Dockerfile) builds the website and packages it with [Caddy](https://caddyserver.com/), which serves the pages and forwards API requests to the [backend](https://github.com/Manara-Education/backend-foundation). Any address that isn't a file gets `index.html`, so a deep link like `/courses/42` opens the right page.
+
+Releases go from `develop` to `main` through a release PR, and are deployed from a version tag.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -189,11 +240,28 @@ src/
 │   ├── profile/        👤 Your profile
 │   ├── about/  contact/  legal/   ℹ️ Info pages
 │   └── …
-├── shared/       🧰 Code every feature uses: API client, auth, components,
-│                    video, rich text, responsive and direction helpers
+├── shared/       🧰 Code every feature uses: API client, components, video,
+│                    rich text, and the responsive and direction helpers
 └── styles/       🎨 Theme, fonts and global CSS
 tools/mock-api/   🎭 The fake backend for easy mode
 ```
+
+Each feature keeps its own `api/`, `services/`, `hooks/`, `components/`, `pages/` and `types/` folders. Code used by more than one feature goes in `src/shared/`.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+---
+
+## 🤝 Contributing
+
+Work happens on **`develop`**. `main` only moves forward through a release PR from `develop`.
+
+1. Branch from `develop` with a prefix: `feat/`, `fix/`, `update/` or `remove/` (for example `feat/quiz-timer`)
+2. Title commits and PRs as `[Area Emoji] - Sentence case description.`, for example `[Student Feature 🧑‍🎓] - Add checkout and subscription plans.`
+3. Run `npm run typecheck && npm test && npm run build` before you push
+4. Open a PR into `develop` and fill in the template. For a UI change, add before and after screenshots, on desktop and mobile.
+
+The full guide is in **[CONTRIBUTING.md](CONTRIBUTING.md)**.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -201,7 +269,6 @@ tools/mock-api/   🎭 The fake backend for easy mode
 
 ## 🛡️ Security
 
-Found a security problem? **Please don't open a public issue.** Follow **[SECURITY.md](SECURITY.md)** instead.
+Found a security problem? **Please don't open a public issue.** Report it privately as described in **[SECURITY.md](SECURITY.md)**.
 
----
-
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
