@@ -153,8 +153,14 @@ WORKDIR /caddy
 #
 # 2026-10: go-jose/v4 CVE-2026-116587 needs >= v4.1.6, above the v4.1.5 Caddy
 # v2.11.7 asks for. Another floor raised above MVS, so it cannot conflict.
-ARG X_CRYPTO=v0.57.0
-ARG X_NET=v0.60.0
+#
+# 2026-11: x/net CVE-2026-78661 (HIGH) and CVE-2026-97045 both need >= v0.62.0.
+# x/net v0.62.0 requires x/crypto v0.58.0, so x/crypto moves with it; leaving
+# it at v0.57.0 would make this one `go get` ask for two versions that cannot
+# coexist. OSV reports both new versions clean apart from GO-2026-5932, the
+# unfixable openpgp note recorded above.
+ARG X_CRYPTO=v0.58.0
+ARG X_NET=v0.62.0
 ARG GRPC=v1.83.2
 ARG GO_JOSE_V4=v4.1.6
 
@@ -273,7 +279,7 @@ check() { # module  advisory-minimum
 # and x/crypto notes above.
 check github.com/caddyserver/caddy/v2 2.11.7
 check golang.org/x/crypto     0.56.0
-check golang.org/x/net        0.60.0
+check golang.org/x/net        0.62.0
 check golang.org/x/text       0.39.0
 check google.golang.org/grpc  1.83.2
 check github.com/klauspost/compress 1.18.7
