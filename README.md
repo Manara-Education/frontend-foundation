@@ -44,7 +44,6 @@ Everything you see and click on <a href="https://manara-edu.com">manara-edu.com<
     <li><a href="#%EF%B8%8F-configuration">Configuration</a></li>
     <li><a href="#-how-it-reaches-users">How it reaches users</a></li>
     <li><a href="#%EF%B8%8F-project-structure">Project structure</a></li>
-    <li><a href="#-contributing">Contributing</a></li>
     <li><a href="#%EF%B8%8F-security">Security</a></li>
   </ol>
 </details>
@@ -247,21 +246,6 @@ tools/mock-api/   🎭 The fake backend for easy mode
 ```
 
 Each feature keeps its own `api/`, `services/`, `hooks/`, `components/`, `pages/` and `types/` folders. Code used by more than one feature goes in `src/shared/`.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
----
-
-## 🤝 Contributing
-
-Work happens on **`develop`**. `main` only moves forward through a release PR from `develop`.
-
-1. Branch from `develop` with a prefix: `feat/`, `fix/`, `update/` or `remove/` (for example `feat/quiz-timer`)
-2. Title commits and PRs as `[Area Emoji] - Sentence case description.`, for example `[Student Feature 🧑‍🎓] - Add checkout and subscription plans.`
-3. Run `npm run typecheck && npm test && npm run build` before you push
-4. Open a PR into `develop` and fill in the template. For a UI change, add before and after screenshots, on desktop and mobile.
-
-The full guide is in **[CONTRIBUTING.md](CONTRIBUTING.md)**.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
