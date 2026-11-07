@@ -10,7 +10,7 @@ import { ResetPasswordPage } from "@/features/auth/reset-password/pages/reset-pa
 import { TermsPage } from "@/features/legal/terms/pages/terms-page";
 import { PrivacyPage } from "@/features/legal/privacy/pages/privacy-page";
 import { SecurityPage } from "@/features/legal/security/pages/security-page";
-import { ProfileView } from "@/features/profile/pages/profile-view";
+import { accountRoutes } from "@/features/settings/settings.routes";
 import { AccessDeniedPage } from "@/features/session/access-denied/pages/access-denied-page";
 import { ProtectedRoute, PublicOnlyRoute, RoleRoute, ROLES } from "@/shared/auth";
 import {
@@ -191,20 +191,10 @@ export const router = createBrowserRouter([
             handle: handle({ title: "وصول مرفوض" }),
           },
 
-          // Shared by both roles: the profile screen is the same page for either.
+          // Account screens: the instructor's profile, and the student's Settings that replaced it.
           {
             Component: AppLayout,
-            children: [
-              {
-                path: "profile",
-                Component: ProfileView,
-                handle: handle({
-                  title: "ملفي الشخصي",
-                  subtitle: "إدارة حسابك بسهولة",
-                  section: "profile",
-                }),
-              },
-            ],
+            children: accountRoutes,
           },
 
           // ── STUDENT ───────────────────────────────────────────────────────
