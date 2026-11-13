@@ -1,5 +1,5 @@
 import type { ElementType } from "react";
-import { BookOpen, Compass, Home, Megaphone, PlusSquare, User } from "lucide-react";
+import { BookOpen, Compass, Home, Megaphone, PlusSquare, Settings, User } from "lucide-react";
 import { isInstructorRole } from "@/shared/auth/roles";
 import { paths, type NavSectionId } from "@/shared/navigation/paths";
 
@@ -27,7 +27,7 @@ const studentSection: NavSection = {
   items: [
     { id: "student-courses", label: "دوراتي", icon: Home, to: paths.student.courses },
     { id: "student-explore", label: "استكشاف الدورات", icon: Compass, to: paths.student.explore },
-    { id: "profile", label: "ملفي الشخصي", icon: User, to: paths.profile },
+    { id: "settings", label: "الإعدادات", icon: Settings, to: paths.settings.account },
   ],
 };
 
