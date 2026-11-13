@@ -1,3 +1,4 @@
+import type { PublicCourseListState } from "@/features/public-courses/types/public-courses.types";
 import { LandingNavbar } from "./landing-navbar";
 import { LandingFooter } from "./landing-footer";
 import { HeroSection } from "./hero-section";
@@ -9,17 +10,18 @@ import { QuizSection } from "./quiz-section";
 import { AiHintSection } from "./ai-hint-section";
 import { ProgressSection } from "./progress-section";
 import { CoursesSection } from "./courses-section";
-import { InstructorsSection } from "./instructors-section";
 import { VisionSection } from "./vision-section";
-import { CtaSection } from "./cta-section";
 import { FONT } from "./theme";
 
 interface LandingContentProps {
   onRegister: () => void;
   onSignIn: () => void;
+  /** The real courses on offer, from the public catalogue. */
+  courses: PublicCourseListState;
+  onRetryCourses: () => void;
 }
 
-export function LandingContent({ onRegister, onSignIn }: LandingContentProps) {
+export function LandingContent({ onRegister, onSignIn, courses, onRetryCourses }: LandingContentProps) {
   return (
     <div style={{ fontFamily: FONT }}>
       <LandingNavbar onSignIn={onSignIn} />
@@ -32,10 +34,8 @@ export function LandingContent({ onRegister, onSignIn }: LandingContentProps) {
         <QuizSection />
         <AiHintSection />
         <ProgressSection />
-        <CoursesSection />
-        <InstructorsSection onCta={onRegister} />
+        <CoursesSection state={courses} onRetry={onRetryCourses} />
         <VisionSection />
-        <CtaSection onCta={onRegister} />
       </main>
       <LandingFooter />
     </div>

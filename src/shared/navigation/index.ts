@@ -11,3 +11,4 @@ export type { CourseEditorTab, NavSectionId } from "./paths";
 export { DocumentTitleProvider, useDocumentTitleOverride } from "./document-title";
 export { useRouteMeta } from "./route-meta";
 export type { ResolvedRouteMeta, RouteHandle } from "./route-meta";
+export { useHashScroll } from "./use-hash-scroll";

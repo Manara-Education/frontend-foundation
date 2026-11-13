@@ -135,6 +135,9 @@
 
   html {
     font-size: var(--font-size);
+    /* Kills the rubber-band bounce past the top and bottom of the page, which pulled the
+       footer off the viewport edge and flashed the body background behind it. */
+    overscroll-behavior-y: none;
   }
 
   h1 {

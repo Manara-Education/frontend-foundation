@@ -71,7 +71,7 @@ RUN npm run build
 # stdlib advisories and nothing else. The `go get` line below is what fixes the
 # other six, and it is the part that has to be maintained by hand until Caddy
 # bumps them upstream.
-FROM golang:1.27.1-alpine@sha256:cf6fca6641884b8433441b2b0652976f975e1d0fdd26d177eaaf8596087f3125 AS caddybuild
+FROM golang:1.27.3-alpine@sha256:fa3d596898d9f126af7c01d14ee7597bab3f39cccf392ef36b69fe77cd681f18 AS caddybuild
 
 # The scanned binary reported Go stdlib v1.26.3. The eleven stdlib advisories
 # are fixed across 1.26.4 and 1.26.6, so any toolchain from 1.26.6 on clears
@@ -79,7 +79,10 @@ FROM golang:1.27.1-alpine@sha256:cf6fca6641884b8433441b2b0652976f975e1d0fdd26d17
 # docker updates, so the FROM line above is the only place that names the
 # toolchain, and the Security Gate's scan of the compiled binary is what shows
 # its stdlib is clean.
-ARG CADDY_VERSION=v2.11.4
+# Kept equal to the runtime image's Caddy tag below. v2.11.7 brings
+# klauspost/compress v1.20.1 (CVE-2026-63209 needs >= v1.18.7) and
+# cel-go v0.32.0 upstream, which clears the cel-go note further down.
+ARG CADDY_VERSION=v2.11.7
 
 WORKDIR /caddy
 
@@ -141,8 +144,25 @@ WORKDIR /caddy
 # Newer releases exist (x/crypto v0.57.0, x/net v0.59.0, x/text v0.42.0). This
 # set is preferred because every extra version is API-change risk inside
 # quic-go and Caddy's TLS stack that only a failed build would catch.
-ARG X_CRYPTO=v0.56.0
+# 2026-10: x/net CVE-2026-78669 needs >= v0.60.0, above the v0.59.0 Caddy
+# v2.11.7 asks for, so x/net now joins the pinned set. It is a floor raised
+# ABOVE what MVS picks, which is the direction that cannot conflict; the two
+# failures above came from pins below it. x/crypto moves to v0.57.0 because
+# Caddy v2.11.7 and x/net v0.60.0 both require it: `go get` sets a version
+# exactly, so an older pin would downgrade Caddy to satisfy it.
+#
+# 2026-10: go-jose/v4 CVE-2026-116587 needs >= v4.1.6, above the v4.1.5 Caddy
+# v2.11.7 asks for. Another floor raised above MVS, so it cannot conflict.
+#
+# 2026-11: x/net CVE-2026-78661 (HIGH) and CVE-2026-97045 both need >= v0.62.0.
+# x/net v0.62.0 requires x/crypto v0.58.0, so x/crypto moves with it; leaving
+# it at v0.57.0 would make this one `go get` ask for two versions that cannot
+# coexist. OSV reports both new versions clean apart from GO-2026-5932, the
+# unfixable openpgp note recorded above.
+ARG X_CRYPTO=v0.58.0
+ARG X_NET=v0.62.0
 ARG GRPC=v1.83.2
+ARG GO_JOSE_V4=v4.1.6
 
 # CEL-GO IS DELIBERATELY NOT UPGRADED, AND THIS IS THE RECORD OF WHY.
 #
@@ -170,6 +190,15 @@ ARG GRPC=v1.83.2
 # upstream: when Caddy moves to a cel-go at or above v0.30.0, this resolves
 # itself and the gate will show it.
 
+# GO-JOSE V3 IS KNOWINGLY LEFT STANDING, UNDER AN EXCEPTION THAT EXPIRES.
+#
+# CVE-2026-116587 has no v3 fix: v3.0.5 is the newest release and is listed as
+# last affected. It cannot be pinned away or left out of the build, because
+# caddytls itself links it through smallstep/certificates and go.step.sm/crypto.
+# EXC-2026-001 in .github/security/exceptions.yml records why it is not reachable
+# here, and it blocks again on 2027-01-25. When smallstep moves to v4
+# (smallstep/crypto#441), this resolves itself and the entry should be removed.
+
 # The standard module set is what makes this Caddy equivalent to the official
 # binary: file_server, reverse_proxy, encode, headers, the TLS/ACME stack and
 # the rest. Dropping it would silently produce a Caddy that cannot run this
@@ -194,17 +223,19 @@ GO
 go mod init manara/caddy
 go get "github.com/caddyserver/caddy/v2@${CADDY_VERSION}"
 
-# The security bumps — the two modules whose own advisories need a version
-# higher than Caddy asks for. x/net and x/text are deliberately absent: they
-# are pulled up by these two through minimal version selection, and pinning
-# them here is what broke the build twice (see the note above the ARGs).
+# The security bumps — the modules whose own advisories need a version
+# higher than Caddy asks for. x/text is deliberately absent: it is pulled up
+# through minimal version selection. x/net was absent too until its own
+# advisory floor rose above Caddy's (see the note above the ARGs).
 #
-# `go get` raises a module to at least the version named, and MVS keeps the
-# higher of the two, so neither of these can be silently undone by a transitive
-# requirement asking for something older.
+# `go get` sets each module to the version named, upgrading or DOWNGRADING
+# whatever else it must. Each pin therefore has to be at or above what Caddy
+# requires, and the check on caddy/v2 below proves Caddy was not downgraded.
 go get \
   "golang.org/x/crypto@${X_CRYPTO}" \
-  "google.golang.org/grpc@${GRPC}"
+  "golang.org/x/net@${X_NET}" \
+  "google.golang.org/grpc@${GRPC}" \
+  "github.com/go-jose/go-jose/v4@${GO_JOSE_V4}"
 go mod tidy
 
 # ASSERT THE RESULT, DO NOT TRUST THE REQUEST.
@@ -246,10 +277,13 @@ check() { # module  advisory-minimum
 # The floors below are the ADVISORY minimums for the branch this build is on,
 # which is not always the number the advisory headline quotes — see the grpc
 # and x/crypto notes above.
+check github.com/caddyserver/caddy/v2 2.11.7
 check golang.org/x/crypto     0.56.0
-check golang.org/x/net        0.56.0
+check golang.org/x/net        0.62.0
 check golang.org/x/text       0.39.0
 check google.golang.org/grpc  1.83.2
+check github.com/klauspost/compress 1.18.7
+check github.com/go-jose/go-jose/v4 4.1.6
 SH
 
 # -trimpath keeps build-host paths out of the binary. CGO is off so the result
@@ -277,7 +311,7 @@ RUN /out/caddy version && go version -m /out/caddy | grep -E 'golang.org/x/(cryp
 # stops the base from changing underneath a build without a reviewed diff.
 # A digest pin does NOT discover newer images on its own — see
 # .github/dependabot.yml, which is what proposes the bump.
-FROM caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648 AS runtime
+FROM caddy:2.11.8-alpine@sha256:f6228111e5fafa1a5238258d0858e103f10599b8d1659a146e7726681a002bb9 AS runtime
 
 # --- OS packages -----------------------------------------------------------
 # The base image ships Alpine 3.23.5, whose curl/libcurl (8.19.0-r0), OpenSSL

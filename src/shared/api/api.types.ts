@@ -31,6 +31,8 @@ export const ApiErrorCode = {
   TERMS_VERSION_OUTDATED: "TERMS_VERSION_OUTDATED",
   /** The server could not determine which terms version is current, so it refused to proceed. */
   TERMS_UNAVAILABLE: "TERMS_UNAVAILABLE",
+  /** No privacy policy has been published yet. The page says so and shows no text in its place. */
+  PRIVACY_POLICY_NOT_PUBLISHED: "PRIVACY_POLICY_NOT_PUBLISHED",
 } as const;
 
 export type ApiErrorCode = (typeof ApiErrorCode)[keyof typeof ApiErrorCode];

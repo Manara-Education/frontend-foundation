@@ -64,7 +64,7 @@ function passwordInputs(container: HTMLElement): HTMLInputElement[] {
 async function fillForm(container: HTMLElement, password: string) {
   await waitFor(() => expect(getCurrentTermsMock).toHaveBeenCalled());
   await userEvent.type(screen.getByPlaceholderText("أدخل اسمك الكامل"), "سارة");
-  await userEvent.type(screen.getByPlaceholderText("example@manara.com"), "sara@manara.com");
+  await userEvent.type(screen.getByPlaceholderText("name@example.com"), "sara@manara.com");
   const [pwd, confirm] = passwordInputs(container);
   // fireEvent rather than userEvent.type: what is under test is the rule applied to the value, not
   // keystroke simulation, and some of these strings carry emoji and long Arabic runs.

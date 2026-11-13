@@ -75,7 +75,7 @@ export function ForgotPasswordForm({
         <FormField
           label="البريد الإلكتروني"
           type="email"
-          placeholder="example@manara.com"
+          placeholder="name@example.com"
           value={form.email}
           onChange={onChange("email")}
           error={errors.email}
