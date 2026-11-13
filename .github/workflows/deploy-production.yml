@@ -544,6 +544,8 @@ jobs:
           IMAGE: ${{ steps.image.outputs.image }}
           DIGEST: ${{ steps.image.outputs.digest }}
           TAG: ${{ steps.resolve.outputs.tag }}
+          SHA: ${{ steps.commit.outputs.sha }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
           echo "Scanning $IMAGE@$DIGEST"
@@ -554,11 +556,31 @@ jobs:
           trivy image "$IMAGE@$DIGEST" \
             --scanners vuln \
             --severity HIGH,CRITICAL \
-            --format table \
-            --exit-code 1 \
-            --output image-scan.txt || scan_failed=1
+            --format json \
+            --exit-code 0 \
+            --output image-scan.json
 
+          trivy convert --format table --output image-scan.txt image-scan.json
           cat image-scan.txt
+
+          # The verdict honours exceptions.yml exactly as the Security Gate does,
+          # read from the RELEASED commit (the files the gate assessed it with),
+          # not from this workflow's checkout. Before this, `--exit-code 1` refused
+          # any HIGH finding, including one with a reviewed, unexpired exception,
+          # so a finding with no upstream fix (EXC-2026-001) made every release
+          # undeployable while production ran an older image carrying it anyway.
+          # deploy-scan-verdict.py fails closed: an invalid, expired or
+          # out-of-scope exception is not applied, and an unreadable input blocks.
+          python3 -m pip install --quiet --disable-pip-version-check 'PyYAML==6.0.3'
+          git show "$SHA:.github/security/policy.yml" > "$RUNNER_TEMP/policy.yml"
+          git show "$SHA:.github/security/exceptions.yml" > "$RUNNER_TEMP/exceptions.yml" \
+            || echo 'exceptions: []' > "$RUNNER_TEMP/exceptions.yml"
+          python3 .github/scripts/deploy-scan-verdict.py \
+            --report image-scan.json \
+            --exceptions "$RUNNER_TEMP/exceptions.yml" \
+            --policy "$RUNNER_TEMP/policy.yml" \
+            --repository "$REPOSITORY" | tee image-scan-verdict.txt || scan_failed=1
+          cat image-scan-verdict.txt >> image-scan.txt
           mkdir -p "$RUNNER_TEMP/observation" && cp image-scan.txt "$RUNNER_TEMP/observation/image-scan.txt"
           echo "result=$([ "${scan_failed:-0}" = 1 ] && echo blocked || echo pass)" >> "$GITHUB_OUTPUT"
 
@@ -581,7 +603,8 @@ jobs:
 
           if [ "${scan_failed:-0}" = "1" ]; then
             echo "::error title=Published image has blocking findings::$IMAGE@$DIGEST"
-            echo "::error::carries HIGH or CRITICAL vulnerabilities. Production has NOT been"
+            echo "::error::carries HIGH or CRITICAL vulnerabilities that no valid exception covers."
+            echo "::error::Production has NOT been"
             echo "::error::touched and is still serving the previous version."
             echo "::error::"
             echo "::error::This can happen even when the release's Security Gate was green:"
@@ -589,7 +612,7 @@ jobs:
             echo "::error::Fix or formally except the findings and cut a new release."
             exit 1
           fi
-          echo "No HIGH or CRITICAL findings in the image about to be deployed."
+          echo "No unexcepted HIGH or CRITICAL findings in the image about to be deployed."
 
       # ---------------------------------------------------------------------
       # 5. SSH
