@@ -236,7 +236,14 @@ real `owner`, an `approval` link, and an `expires` date at most 90 days out. A
 missing field, an unparseable date, or a past expiry **fails the gate** — an
 expired exception stops suppressing automatically.
 
-There is currently **no** active exception in this repository.
+There is one active exception in this repository: `EXC-2026-001`, for
+CVE-2026-116587 in go-jose v3 inside the Caddy binary, expiring 2027-01-25.
+
+The gate reads this file from the BASE branch, so a pull request that adds an
+exception cannot pass its own gate while the finding is present. Landing one means
+lifting `Security Gate` from the branch ruleset for that single pull request and
+restoring it immediately. Keep such a pull request to the exception alone, so
+that every other change still goes through the gate.
 
 ## 7. Deployment enforcement
 
