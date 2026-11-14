@@ -381,6 +381,11 @@ RUN set -eux; \
 # Config and assets stay root-owned and read-only to the server: it must be able
 # to read them and must not be able to rewrite them.
 COPY --chown=root:root --chmod=444 Caddyfile /etc/caddy/Caddyfile
+
+# Where the infrastructure may mount extra site definitions (see the `import` at
+# the end of the Caddyfile). Created empty and root-owned so the glob has a
+# directory to look in, and `caddy validate` passes with nothing mounted.
+RUN mkdir -p /etc/caddy/sites.d
 COPY --from=build --chown=root:root /build/dist /srv
 
 USER caddy
