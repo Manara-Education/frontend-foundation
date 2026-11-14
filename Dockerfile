@@ -375,17 +375,15 @@ RUN set -eux; \
     setcap cap_net_bind_service=+ep /usr/bin/caddy; \
     getcap /usr/bin/caddy; \
     apk del .caddy-setcap; \
-    mkdir -p /data /config; \
+    mkdir -p /data /config /etc/caddy/sites.d; \
     chown -R caddy:caddy /data /config
 
 # Config and assets stay root-owned and read-only to the server: it must be able
 # to read them and must not be able to rewrite them.
 COPY --chown=root:root --chmod=444 Caddyfile /etc/caddy/Caddyfile
-
-# Where the infrastructure may mount extra site definitions (see the `import` at
-# the end of the Caddyfile). Created empty and root-owned so the glob has a
-# directory to look in, and `caddy validate` passes with nothing mounted.
-RUN mkdir -p /etc/caddy/sites.d
+# /etc/caddy/sites.d (created empty above) is the mount point for the extra site
+# definitions the Caddyfile imports. It is not needed for validation to pass: a
+# glob matching nothing is a no-op, and the directory is only the mount target.
 COPY --from=build --chown=root:root /build/dist /srv
 
 USER caddy
