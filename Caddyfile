@@ -234,3 +234,18 @@
 {$REDIRECT_FROM:http://alternate-hostnames.invalid} {
 	redir https://{$SITE_ADDRESS}{uri} 308
 }
+
+# -----------------------------------------------------------------------------
+# Additional sites.
+# -----------------------------------------------------------------------------
+# Lets the infrastructure add separate sites (other hostnames) to this ingress
+# without a frontend rebuild: it mounts one `*.caddy` file per site into
+# /etc/caddy/sites.d, and each is loaded here as if written out in full.
+#
+# This image ships that directory empty. A glob that matches no file is a no-op
+# in Caddy (a literal path that is missing would be an error, which is why this
+# is a glob), so a deployment that mounts nothing — a local `docker run`, CI —
+# behaves exactly as if this line were absent.
+#
+# Each imported file must hold whole site blocks (a hostname and its braces).
+import /etc/caddy/sites.d/*.caddy
