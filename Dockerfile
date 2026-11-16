@@ -71,7 +71,7 @@ RUN npm run build
 # stdlib advisories and nothing else. The `go get` line below is what fixes the
 # other six, and it is the part that has to be maintained by hand until Caddy
 # bumps them upstream.
-FROM golang:1.27.3-alpine@sha256:fa3d596898d9f126af7c01d14ee7597bab3f39cccf392ef36b69fe77cd681f18 AS caddybuild
+FROM golang:1.27.4-alpine@sha256:0a5f7fe796599ff487605987432e7619ae45beeb2fba4c2ce0b907879932aebf AS caddybuild
 
 # The scanned binary reported Go stdlib v1.26.3. The eleven stdlib advisories
 # are fixed across 1.26.4 and 1.26.6, so any toolchain from 1.26.6 on clears
