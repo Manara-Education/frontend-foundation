@@ -248,4 +248,9 @@
 # behaves exactly as if this line were absent.
 #
 # Each imported file must hold whole site blocks (a hostname and its braces).
+#
+# An imported file is not isolated from the rest of the configuration: one that
+# is unreadable (wrong owner or mode) or invalid, or that repeats a hostname
+# already served here, stops the whole server from loading its configuration,
+# main site included. Run `caddy validate` as the server's user before mounting.
 import /etc/caddy/sites.d/*.caddy
